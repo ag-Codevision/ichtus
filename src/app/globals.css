@@ -1,0 +1,206 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-deep-black: #0B0C0D;
+  --bg-charcoal: #111214;
+  --bg-graphite: #1B1B1D;
+  --bg-graphite-hover: #252527;
+  --color-orange: #FF650F;
+  --color-orange-hover: #FF781B;
+  --color-ivory: #F7F5F2;
+  --text-heading: #F8F7F5;
+  --text-body: #B4B1AE;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+}
+
+/* ====================================================
+   MODO CLARO (LIGHT THEME) — Variáveis e Adaptações
+   ==================================================== */
+html.light,
+:root[data-theme="light"] {
+  --bg-deep-black: #F8F9FA;
+  --bg-charcoal: #FFFFFF;
+  --bg-graphite: #FFFFFF;
+  --bg-graphite-hover: #F1F3F5;
+  --color-orange: #FF650F;
+  --color-orange-hover: #FF781B;
+  --color-ivory: #FFFFFF;
+  --text-heading: #0F172A;
+  --text-body: #475569;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background-color: var(--bg-deep-black);
+  color: var(--text-body);
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  background-color: var(--bg-deep-black);
+  color: var(--text-body);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Custom Selection */
+::selection {
+  background-color: #FF650F;
+  color: #FFFFFF;
+}
+
+/* Custom Scrollbar - Dark Mode */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-deep-black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #252527;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FF650F;
+}
+
+/* Custom Scrollbar - Light Mode */
+html.light ::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+}
+
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #FF650F;
+}
+
+/* Utilitários Visuais Cinematográficos */
+.editorial-glow-orange {
+  box-shadow: 0 0 50px -10px rgba(255, 101, 15, 0.4);
+}
+
+.editorial-card {
+  background-color: #1B1B1D;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.editorial-card:hover {
+  border-color: rgba(255, 101, 15, 0.35);
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6), 0 0 20px -5px rgba(255, 101, 15, 0.15);
+  transform: translateY(-2px);
+}
+
+.orange-gradient-btn {
+  background: linear-gradient(115deg, #FF5D09 0%, #FF6B12 55%, #FA6B17 100%);
+  color: #FFFFFF !important;
+  font-weight: 600;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orange-gradient-btn:hover {
+  box-shadow: 0 0 25px 0 rgba(255, 101, 15, 0.5);
+  transform: translateY(-1px);
+}
+
+/* ====================================================
+   SOBREPOSIÇÕES EXCLUSIVAS DO MODO CLARO (LIGHT THEME)
+   ==================================================== */
+
+html.light body {
+  background-color: #F8F9FA !important;
+  color: #475569 !important;
+}
+
+html.light .bg-glessios-black {
+  background-color: #F8F9FA !important;
+}
+
+html.light .bg-glessios-charcoal {
+  background-color: #FFFFFF !important;
+}
+
+html.light .bg-glessios-graphite {
+  background-color: #FFFFFF !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+html.light .bg-glessios-graphite-hover:hover {
+  background-color: #F1F5F9 !important;
+}
+
+html.light .text-glessios-text-heading {
+  color: #0F172A !important;
+}
+
+html.light .text-glessios-text-body {
+  color: #475569 !important;
+}
+
+html.light .border-glessios-border-dark,
+html.light .border-white\/10,
+html.light .border-white\/5 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.light .editorial-card {
+  background-color: #FFFFFF !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.04);
+}
+
+html.light .editorial-card:hover {
+  border-color: rgba(255, 101, 15, 0.45) !important;
+  box-shadow: 0 12px 25px -4px rgba(0, 0, 0, 0.08), 0 0 15px -3px rgba(255, 101, 15, 0.15) !important;
+}
+
+/* Navbar e Cabeçalhos com Backdrop Blur no Modo Claro */
+html.light header.bg-glessios-black\/90,
+html.light .bg-glessios-black\/90,
+html.light .bg-glessios-black\/80 {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Links e Menus de Navegação no Modo Claro */
+html.light nav a.text-glessios-text-body {
+  color: #475569 !important;
+}
+
+html.light nav a.text-glessios-text-body:hover {
+  color: #0F172A !important;
+}
+
+/* Modais e Painéis Flutuantes no Modo Claro */
+html.light .bg-glessios-charcoal\/80 {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Inputs e Campos de Formulário no Modo Claro */
+html.light input:not([type="checkbox"]):not([type="radio"]),
+html.light select,
+html.light textarea {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #94A3B8 !important;
+}

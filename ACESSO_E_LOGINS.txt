@@ -1,0 +1,108 @@
+================================================================================
+          GLESSIOS — COMUNICACAO VISUAL & FACHADAS PREMIUM
+           GUIA DE LINKS DE LOGIN, ROLES E ACESSOS DO SISTEMA
+================================================================================
+
+AMBIENTE LOCAL:
+URL Base: http://localhost:3005
+Tema: Suporte a Modo Claro e Modo Escuro (alternador Sol/Lua em todas as telas)
+
+--------------------------------------------------------------------------------
+1. PERFIL: ADMIN (ADMINISTRADOR GERAL & OPERACOES FABRIS INTEGRADAS)
+--------------------------------------------------------------------------------
+Funcao: Centraliza toda a gestao estrategica, comercial, financeira e a
+operacao tecnica do chao de fabrica (projetos, corte CNC, serralheria,
+montagem, baixas de estoque e instalacao).
+
+LINK DE LOGIN DO ADMIN:
+http://localhost:3005/admin/login
+
+CREDENCIAIS OFICIAIS:
+- E-mail: admin@glessios.com.br
+- Senha:  Admin@Glessios2026!
+
+CONTA COMPLEMENTAR (ESTACAO TECNICA / PROJETISTA):
+- E-mail: projetista@glessios.com.br
+- Senha:  Designer@Glessios2026!
+
+DICA DE ACESSO RAPIDO:
+Na tela de login do admin (/admin/login), ha o botao:
+"Entrar com Conta de Admin Demo (1 Clique)" que autentica instantaneamente.
+
+MODULOS E ROTAS ACESSIVEIS PELO ADMIN:
+- CRM Comercial Kanban:
+  http://localhost:3005/admin/crm
+  (Gestao de leads, arraste entre etapas e conversao em Ordem de Servico)
+
+- Producao & Linha Fabril (8 Etapas):
+  http://localhost:3005/admin/producao
+  (Briefing, Provas de Arte WACLI WhatsApp, Corte CNC Router, Impressao UV,
+  Serralheria, Montagem LED, Inspecao e Instalacao)
+
+- Controle de Estoque de Insumos:
+  http://localhost:3005/admin/estoque
+  (Chapas de ACM, Modulos LED, Lonas, Perfis, alertas de reposicao e baixas)
+
+- Agendamentos de Campo:
+  http://localhost:3005/admin/agendamentos
+  (Visitas tecnicas de medicao no local e equipes de instalacao externa)
+
+- Gestao Financeira & Demonstrativo DRE:
+  http://localhost:3005/admin/financeiro
+  (Faturamento, boletos, PIX com baixa automatica e DRE Fabril com calculo de CMV)
+
+- Proposta Comercial Executiva A4 (Impressao/PDF):
+  http://localhost:3005/admin/propostas/cm8a7b6c5000108l4f1h20987
+  (Orcamento pronto para impressao ou exportacao em PDF com memorial descritivo)
+
+
+--------------------------------------------------------------------------------
+2. PERFIL: CUSTOMER (CLIENTE CONTRATANTE — PORTAL EXCLUSIVO)
+--------------------------------------------------------------------------------
+Funcao: Espaco restrito e seguro onde o contratante acompanha em tempo real a
+fabricacao da fachada, aprova maquetes de arte e paga faturas via PIX.
+
+LINK DE LOGIN DO CLIENTE:
+http://localhost:3005/portal/login
+
+CREDENCIAIS OFICIAIS:
+- E-mail Principal: contato@lojaconcept.com.br
+- E-mail Demo:      renata@conceptbatel.com.br
+- Senha Padrao:     Cliente@Glessios2026!
+
+DICA DE ACESSO RAPIDO:
+Na tela de login do cliente (/portal/login), basta clicar no botao:
+"Acessar com Conta Demo" para login automatico em 1 clique.
+
+MODULOS E RECURSOS ACESSIVEIS PELO CLIENTE:
+- Dashboard Exclusivo do Contratante:
+  http://localhost:3005/portal/dashboard
+
+  Recursos inclusos:
+  * Timeline Fabril Interativa: visualizacao do progresso em tempo real das
+    8 fases da fachada.
+  * Aprovacao de Provas de Arte: inspecao em alta definicao da maquete 3D com
+    botoes de "Aprovar Arte" ou "Solicitar Ajuste" sincronizados com WhatsApp WACLI.
+  * Faturas e Pagamento PIX: visualizacao das parcelas em aberto, geracao de
+    QR Code oficial e codigo PIX Copia e Cola para liquidacao imediata.
+  * Cronograma de Instalacao: consulta de data e horario das visitas tecnicas
+    e da equipe de fixacao no local do comercio.
+
+
+--------------------------------------------------------------------------------
+3. WEBSITE PUBLICO & INSTITUCIONAL
+--------------------------------------------------------------------------------
+- Pagina Inicial / Portfólio / Orcamento:
+  http://localhost:3005
+
+- Blog Tecnico com Artigos IA:
+  http://localhost:3005/blog
+
+- Links de Acesso Rapido no Rodape:
+  O rodape do site contem links diretos para "Portal do Cliente" e
+  "Acesso Administrativo".
+
+================================================================================
+Arquivo gerado automaticamente pelo sistema Glessios Comunicação Visual.
+Todos os direitos reservados.
+================================================================================

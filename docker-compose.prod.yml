@@ -1,0 +1,77 @@
+version: "3.8"
+
+services:
+  # 1. Banco de Dados PostgreSQL 16 Isolado do Projeto Glessios
+  postgres:
+    image: postgres:16-alpine
+    container_name: glessios_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-glessios_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-GlessiosSecretProd2026SecureKey}
+      POSTGRES_DB: ${POSTGRES_DB:-glessios_prod}
+    volumes:
+      - glessios_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-glessios_admin} -d ${POSTGRES_DB:-glessios_prod}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - glessios_network
+
+  # 2. Container Inicial de Migração e Seed Automático
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: deps
+    container_name: glessios_migrator
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-glessios_admin}:${POSTGRES_PASSWORD:-GlessiosSecretProd2026SecureKey}@postgres:5432/${POSTGRES_DB:-glessios_prod}?schema=public
+    volumes:
+      - ./prisma:/app/prisma
+    command: sh -c "npx prisma db push && npx tsx prisma/seed.ts"
+    networks:
+      - glessios_network
+
+  # 3. Aplicação Next.js 15 Standalone (Glessios)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: glessios_app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-glessios_admin}:${POSTGRES_PASSWORD:-GlessiosSecretProd2026SecureKey}@postgres:5432/${POSTGRES_DB:-glessios_prod}?schema=public
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-glessios_secret_super_seguro_development_2026_jwt_token}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://72.62.141.188:3005}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY}
+      NVIDIA_MODEL: ${NVIDIA_MODEL:-meta/llama-3.2-11b-vision-instruct}
+      UNSPLASH_ACCESS_KEY: ${UNSPLASH_ACCESS_KEY}
+      WACLI_API_URL: ${WACLI_API_URL:-http://localhost:3001}
+      CRON_SECRET: ${CRON_SECRET}
+      PORT: 3000
+    ports:
+      - "3005:3000"
+    networks:
+      - glessios_network
+
+volumes:
+  glessios_pgdata:
+    name: glessios_pgdata
+
+networks:
+  glessios_network:
+    name: glessios_network
+    driver: bridge

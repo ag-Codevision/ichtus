@@ -1,0 +1,437 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ====================================================
+// ENUMS DO SISTEMA GLESSIOS
+// ====================================================
+
+enum UserRole {
+  ADMIN
+  CUSTOMER
+}
+
+enum LeadSource {
+  WEBSITE_FORM
+  WHATSAPP
+  MANUAL_ADMIN
+  INSTAGRAM_FACEBOOK
+  INDICATION
+}
+
+enum PriorityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum OSStage {
+  BRIEFING_ARTWORK
+  ARTWORK_APPROVAL
+  CNC_ROUTER_CUTTING
+  DIGITAL_PRINTING
+  ASSEMBLY_STRUCTURE
+  QUALITY_CONTROL
+  READY_FOR_INSTALLATION
+  INSTALLED_COMPLETED
+  CANCELLED
+}
+
+enum ArtworkStatus {
+  PENDING_CUSTOMER_REVIEW
+  APPROVED
+  REVISION_REQUESTED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  PIX
+  BOLETO
+  CREDIT_CARD
+  BANK_TRANSFER
+  CASH
+}
+
+enum FinancialTransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum AppointmentType {
+  TECHNICAL_VISIT_MEASUREMENT
+  INTERNAL_PRODUCTION_RUN
+  EXTERNAL_INSTALLATION
+  DELIVERY_PICKUP
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+}
+
+enum StockUnit {
+  M2           // Metros quadrados (Lona, ACM, Vinil)
+  LINEAR_METER // Metros lineares (Perfis, Fitas)
+  UNIT         // Peças (LEDs, Fontes, Ilhoses)
+  LITER        // Tintas e Vernizes
+  SHEET        // Placas inteiras de ACM/Acrílico
+  ROLL         // Rolos fechados
+}
+
+enum MovementType {
+  INCOMING_PURCHASE
+  OUTGOING_PRODUCTION_OS
+  OUTGOING_LOSS_DEFECT
+  MANUAL_ADJUSTMENT
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// ====================================================
+// USUÁRIOS E AUTENTICAÇÃO
+// ====================================================
+
+model User {
+  id              String      @id @default(cuid())
+  name            String
+  email           String      @unique
+  passwordHash    String
+  phone           String?     // Formato: 5541999999999
+  role            UserRole    @default(CUSTOMER)
+  avatarUrl       String?
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  customerProfile Customer?
+  createdOS       ServiceOrder[] @relation("CreatedBy")
+  assignedLeads   Lead[]
+  notifications   Notification[]
+  stockMovements  StockMovement[]
+
+  @@map("users")
+}
+
+model Customer {
+  id             String         @id @default(cuid())
+  userId         String         @unique
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName    String?        // Razão Social
+  tradeName      String?        // Nome Fantasia
+  documentNumber String?        // CPF ou CNPJ
+  street         String?
+  number         String?
+  neighborhood   String?
+  city           String?
+  state          String?
+  zipCode        String?
+  notes          String?        @db.Text
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  serviceOrders  ServiceOrder[]
+  invoices       Invoice[]
+  appointments   Appointment[]
+
+  @@map("customers")
+}
+
+// ====================================================
+// CRM KANBAN & LEADS COMERCIAIS
+// ====================================================
+
+model KanbanColumn {
+  id        String       @id @default(cuid())
+  name      String       // Ex: Novo Lead, Briefing, Proposta Enviada, Aprovado
+  order     Int          // Ordenação visual no board
+  color     String?      // Cor hexadecimal para visualização
+  isSystem  Boolean      @default(false)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  leads     Lead[]
+
+  @@map("kanban_columns")
+}
+
+model Lead {
+  id              String        @id @default(cuid())
+  columnId        String
+  column          KanbanColumn  @relation(fields: [columnId], references: [id])
+  title           String        // Ex: "Fachada Loja Tech - Letreiro Luminoso"
+  contactName     String
+  contactPhone    String
+  contactEmail    String?
+  source          LeadSource    @default(WEBSITE_FORM)
+  estimatedValue  Decimal?      @db.Decimal(12, 2)
+  priority        PriorityLevel @default(MEDIUM)
+  notes           String?       @db.Text
+  assignedToId    String?
+  assignedTo      User?         @relation(fields: [assignedToId], references: [id])
+  orderInColumn   Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  serviceOrders   ServiceOrder[]
+
+  @@map("leads")
+}
+
+// ====================================================
+// ORDENS DE SERVIÇO & FLUXO DE PRODUÇÃO INDUSTRIAL
+// ====================================================
+
+model ServiceOrder {
+  id               String         @id @default(cuid())
+  code             String         @unique // Ex: "OS-2026-0001"
+  customerId       String
+  customer         Customer       @relation(fields: [customerId], references: [id])
+  leadId           String?
+  lead             Lead?          @relation(fields: [leadId], references: [id])
+  createdById      String
+  createdBy        User           @relation("CreatedBy", fields: [createdById], references: [id])
+  title            String
+  description      String?        @db.Text
+  currentStage     OSStage        @default(BRIEFING_ARTWORK)
+  priority         PriorityLevel  @default(MEDIUM)
+  deadline         DateTime?
+  installationDate DateTime?
+  totalAmount      Decimal        @db.Decimal(12, 2)
+  discount         Decimal        @default(0.00) @db.Decimal(12, 2)
+  netAmount        Decimal        @db.Decimal(12, 2)
+  notes            String?        @db.Text
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  items            ServiceOrderItem[]
+  artworkProofs    ArtworkProof[]
+  invoices         Invoice[]
+  appointments     Appointment[]
+  stockMovements   StockMovement[]
+
+  @@map("service_orders")
+}
+
+model ServiceOrderItem {
+  id             String       @id @default(cuid())
+  serviceOrderId String
+  serviceOrder   ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  description    String       // Ex: "Letreiro Caixa Alta Acrílico com LED"
+  unit           String       // "un", "m²", etc.
+  quantity       Decimal      @db.Decimal(10, 2)
+  widthMeters    Decimal?     @db.Decimal(10, 3)
+  heightMeters   Decimal?     @db.Decimal(10, 3)
+  unitPrice      Decimal      @db.Decimal(12, 2)
+  totalPrice     Decimal      @db.Decimal(12, 2)
+
+  @@map("service_order_items")
+}
+
+model ArtworkProof {
+  id             String        @id @default(cuid())
+  serviceOrderId String
+  serviceOrder   ServiceOrder  @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  version        Int           @default(1)
+  title          String        // Ex: "Layout Fachada Versão 1"
+  fileUrl        String        // Link do PDF/Imagem no Storage
+  previewUrl     String        // Thumbnail para o portal
+  status         ArtworkStatus @default(PENDING_CUSTOMER_REVIEW)
+  customerNotes  String?       @db.Text
+  reviewedAt     DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@map("artwork_proofs")
+}
+
+// ====================================================
+// ESTOQUE DE MATERIAIS DE COMUNICAÇÃO VISUAL
+// ====================================================
+
+model StockItem {
+  id              String          @id @default(cuid())
+  name            String          // Ex: "Chapa ACM 3mm Prata Brilho", "Lona 440g Fosca"
+  sku             String          @unique
+  category        String          // "Chapas", "Lonas", "Adesivos", "Ferragens", "LEDs"
+  unit            StockUnit
+  currentQuantity Decimal         @db.Decimal(12, 3)
+  minQuantity     Decimal         @db.Decimal(12, 3) // Alerta de reposição
+  averageUnitCost Decimal         @db.Decimal(12, 2)
+  supplier        String?
+  location        String?         // Galpão A, Prateleira 2
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  movements       StockMovement[]
+
+  @@map("stock_items")
+}
+
+model StockMovement {
+  id             String        @id @default(cuid())
+  stockItemId    String
+  stockItem      StockItem     @relation(fields: [stockItemId], references: [id])
+  serviceOrderId String?
+  serviceOrder   ServiceOrder? @relation(fields: [serviceOrderId], references: [id])
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  type           MovementType
+  quantity       Decimal       @db.Decimal(12, 3)
+  unitCost       Decimal       @db.Decimal(12, 2)
+  totalCost      Decimal       @db.Decimal(12, 2)
+  notes          String?
+  createdAt      DateTime      @default(now())
+
+  @@map("stock_movements")
+}
+
+// ====================================================
+// MÓDULO FINANCEIRO, FATURAS E FLUXO DE CAIXA
+// ====================================================
+
+model Invoice {
+  id               String                 @id @default(cuid())
+  code             String                 @unique // Ex: "FAT-2026-0042"
+  serviceOrderId   String
+  serviceOrder     ServiceOrder           @relation(fields: [serviceOrderId], references: [id])
+  customerId       String
+  customer         Customer               @relation(fields: [customerId], references: [id])
+  amount           Decimal                @db.Decimal(12, 2)
+  dueDate          DateTime
+  paidDate         DateTime?
+  status           InvoiceStatus          @default(PENDING)
+  paymentMethod    PaymentMethod?
+  pixQrCodeBase64  String?                @db.Text
+  pixCopyPasteCode String?                @db.Text
+  pdfUrl           String?
+  notes            String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  transactions     FinancialTransaction[]
+
+  @@map("invoices")
+}
+
+model FinancialTransaction {
+  id          String                   @id @default(cuid())
+  invoiceId   String?
+  invoice     Invoice?                 @relation(fields: [invoiceId], references: [id])
+  type        FinancialTransactionType
+  category    String                   // "Vendas", "Fornecedores", "Salários", "Energia"
+  description String
+  amount      Decimal                  @db.Decimal(12, 2)
+  entryDate   DateTime                 @default(now())
+  bankAccount String?                  // Conta bancária / Caixa
+  receiptUrl  String?
+  createdAt   DateTime                 @default(now())
+
+  @@map("financial_transactions")
+}
+
+// ====================================================
+// AGENDAMENTOS E CALENDÁRIO DE CAMPO
+// ====================================================
+
+model Appointment {
+  id              String            @id @default(cuid())
+  title           String            // Ex: "Instalação Fachada Luminosa"
+  type            AppointmentType
+  status          AppointmentStatus @default(SCHEDULED)
+  customerId      String?
+  customer        Customer?         @relation(fields: [customerId], references: [id])
+  serviceOrderId  String?
+  serviceOrder    ServiceOrder?     @relation(fields: [serviceOrderId], references: [id])
+  scheduledAt     DateTime
+  durationMinutes Int               @default(60)
+  locationAddress String?
+  assignedTeam    String?           // Equipe de instaladores
+  notes           String?           @db.Text
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@map("appointments")
+}
+
+// ====================================================
+// PORTFÓLIO & BLOG AUTÔNOMO COM IA
+// ====================================================
+
+model PortfolioProject {
+  id             String    @id @default(cuid())
+  title          String
+  slug           String    @unique
+  category       String    // "Fachadas", "Envelopamento", "Luminosos", "Stands"
+  clientName     String?
+  description    String    @db.Text
+  featuredImage  String
+  galleryImages  String[]  // URLs adicionais
+  tags           String[]
+  isFeatured     Boolean   @default(false)
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("portfolio_projects")
+}
+
+model BlogPost {
+  id                String     @id @default(cuid())
+  title             String
+  slug              String     @unique
+  excerpt           String     @db.Text
+  contentMarkdown   String     @db.Text
+  coverImageUrl     String
+  imageAlt          String
+  imagePhotographer String?
+  status            PostStatus @default(PUBLISHED)
+  metaTitle         String
+  metaDescription   String
+  canonicalUrl      String?
+  tags              String[]
+  readingTimeMin    Int        @default(4)
+  viewCount         Int        @default(0)
+  publishedAt       DateTime   @default(now())
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@map("blog_posts")
+}
+
+// ====================================================
+// NOTIFICAÇÕES MULTICANAL (IN-APP & WHATSAPP)
+// ====================================================
+
+model Notification {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  message         String    @db.Text
+  linkUrl         String?
+  isRead          Boolean   @default(false)
+  sentViaWhatsapp Boolean   @default(false)
+  whatsappStatus  String?   // "SENT", "DELIVERED", "FAILED"
+  createdAt       DateTime  @default(now())
+
+  @@map("notifications")
+}

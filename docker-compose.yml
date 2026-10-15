@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: glessios_postgres_dev
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: glessios_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - glessios_pgdata:/var/lib/postgresql/data
+    networks:
+      - glessios_local_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: glessios_redis_dev
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - glessios_redisdata:/data
+    networks:
+      - glessios_local_net
+
+volumes:
+  glessios_pgdata:
+  glessios_redisdata:
+
+networks:
+  glessios_local_net:
+    driver: bridge
