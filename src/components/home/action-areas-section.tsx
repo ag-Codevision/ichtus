@@ -65,18 +65,16 @@ export function ActionAreasSection() {
   return (
     <section id="atuacao" className="py-24 bg-[#121316] border-b border-white/[0.08] relative scroll-mt-20 text-white">
       <div className="max-w-7xl mx-auto px-6">
-        {/* Cabeçalho */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
-          <div className="space-y-4 max-w-2xl">
-            <Badge variant="orange" className="font-semibold tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" />
-              Áreas de atuação
-            </Badge>
-            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
-              Como podemos te ajudar?
-            </h2>
-          </div>
-          <p className="text-base text-zinc-400 max-w-md leading-relaxed">
+        {/* Cabeçalho com subtítulo abaixo do título */}
+        <div className="max-w-3xl mb-16 space-y-4">
+          <Badge variant="orange" className="font-semibold tracking-wider">
+            <Sparkles className="w-3.5 h-3.5" />
+            Áreas de atuação
+          </Badge>
+          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
+            Como podemos te ajudar?
+          </h2>
+          <p className="text-base text-zinc-400 max-w-2xl leading-relaxed pt-1">
             Estrutura completa para atender às suas necessidades, desde a concepção de marca e web até a fabricação, logística e instalação final.
           </p>
         </div>

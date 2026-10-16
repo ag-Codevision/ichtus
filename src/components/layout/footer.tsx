@@ -155,9 +155,20 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
-          <p>© {new Date().getFullYear()} Glessios Gusso • Soluções e Design. Todos os direitos reservados.</p>
-          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+        <div className="pt-8 flex flex-col items-center justify-center text-center gap-3 text-xs text-zinc-500">
+          <p className="text-zinc-400">
+            Criado com 💜 por{" "}
+            <a
+              href="https://agenciacodevision.com.br"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-200 hover:text-[#FF650F] transition-colors font-semibold underline underline-offset-2"
+            >
+              Agência Codevision
+            </a>{" "}
+            © {new Date().getFullYear()} Icthus • Soluções e Design. Todos os direitos reservados.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 text-zinc-500">
             <Link href="/portal/login" className="hover:text-[#FF650F] transition-colors">
               Portal do Cliente
             </Link>
@@ -165,8 +176,6 @@ export function Footer() {
             <Link href="/admin/login" className="hover:text-[#FF650F] transition-colors">
               Acesso Administrativo
             </Link>
-            <span>•</span>
-            <span className="text-[#FF650F] font-mono">Glessios v2.0</span>
           </div>
         </div>
       </div>

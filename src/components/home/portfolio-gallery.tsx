@@ -177,18 +177,16 @@ export function PortfolioGallery() {
   return (
     <section id="portfolio" className="py-24 bg-white border-b border-zinc-200/90 relative scroll-mt-20 text-zinc-900">
       <div className="max-w-7xl mx-auto px-6">
-        {/* Cabeçalho da Seção */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
-          <div className="space-y-4 max-w-2xl">
-            <Badge variant="orange-light" className="font-semibold tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" />
-              Galeria de Soluções
-            </Badge>
-            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-zinc-900">
-              Nosso Portfolio
-            </h2>
-          </div>
-          <p className="text-sm md:text-base text-zinc-600 max-w-md">
+        {/* Cabeçalho da Seção com subtítulo abaixo do título */}
+        <div className="max-w-3xl mb-12 space-y-4">
+          <Badge variant="orange-light" className="font-semibold tracking-wider">
+            <Sparkles className="w-3.5 h-3.5" />
+            Galeria de Soluções
+          </Badge>
+          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-zinc-900">
+            Nosso Portfolio
+          </h2>
+          <p className="text-sm md:text-base text-zinc-600 max-w-2xl leading-relaxed pt-1">
             Cada cliente é único. Não nos contentamos com soluções genéricas: desenvolvemos projetos exclusivos com o que há de mais moderno.
           </p>
         </div>

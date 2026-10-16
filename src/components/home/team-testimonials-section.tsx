@@ -49,17 +49,16 @@ export function TeamTestimonialsSection() {
           ==================================================== */}
       <section id="equipe" className="py-24 border-b border-white/[0.08] relative scroll-mt-20">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
-            <div className="space-y-4 max-w-2xl">
-              <Badge variant="orange" className="font-semibold tracking-wider">
-                <Sparkles className="w-3.5 h-3.5" />
-                Liderança & Compromisso
-              </Badge>
-              <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
-                Nossa Equipe
-              </h2>
-            </div>
-            <p className="text-base text-zinc-400 max-w-md leading-relaxed">
+          {/* Cabeçalho com subtítulo abaixo do título */}
+          <div className="max-w-3xl mb-16 space-y-4">
+            <Badge variant="orange" className="font-semibold tracking-wider">
+              <Sparkles className="w-3.5 h-3.5" />
+              Liderança & Compromisso
+            </Badge>
+            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
+              Nossa Equipe
+            </h2>
+            <p className="text-base text-zinc-400 max-w-2xl leading-relaxed pt-1">
               Profissionais dedicados a pensar nas soluções mais inteligentes e funcionais para o seu negócio.
             </p>
           </div>
@@ -121,17 +120,16 @@ export function TeamTestimonialsSection() {
           ==================================================== */}
       <section id="depoimentos" className="py-24 border-b border-white/[0.08] relative scroll-mt-20">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
-            <div className="space-y-4 max-w-2xl">
-              <Badge variant="orange" className="font-semibold tracking-wider">
-                <Sparkles className="w-3.5 h-3.5" />
-                Depoimentos
-              </Badge>
-              <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
-                O que dizem nossos clientes
-              </h2>
-            </div>
-            <p className="text-base text-zinc-400 max-w-md leading-relaxed">
+          {/* Cabeçalho com subtítulo abaixo do título */}
+          <div className="max-w-3xl mb-16 space-y-4">
+            <Badge variant="orange" className="font-semibold tracking-wider">
+              <Sparkles className="w-3.5 h-3.5" />
+              Depoimentos
+            </Badge>
+            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
+              O que dizem nossos clientes
+            </h2>
+            <p className="text-base text-zinc-400 max-w-2xl leading-relaxed pt-1">
               A confiança e o relacionamento que construímos com cada parceiro é o nosso maior patrimônio.
             </p>
           </div>
