@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Menu, X, Sparkles, User } from "lucide-react";
+import { Menu, X, User } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export function Navbar() {
@@ -25,7 +25,6 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Rola suavemente até o elemento quando a rota carrega com hash (ex: vindo de /blog)
   React.useEffect(() => {
     if (typeof window !== "undefined" && window.location.hash) {
       const hash = window.location.hash;
@@ -55,131 +54,156 @@ export function Navbar() {
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? "bg-glessios-black/90 backdrop-blur-md border-b border-glessios-border-dark py-3.5 shadow-2xl"
-          : "bg-transparent py-5"
+          ? "bg-[#121316]/95 backdrop-blur-md border-b border-white/[0.08] py-3 shadow-[0_4px_20px_rgba(0,0,0,0.3)]"
+          : "bg-[#121316]/75 backdrop-blur-sm py-4 border-b border-white/[0.04]"
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-3 group py-1" aria-label="ICTHUS Soluções e Design">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-3 group py-1" aria-label="Glessios Soluções Visuais">
           <Image
             src="/logo-web.png"
-            alt="ICTHUS Soluções e Design"
-            width={200}
-            height={44}
+            alt="Glessios Soluções Visuais"
+            width={180}
+            height={40}
             priority
-            className="h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+            className="h-9 w-auto object-contain transition-transform duration-300 group-hover:scale-102"
           />
         </Link>
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8">
+        {/* Links Desktop */}
+        <nav className="hidden md:flex items-center gap-6 lg:gap-8">
           <Link
             href="/#solucoes"
             onClick={(e) => handleNavClick(e, "#solucoes")}
-            className="text-sm font-medium text-glessios-text-body hover:text-white transition-colors"
+            className="text-sm font-medium text-slate-300 hover:text-[#FF650F] transition-colors"
           >
             Soluções
           </Link>
           <Link
-            href="/#portfolio"
-            onClick={(e) => handleNavClick(e, "#portfolio")}
-            className="text-sm font-medium text-glessios-text-body hover:text-white transition-colors"
-          >
-            Portfólio
-          </Link>
-          <Link
             href="/#sobre"
             onClick={(e) => handleNavClick(e, "#sobre")}
-            className="text-sm font-medium text-glessios-text-body hover:text-white transition-colors"
+            className="text-sm font-medium text-slate-300 hover:text-[#FF650F] transition-colors"
           >
             Sobre Nós
           </Link>
           <Link
-            href="/#processo"
-            onClick={(e) => handleNavClick(e, "#processo")}
-            className="text-sm font-medium text-glessios-text-body hover:text-white transition-colors"
+            href="/#portfolio"
+            onClick={(e) => handleNavClick(e, "#portfolio")}
+            className="text-sm font-medium text-slate-300 hover:text-[#FF650F] transition-colors"
           >
-            Processo Fabril
+            Portfólio
+          </Link>
+          <Link
+            href="/#atuacao"
+            onClick={(e) => handleNavClick(e, "#atuacao")}
+            className="text-sm font-medium text-slate-300 hover:text-[#FF650F] transition-colors"
+          >
+            Áreas de Atuação
+          </Link>
+          <Link
+            href="/#servicos"
+            onClick={(e) => handleNavClick(e, "#servicos")}
+            className="text-sm font-medium text-slate-300 hover:text-[#FF650F] transition-colors"
+          >
+            Serviços
+          </Link>
+          <Link
+            href="/#contato"
+            onClick={(e) => handleNavClick(e, "#contato")}
+            className="text-sm font-medium text-slate-300 hover:text-[#FF650F] transition-colors"
+          >
+            Contato
           </Link>
           <Link
             href="/blog"
-            className="text-sm font-medium text-glessios-text-body hover:text-white transition-colors flex items-center gap-1.5"
+            className="text-sm font-medium text-slate-300 hover:text-[#FF650F] transition-colors flex items-center gap-1.5"
           >
-            Blog & IA
-            <span className="h-1.5 w-1.5 rounded-full bg-glessios-orange animate-pulse" />
+            Blog
+            <span className="h-1.5 w-1.5 rounded-full bg-[#FF650F] animate-pulse" />
           </Link>
         </nav>
 
-        {/* Action CTAs */}
+        {/* Ações */}
         <div className="hidden lg:flex items-center gap-3">
           <Link href="/portal/login">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <User className="w-4 h-4 text-glessios-orange" />
+            <Button variant="ghost" size="sm" className="gap-2 text-zinc-300 hover:text-white">
+              <User className="w-4 h-4 text-[#FF650F]" />
               Portal do Cliente
             </Button>
           </Link>
           <ThemeToggle />
         </div>
 
-        {/* Mobile menu trigger & ThemeToggle */}
+        {/* Menu mobile */}
         <div className="flex items-center gap-2 md:hidden">
           <ThemeToggle />
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="text-glessios-text-heading hover:text-glessios-orange p-2"
-            aria-label="Abrir menu móvel"
+            className="text-white hover:text-[#FF650F] p-2"
+            aria-label="Abrir menu"
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* Drawer Mobile */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-glessios-charcoal/95 backdrop-blur-xl border-b border-glessios-border-dark px-6 py-6 flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
+        <div className="md:hidden bg-[#121316]/98 backdrop-blur-xl border-b border-white/[0.08] px-6 py-6 flex flex-col gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
           <Link
             href="/#solucoes"
             onClick={(e) => handleNavClick(e, "#solucoes")}
-            className="text-base font-medium text-glessios-text-heading py-2"
+            className="text-base font-medium text-white py-2"
           >
             Soluções
           </Link>
           <Link
-            href="/#portfolio"
-            onClick={(e) => handleNavClick(e, "#portfolio")}
-            className="text-base font-medium text-glessios-text-heading py-2"
-          >
-            Portfólio
-          </Link>
-          <Link
             href="/#sobre"
             onClick={(e) => handleNavClick(e, "#sobre")}
-            className="text-base font-medium text-glessios-text-heading py-2"
+            className="text-base font-medium text-white py-2"
           >
             Sobre Nós
           </Link>
           <Link
-            href="/#processo"
-            onClick={(e) => handleNavClick(e, "#processo")}
-            className="text-base font-medium text-glessios-text-heading py-2"
+            href="/#portfolio"
+            onClick={(e) => handleNavClick(e, "#portfolio")}
+            className="text-base font-medium text-white py-2"
           >
-            Processo Fabril
+            Portfólio
+          </Link>
+          <Link
+            href="/#atuacao"
+            onClick={(e) => handleNavClick(e, "#atuacao")}
+            className="text-base font-medium text-white py-2"
+          >
+            Áreas de Atuação
+          </Link>
+          <Link
+            href="/#servicos"
+            onClick={(e) => handleNavClick(e, "#servicos")}
+            className="text-base font-medium text-white py-2"
+          >
+            Serviços
+          </Link>
+          <Link
+            href="/#contato"
+            onClick={(e) => handleNavClick(e, "#contato")}
+            className="text-base font-medium text-white py-2"
+          >
+            Contato
           </Link>
           <Link
             href="/blog"
             onClick={() => setMobileMenuOpen(false)}
-            className="text-base font-medium text-glessios-text-heading py-2 flex items-center justify-between"
+            className="text-base font-medium text-white py-2 flex items-center justify-between"
           >
-            Blog de Tendências
-            <span className="text-xs bg-glessios-orange/20 text-glessios-orange px-2 py-0.5 rounded-full">
-              IA Ativa
-            </span>
+            Blog
           </Link>
 
-          <div className="pt-4 border-t border-glessios-border-dark flex flex-col gap-3">
+          <div className="pt-4 border-t border-white/[0.08] flex flex-col gap-3">
             <Link href="/portal/login" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="secondary" className="w-full justify-center">
+              <Button variant="dark-secondary" className="w-full justify-center">
                 Portal do Cliente
               </Button>
             </Link>

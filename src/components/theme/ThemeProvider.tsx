@@ -13,13 +13,13 @@ interface ThemeContextType {
 const ThemeContext = React.createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = React.useState<Theme>("dark");
+  const [theme, setThemeState] = React.useState<Theme>("light");
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
-    // Recupera preferência do localStorage ou padrão dark
+    // Recupera preferência do localStorage ou padrão light
     const savedTheme = localStorage.getItem("glessios-theme") as Theme | null;
-    const initialTheme: Theme = savedTheme === "light" ? "light" : "dark";
+    const initialTheme: Theme = savedTheme ? savedTheme : "light";
 
     setThemeState(initialTheme);
     applyTheme(initialTheme);

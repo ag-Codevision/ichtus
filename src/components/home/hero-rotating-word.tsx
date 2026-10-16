@@ -11,29 +11,36 @@ const ROTATING_WORDS = [
   "Web",
 ];
 
+/**
+ * HeroRotatingWord — Inspirado no Rotating Text do React Bits com Mask Reveal.
+ * Transição vertical cinematográfica suave com desfoque de movimento e iluminação âmbar.
+ */
 export function HeroRotatingWord() {
   const [wordIndex, setWordIndex] = useState(0);
-  const [isExiting, setIsExiting] = useState(false);
+  const [stage, setStage] = useState<"entering" | "idle" | "exiting">("entering");
 
   useEffect(() => {
-    const currentWord = ROTATING_WORDS[wordIndex];
-    // Duração total da saída de todas as letras com seus delays
-    const exitDuration = currentWord.length * 30 + 400;
+    // 1. Entrada concluída após 600ms -> estado idle
+    const enterTimer = setTimeout(() => {
+      setStage("idle");
+    }, 600);
 
-    // Tempo em que a palavra permanece totalmente visível
-    const displayTimer = setTimeout(() => {
-      setIsExiting(true);
-
-      // Após a conclusão da rotação 3D de saída, avança para a próxima palavra
-      const nextTimer = setTimeout(() => {
-        setWordIndex((prev) => (prev + 1) % ROTATING_WORDS.length);
-        setIsExiting(false);
-      }, exitDuration);
-
-      return () => clearTimeout(nextTimer);
+    // 2. Transição de saída aos 2800ms
+    const exitTimer = setTimeout(() => {
+      setStage("exiting");
     }, 2800);
 
-    return () => clearTimeout(displayTimer);
+    // 3. Troca de palavra aos 3300ms
+    const nextTimer = setTimeout(() => {
+      setWordIndex((prev) => (prev + 1) % ROTATING_WORDS.length);
+      setStage("entering");
+    }, 3300);
+
+    return () => {
+      clearTimeout(enterTimer);
+      clearTimeout(exitTimer);
+      clearTimeout(nextTimer);
+    };
   }, [wordIndex]);
 
   const currentWord = ROTATING_WORDS[wordIndex];
@@ -41,78 +48,63 @@ export function HeroRotatingWord() {
   return (
     <>
       <style>{`
-        @keyframes letterFlipIn3D {
+        @keyframes rotatingWordIn {
           0% {
-            transform: rotateX(-90deg) translateY(20px) translateZ(-25px);
+            transform: translateY(100%);
             opacity: 0;
-            filter: blur(3px);
+            filter: blur(8px);
           }
-          70% {
-            transform: rotateX(12deg) translateY(-2px) translateZ(4px);
+          100% {
+            transform: translateY(0%);
+            opacity: 1;
+            filter: blur(0px);
+          }
+        }
+
+        @keyframes rotatingWordOut {
+          0% {
+            transform: translateY(0%);
             opacity: 1;
             filter: blur(0px);
           }
           100% {
-            transform: rotateX(0deg) translateY(0) translateZ(0);
-            opacity: 1;
-            filter: blur(0px);
-          }
-        }
-
-        @keyframes letterFlipOut3D {
-          0% {
-            transform: rotateX(0deg) translateY(0) translateZ(0);
-            opacity: 1;
-            filter: blur(0px);
-          }
-          100% {
-            transform: rotateX(90deg) translateY(-20px) translateZ(-25px);
+            transform: translateY(-100%);
             opacity: 0;
-            filter: blur(3px);
+            filter: blur(8px);
           }
         }
 
-        .letter-flip-in {
-          animation: letterFlipIn3D 0.55s cubic-bezier(0.25, 1, 0.5, 1) both;
+        .rotating-word-in {
+          animation: rotatingWordIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
-        .letter-flip-out {
-          animation: letterFlipOut3D 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+        .rotating-word-out {
+          animation: rotatingWordOut 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .rotating-word-idle {
+          transform: translateY(0%);
+          opacity: 1;
+          filter: blur(0px);
         }
       `}</style>
 
-      <span
-        className="inline-flex items-center align-middle"
-        style={{ perspective: "1000px" }}
-        aria-label={currentWord}
-      >
+      <span className="inline-block overflow-hidden align-baseline h-[1.2em] min-w-[150px] sm:min-w-[240px] md:min-w-[340px] relative select-none">
         <span
           key={wordIndex}
-          className="inline-flex items-center min-w-[200px] sm:min-w-[280px] md:min-w-[360px] py-1 select-none"
-          style={{ transformStyle: "preserve-3d" }}
+          className={`inline-block font-extrabold text-[#FF650F] ${
+            stage === "entering"
+              ? "rotating-word-in"
+              : stage === "exiting"
+              ? "rotating-word-out"
+              : "rotating-word-idle"
+          }`}
+          style={{
+            willChange: "transform, opacity, filter",
+            textShadow: "0 0 25px rgba(255, 101, 15, 0.45)",
+          }}
         >
-          {currentWord.split("").map((char, index) => {
-            const delay = isExiting ? index * 30 : index * 45;
-
-            return (
-              <span
-                key={`${wordIndex}-${index}`}
-                className={`inline-block text-transparent bg-clip-text bg-orange-gradient font-extrabold ${
-                  isExiting ? "letter-flip-out" : "letter-flip-in"
-                }`}
-                style={{
-                  animationDelay: `${delay}ms`,
-                  transformOrigin: "50% 50% -12px",
-                  transformStyle: "preserve-3d",
-                  backfaceVisibility: "hidden",
-                  willChange: "transform, opacity",
-                  textShadow: "0 0 35px rgba(255, 107, 0, 0.35)",
-                }}
-              >
-                {char === " " ? "\u00A0" : char}
-              </span>
-            );
-          })}
+          {currentWord}
         </span>
       </span>
     </>

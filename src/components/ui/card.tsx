@@ -16,10 +16,10 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-2xl bg-glessios-graphite p-6 transition-all duration-300",
-        bordered && "border border-glessios-border-dark",
+        "rounded-2xl bg-white dark:bg-slate-900 p-6 transition-all duration-300",
+        bordered && "border border-slate-200/90 dark:border-slate-800",
         hoverEffect &&
-          "hover:border-glessios-orange/40 hover:bg-glessios-graphite-hover hover:shadow-card-hover hover:-translate-y-1",
+          "hover:border-orange-300/80 dark:hover:border-orange-500/40 hover:shadow-[0_12px_30px_-8px_rgba(15,23,42,0.08)] hover:-translate-y-1",
         className
       )}
       {...props}
@@ -49,7 +49,7 @@ export function CardTitle({
   return (
     <h3
       className={cn(
-        "text-xl font-bold tracking-tight text-glessios-text-heading",
+        "text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100",
         className
       )}
       {...props}
@@ -65,7 +65,7 @@ export function CardDescription({
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn("text-sm text-glessios-text-body", className)} {...props}>
+    <p className={cn("text-sm text-slate-600 dark:text-slate-400 leading-relaxed", className)} {...props}>
       {children}
     </p>
   );
@@ -86,7 +86,7 @@ export function CardFooter({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("flex items-center pt-4 border-t border-glessios-border-dark", className)}
+      className={cn("flex items-center pt-4 border-t border-slate-100 dark:border-slate-800", className)}
       {...props}
     >
       {children}

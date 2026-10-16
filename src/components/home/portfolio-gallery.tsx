@@ -4,8 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { ArrowRight, X, ExternalLink, Sparkles, CheckCircle2, ChevronRight } from "lucide-react";
+import { ArrowRight, X, Sparkles, ChevronRight, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 export interface ProjectItem {
@@ -24,31 +23,30 @@ export interface ProjectItem {
 const SAMPLE_PROJECTS: ProjectItem[] = [
   {
     id: "proj-1",
-    title: "Fachada Estruturada em ACM & Letreiro LED — Tech Tower",
-    category: "Fachadas em ACM",
+    title: "Fachada Comercial Estruturada em ACM & Letreiro LED",
+    category: "Fachadas",
     clientName: "Tech Tower Empreendimentos",
-    location: "Curitiba, PR",
+    location: "Porto Alegre, RS",
     year: "2026",
     description:
       "Execução de 180m² de fachada em placas de ACM 4mm grafite escovado com usinagem em chanfro 45°, letras bloco em aço inox 304 escovado e retroiluminação indireta com fitas LED 6500K IP68.",
     materials: ["ACM Grafite 4mm", "Aço Inox 304", "LED 6500K Halo", "Estrutura Galvanizada"],
-    featuredImage: "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=1200&q=80",
+    featuredImage: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80",
     galleryImages: [
-      "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=1200&q=80",
       "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=1200&q=80",
     ],
   },
   {
     id: "proj-2",
-    title: "Letreiro Caixa Acrílico Cristal & Neon Glow — Boutique Lumina",
-    category: "Letreiros Luminosos",
-    clientName: "Grupo Lumina Óticas",
-    location: "Batel — Curitiba, PR",
+    title: "Letreiro Caixa Acrílico Cristal & Neon Glow",
+    category: "Letreiros",
+    clientName: "Boutique Lumina",
+    location: "Porto Alegre, RS",
     year: "2026",
     description:
       "Letras caixa de alto relevo usinadas a laser em acrílico cast 10mm cristal, laterais termoformadas e sistema ótico interno com difusores para eliminação de pontos quentes de LED.",
-    materials: ["Acrílico Cristal 10mm", "LED Branco Quente 3000K", "Módulos Injetados", "Acabamento Automotivo"],
+    materials: ["Acrílico Cristal 10mm", "LED Branco Quente 3000K", "Módulos Injetados"],
     featuredImage: "https://images.unsplash.com/photo-1518334792104-db78a16ac8b8?auto=format&fit=crop&w=1200&q=80",
     galleryImages: [
       "https://images.unsplash.com/photo-1518334792104-db78a16ac8b8?auto=format&fit=crop&w=1200&q=80",
@@ -57,52 +55,117 @@ const SAMPLE_PROJECTS: ProjectItem[] = [
   },
   {
     id: "proj-3",
-    title: "Pórtico Monolítico & Totem Iluminado — Auto Premium",
-    category: "Fachadas em ACM",
-    clientName: "Auto Premium Veículos",
-    location: "São José dos Pinhais, PR",
+    title: "Identidade Visual & Branding Corporativo",
+    category: "Design",
+    clientName: "Studio Aurora Criativo",
+    location: "Porto Alegre, RS",
     year: "2026",
     description:
-      "Pórtico autoportante de entrada com 8 metros de altura, revestido com ACM preto fosco e vermelho corporativo, complementado por totem tridimensional de 6 metros com lona tensionada backlight.",
-    materials: ["ACM Preto Fosco", "Lona Backlight 500g", "Estrutura Treliçada ART", "Fontes Blindadas 400W"],
-    featuredImage: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80",
+      "Desenvolvimento completo de logotipo, guia de marca, paleta cromática e papelaria institucional premium com laminação soft-touch e verniz localizado.",
+    materials: ["Manual de Marca", "Papelaria Corporativa", "Vetorização de Precisão"],
+    featuredImage: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1200&q=80",
     galleryImages: [
-      "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1200&q=80",
     ],
   },
   {
     id: "proj-4",
-    title: "Painel Ripado 3D em Router CNC — Clínica Alpha Med",
-    category: "Router CNC & Laser",
-    clientName: "Alpha Medicina Integrada",
-    location: "Ecoville — Curitiba, PR",
+    title: "Placas de Sinalização Arquitetônica em Inox Escovado",
+    category: "Placas",
+    clientName: "Centro Médico Jardim Botânico",
+    location: "Porto Alegre, RS",
     year: "2026",
     description:
-      "Recepção corporativa com painel ripado usinado em CNC em compensado naval impermeabilizado e logotipo vazado em acrílico ouro espelhado com fita de LED COB embutida.",
-    materials: ["Usinagem CNC Precisão", "Acrílico Dourado Espelhado", "LED COB Alta Fidelidade", "Compensado Naval"],
+      "Sinalização interna de salas e setores em placas de aço inoxidável escovado com gravação química de alta precisão e fixadores em tarugos de alumínio anodizado.",
+    materials: ["Aço Inox Escovado", "Gravação Química", "Tarugos Anodizados"],
+    featuredImage: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80",
+    galleryImages: [
+      "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80",
+    ],
+  },
+  {
+    id: "proj-5",
+    title: "Painel Decorativo Ripado Usinado em Router CNC",
+    category: "Painéis",
+    clientName: "Alpha Medicina Integrada",
+    location: "Porto Alegre, RS",
+    year: "2026",
+    description:
+      "Painel ripado tridimensional usinado em compensado naval impermeabilizado e logotipo vazado em acrílico ouro espelhado com iluminação embutida por fita LED COB.",
+    materials: ["Router CNC", "Acrílico Ouro Espelhado", "LED COB 3000K"],
     featuredImage: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1200&q=80",
     galleryImages: [
       "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=1200&q=80",
+    ],
+  },
+  {
+    id: "proj-6",
+    title: "Quadros Corporativos de Alta Definição & Acrílico",
+    category: "Quadros",
+    clientName: "Advocacia Silveira & Associados",
+    location: "Porto Alegre, RS",
+    year: "2026",
+    description:
+      "Coleção de quadros decorativos corporativos com impressão UV de alta definição sobre acrílico translúcido e molduras metálicas finas em preto fosco.",
+    materials: ["Impressão UV Direta", "Acrílico 5mm", "Moldura Alumínio Fosco"],
+    featuredImage: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=1200&q=80",
+    galleryImages: [
+      "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=1200&q=80",
+    ],
+  },
+  {
+    id: "proj-7",
+    title: "Troféus Personalizados em Metal e Acrílico Maciço",
+    category: "Troféus",
+    clientName: "Prêmio Destaque Empresarial RS",
+    location: "Porto Alegre, RS",
+    year: "2026",
+    description:
+      "Criação e confecção de 40 troféus comemorativos esculpidos a laser com camadas sobrepostas de acrílico cristal usinado e base em aço escovado com gravação personalizada.",
+    materials: ["Acrílico Maciço 15mm", "Base Aço Escovado", "Corte Laser Preciso"],
+    featuredImage: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80",
+    galleryImages: [
+      "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80",
+    ],
+  },
+  {
+    id: "proj-8",
+    title: "Pórtico Monolítico & Totem Iluminado",
+    category: "Outros",
+    clientName: "Auto Premium Concessionária",
+    location: "Porto Alegre, RS",
+    year: "2026",
+    description:
+      "Pórtico autoportante de entrada com 8 metros de altura, complementado por totem tridimensional de 6 metros com lona tensionada backlight e pintura automotiva.",
+    materials: ["ACM Preto Fosco", "Lona Backlight 500g", "Pintura PU"],
+    featuredImage: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80",
+    galleryImages: [
+      "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80",
     ],
   },
 ];
 
 const CATEGORIES = [
-  "Todas",
-  "Fachadas em ACM",
-  "Letreiros Luminosos",
-  "Router CNC & Laser",
+  "Tudo",
+  "Design",
+  "Letreiros",
+  "Placas",
+  "Painéis",
+  "Quadros",
+  "Troféus",
+  "Fachadas",
+  "Outros",
 ];
 
+import { SpotlightCard } from "@/components/ui/spotlight-card";
+
 export function PortfolioGallery() {
-  const [activeCategory, setActiveCategory] = useState("Todas");
+  const [activeCategory, setActiveCategory] = useState("Tudo");
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
 
   const filteredProjects =
-    activeCategory === "Todas"
+    activeCategory === "Tudo"
       ? SAMPLE_PROJECTS
       : SAMPLE_PROJECTS.filter((p) => p.category === activeCategory);
 
@@ -112,34 +175,34 @@ export function PortfolioGallery() {
   };
 
   return (
-    <section id="portfolio" className="py-24 bg-glessios-black border-b border-glessios-border-dark relative scroll-mt-20">
+    <section id="portfolio" className="py-24 bg-white border-b border-zinc-200/90 relative scroll-mt-20 text-zinc-900">
       <div className="max-w-7xl mx-auto px-6">
         {/* Cabeçalho da Seção */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
-          <div className="space-y-4">
-            <Badge variant="orange" className="font-semibold tracking-wider">
+          <div className="space-y-4 max-w-2xl">
+            <Badge variant="orange-light" className="font-semibold tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
-              Obras & Projetos Executados
+              Galeria de Soluções
             </Badge>
-            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-glessios-text-heading">
-              Artesania industrial sob medida
+            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-zinc-900">
+              Nosso Portfolio
             </h2>
           </div>
-          <p className="text-sm md:text-base text-glessios-text-body max-w-md">
-            Cada projeto combina cálculo estrutural, materiais nobres e acabamento minucioso para máxima imponência e longevidade da sua marca.
+          <p className="text-sm md:text-base text-zinc-600 max-w-md">
+            Cada cliente é único. Não nos contentamos com soluções genéricas: desenvolvemos projetos exclusivos com o que há de mais moderno.
           </p>
         </div>
 
-        {/* Filtros por Categoria com microinterações */}
-        <div className="flex flex-wrap items-center gap-3 mb-10 pb-4 border-b border-glessios-border-dark">
+        {/* Filtros por Categoria solicitados na nova copy */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-10 pb-4 border-b border-zinc-200">
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`px-5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
+              className={`px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer ${
                 activeCategory === cat
-                  ? "bg-orange-gradient text-white shadow-orange-glow border border-glessios-border-orange"
-                  : "bg-glessios-graphite text-glessios-text-body hover:text-white hover:bg-glessios-graphite-hover border border-glessios-border-dark"
+                  ? "bg-[#FF650F] text-white shadow-sm"
+                  : "bg-zinc-100 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200 border border-zinc-200/80"
               }`}
             >
               {cat}
@@ -147,86 +210,81 @@ export function PortfolioGallery() {
           ))}
         </div>
 
-        {/* Grid de Projetos do Portfólio */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Grid de Projetos do Portfólio com Spotlight nos Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredProjects.map((project) => (
-            <div
+            <SpotlightCard
               key={project.id}
+              isDark={false}
               onClick={() => handleOpenModal(project)}
-              className="group cursor-pointer rounded-2xl bg-glessios-graphite border border-glessios-border-dark overflow-hidden transition-all duration-300 hover:border-glessios-orange/50 hover:shadow-card-hover hover:-translate-y-1.5 flex flex-col"
+              className="group cursor-pointer rounded-2xl bg-white border border-zinc-200/90 overflow-hidden transition-all duration-300 hover:border-[#FF650F]/50 hover:shadow-lg hover:-translate-y-1 flex flex-col h-full"
             >
-              {/* Imagem do Projeto com Overlay de Gradiente */}
-              <div className="relative h-64 sm:h-80 w-full overflow-hidden bg-glessios-charcoal">
+              {/* Imagem do Projeto */}
+              <div className="relative h-60 w-full overflow-hidden bg-zinc-100">
                 <Image
                   src={project.featuredImage}
                   alt={project.title}
                   fill
                   className="object-cover transition-transform duration-700 group-hover:scale-105"
-                  sizes="(max-width: 768px) 100vw, 50vw"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-glessios-graphite via-transparent to-transparent opacity-90" />
                 <div className="absolute top-4 left-4 flex gap-2">
-                  <Badge variant="graphite" className="bg-glessios-black/75 backdrop-blur-md text-white text-[10px]">
+                  <Badge variant="graphite" className="bg-[#121316]/85 backdrop-blur-md text-white text-[10px]">
                     {project.category}
                   </Badge>
-                  <Badge variant="orange" className="bg-glessios-orange/90 text-white text-[10px] border-none font-bold">
+                  <Badge variant="orange" className="bg-[#FF650F] text-white text-[10px] border-none font-bold">
                     {project.year}
                   </Badge>
                 </div>
               </div>
 
-              {/* Informações e Tags do Projeto */}
+              {/* Informações */}
               <div className="p-6 flex flex-col flex-grow justify-between space-y-4">
                 <div>
-                  <span className="text-xs text-glessios-orange font-mono tracking-wider uppercase">
-                    {project.clientName} — {project.location}
+                  <span className="text-xs text-[#FF650F] font-mono tracking-wider uppercase font-semibold">
+                    {project.clientName}
                   </span>
-                  <h3 className="text-xl font-bold text-glessios-text-heading group-hover:text-white transition-colors mt-1">
+                  <h3 className="text-lg font-bold text-zinc-900 group-hover:text-[#FF650F] transition-colors mt-1">
                     {project.title}
                   </h3>
-                  <p className="text-xs sm:text-sm text-glessios-text-body mt-2 line-clamp-2 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-zinc-600 mt-2 line-clamp-2 leading-relaxed">
                     {project.description}
                   </p>
                 </div>
 
-                <div className="pt-4 border-t border-glessios-border-dark flex items-center justify-between">
+                <div className="pt-4 border-t border-zinc-100 flex items-center justify-between">
                   <div className="flex flex-wrap gap-1.5">
                     {project.materials.slice(0, 2).map((mat, i) => (
-                      <span key={i} className="text-[10px] bg-white/[0.05] text-glessios-text-body px-2.5 py-1 rounded-md">
+                      <span key={i} className="text-[10px] bg-zinc-100 border border-zinc-200/60 text-zinc-600 px-2.5 py-1 rounded-md font-medium">
                         {mat}
                       </span>
                     ))}
-                    {project.materials.length > 2 && (
-                      <span className="text-[10px] text-glessios-orange self-center font-medium">
-                        +{project.materials.length - 2} materiais
-                      </span>
-                    )}
                   </div>
-                  <span className="text-xs font-semibold text-glessios-orange flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                    Ver Detalhes
+                  <span className="text-xs font-semibold text-[#FF650F] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                    Ver
                     <ChevronRight className="w-4 h-4" />
                   </span>
                 </div>
               </div>
-            </div>
+            </SpotlightCard>
           ))}
         </div>
       </div>
 
-      {/* Modal / Lightbox Interativo do Projeto */}
+      {/* Modal / Lightbox Interativo */}
       {selectedProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-4xl bg-glessios-graphite border border-glessios-border-orange/60 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            {/* Botão de Fechar */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-4xl bg-[#18191D] border border-orange-500/40 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Botão Fechar */}
             <button
               onClick={() => setSelectedProject(null)}
-              className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-glessios-black/80 text-white hover:text-glessios-orange border border-white/10 flex items-center justify-center transition-colors"
+              className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-[#121316]/80 text-white hover:text-[#FF650F] border border-white/10 flex items-center justify-center transition-colors cursor-pointer"
               aria-label="Fechar modal"
             >
               <X className="w-5 h-5" />
             </button>
 
-            {/* Imagem Principal Ampliada */}
+            {/* Imagem Principal */}
             <div className="relative h-72 sm:h-96 w-full bg-black shrink-0">
               <Image
                 src={selectedProject.galleryImages[activeImageIdx] || selectedProject.featuredImage}
@@ -235,78 +293,55 @@ export function PortfolioGallery() {
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 80vw"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-glessios-graphite via-transparent to-transparent opacity-80" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#18191D] via-transparent to-transparent opacity-80" />
             </div>
 
-            {/* Miniaturas de Fotos Adicionais */}
-            {selectedProject.galleryImages.length > 1 && (
-              <div className="flex gap-2 px-6 -mt-8 z-10 overflow-x-auto pb-2">
-                {selectedProject.galleryImages.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveImageIdx(idx)}
-                    className={`relative w-20 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
-                      activeImageIdx === idx ? "border-glessios-orange scale-105 shadow-orange-glow" : "border-white/20 opacity-70"
-                    }`}
-                  >
-                    <Image src={img} alt="Thumbnail" fill className="object-cover" sizes="80px" />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Detalhamento Técnico e Materiais */}
+            {/* Detalhes Técnicos */}
             <div className="p-6 sm:p-8 overflow-y-auto space-y-6">
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="orange">{selectedProject.category}</Badge>
-                  <span className="text-xs text-glessios-text-body font-mono">
+                  <span className="text-xs text-zinc-400 font-mono">
                     {selectedProject.clientName} • {selectedProject.location}
                   </span>
                 </div>
-                <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
+                <h3 className="text-2xl font-extrabold text-white">
                   {selectedProject.title}
                 </h3>
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="text-xs uppercase tracking-wider font-bold text-glessios-orange">
-                  Memorial Descritivo do Projeto
-                </h4>
-                <p className="text-sm text-glessios-text-body leading-relaxed">
+                <p className="text-sm text-zinc-300 mt-3 leading-relaxed">
                   {selectedProject.description}
                 </p>
               </div>
 
               <div>
-                <h4 className="text-xs uppercase tracking-wider font-bold text-glessios-text-heading mb-3">
-                  Especificação Técnica de Materiais Utilizados
+                <h4 className="text-xs uppercase tracking-wider font-bold text-white mb-2">
+                  Materiais & Especificações:
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-wrap gap-2">
                   {selectedProject.materials.map((mat, i) => (
-                    <div
+                    <span
                       key={i}
-                      className="flex items-center gap-2.5 p-3 rounded-xl bg-glessios-charcoal border border-glessios-border-dark text-xs text-white"
+                      className="text-xs bg-[#121316] px-3 py-1.5 rounded-lg border border-white/[0.08] text-zinc-300 flex items-center gap-1.5"
                     >
-                      <CheckCircle2 className="w-4 h-4 text-glessios-orange shrink-0" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#FF650F]" />
                       {mat}
-                    </div>
+                    </span>
                   ))}
                 </div>
               </div>
 
-              {/* Ação de Conversão Direta no Modal */}
-              <div className="pt-4 border-t border-glessios-border-dark flex flex-col sm:flex-row items-center justify-between gap-4">
-                <span className="text-xs text-glessios-text-body text-center sm:text-left">
-                  Deseja uma solução com este padrão para seu estabelecimento?
-                </span>
-                <Link
-                  href={`#orcamento`}
-                  onClick={() => setSelectedProject(null)}
-                  className="w-full sm:w-auto"
-                >
-                  <Button variant="primary" size="md" className="w-full sm:w-auto gap-2">
-                    Solicitar Projeto Semelhante
+              <div className="pt-4 border-t border-white/[0.08] flex items-center justify-between">
+                <Button variant="ghost" size="sm" onClick={() => setSelectedProject(null)}>
+                  Fechar
+                </Button>
+                <Link href="/#contato">
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={() => setSelectedProject(null)}
+                    className="gap-2"
+                  >
+                    Solicitar Orçamento Similar
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>

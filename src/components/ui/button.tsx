@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "outline" | "ghost" | "ivory";
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "ivory" | "dark-secondary" | "outline-dark";
   size?: "sm" | "md" | "lg" | "icon";
   isLoading?: boolean;
 }
@@ -34,25 +34,33 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     const variantStyles = {
-      // Laranja vibrante com gradiente de alta energia e glow controlado
+      // Laranja vibrante com alta legibilidade e acabamento limpo
       primary:
-        "bg-orange-gradient text-white shadow-orange-glow hover:shadow-orange-glow-lg hover:brightness-105 border border-glessios-border-orange",
+        "bg-[#FF650F] hover:bg-[#EA580C] text-white shadow-sm hover:shadow-md transition-all font-semibold active:scale-[0.99] btn-shine-effect",
       
-      // Graphite escuro editorial
+      // Superfície neutra suave (para seções claras)
       secondary:
-        "bg-glessios-graphite text-glessios-text-heading hover:bg-glessios-graphite-hover border border-glessios-border-dark hover:border-glessios-border-dark-hover",
+        "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 border border-zinc-200/80 transition-all font-medium",
       
-      // Outline refinado com transição de borda para laranja
+      // Superfície grafite para seções escuras
+      "dark-secondary":
+        "bg-white/[0.08] text-white hover:bg-white/[0.14] border border-white/15 hover:border-white/30 backdrop-blur-sm transition-all font-medium",
+
+      // Outline refinado claro
       outline:
-        "bg-transparent text-glessios-text-heading border border-glessios-border-dark hover:border-glessios-orange hover:text-white hover:bg-glessios-orange/10",
+        "bg-transparent text-zinc-700 hover:text-[#FF650F] border border-zinc-300 hover:border-[#FF650F] hover:bg-orange-50/40 transition-all font-medium",
       
+      // Outline refinado para seções escuras
+      "outline-dark":
+        "bg-transparent text-zinc-200 hover:text-white border border-white/20 hover:border-white/40 hover:bg-white/[0.06] transition-all font-medium",
+
       // Ghost sem fundo
       ghost:
-        "bg-transparent text-glessios-text-body hover:text-glessios-text-heading hover:bg-white/[0.05]",
+        "bg-transparent text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-all",
       
-      // Variante clara para seções Ivory
+      // Variante corporativa sóbria
       ivory:
-        "bg-glessios-black text-white hover:bg-glessios-charcoal shadow-sm",
+        "bg-zinc-900 text-white hover:bg-zinc-800 shadow-sm transition-all font-semibold",
     };
 
     return (

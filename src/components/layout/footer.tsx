@@ -4,130 +4,169 @@ import { ArrowUpRight, Mail, MapPin, Phone } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="bg-glessios-charcoal border-t border-glessios-border-dark pt-16 pb-12 text-glessios-text-body">
+    <footer className="bg-[#0E0F11] text-zinc-400 border-t border-white/[0.08] pt-16 pb-12">
       <div className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-glessios-border-dark">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-white/[0.08]">
           {/* Coluna 1: Marca & Visão */}
           <div className="lg:col-span-2 flex flex-col space-y-4">
-            <Link href="/" className="inline-block group py-1" aria-label="ICTHUS Soluções e Design">
+            <Link href="/" className="inline-block group py-1" aria-label="Glessios Soluções Visuais">
               <Image
                 src="/logo-web.png"
-                alt="ICTHUS Soluções e Design"
-                width={200}
-                height={44}
-                className="h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                alt="Glessios Soluções Visuais"
+                width={180}
+                height={40}
+                className="h-9 w-auto object-contain transition-transform duration-300 group-hover:scale-102"
               />
             </Link>
-            <p className="text-sm text-glessios-text-body max-w-sm leading-relaxed">
-              Engenharia visual e manufatura de alto padrão para empresas que exigem destaque. Fachadas estruturadas, letreiros luminosos e sinalização corporativa de impacto.
+            <p className="text-sm text-zinc-400 max-w-sm leading-relaxed">
+              Nosso trabalho é pensar em soluções, deixe-nos te ajudar. Atendimento exclusivo, com inovação e modernidade para cada cliente.
             </p>
-            <div className="pt-2 flex items-center gap-4 text-xs text-glessios-text-body">
+            <p className="text-xs font-serif italic text-zinc-300">
+              « Não existem clientes ou trabalhos pequenos, cada cliente é único e especial! »
+            </p>
+            <div className="pt-2 flex items-center gap-4 text-xs text-zinc-400">
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                Fábrica Operando em Capacidade Plena
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Atendimento Ativo — Porto Alegre & Todo o Brasil
               </span>
             </div>
           </div>
 
           {/* Coluna 2: Soluções */}
           <div className="flex flex-col space-y-3">
-            <h4 className="text-sm font-bold uppercase tracking-wider text-glessios-text-heading">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white">
               Soluções
             </h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/#solucoes" className="hover:text-glessios-orange transition-colors">
-                  Fachadas em ACM
+                <Link href="/#portfolio" className="hover:text-[#FF650F] transition-colors">
+                  Design & Marcas
                 </Link>
               </li>
               <li>
-                <Link href="/#solucoes" className="hover:text-glessios-orange transition-colors">
-                  Letreiros Luminosos LED
+                <Link href="/#portfolio" className="hover:text-[#FF650F] transition-colors">
+                  Letreiros Luminosos
                 </Link>
               </li>
               <li>
-                <Link href="/#solucoes" className="hover:text-glessios-orange transition-colors">
-                  Corte CNC Router & Laser
+                <Link href="/#portfolio" className="hover:text-[#FF650F] transition-colors">
+                  Placas & Painéis
                 </Link>
               </li>
               <li>
-                <Link href="/#solucoes" className="hover:text-glessios-orange transition-colors">
-                  Impressão Digital UV
+                <Link href="/#portfolio" className="hover:text-[#FF650F] transition-colors">
+                  Quadros & Troféus
                 </Link>
               </li>
               <li>
-                <Link href="/#solucoes" className="hover:text-glessios-orange transition-colors">
-                  Envelopamento de Frotas
+                <Link href="/#portfolio" className="hover:text-[#FF650F] transition-colors">
+                  Fachadas Comerciais
+                </Link>
+              </li>
+              <li>
+                <Link href="/#servicos" className="hover:text-[#FF650F] transition-colors">
+                  Consultoria & Gerenciamento
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Coluna 3: Plataforma & Acessos */}
+          {/* Coluna 3: Navegação */}
           <div className="flex flex-col space-y-3">
-            <h4 className="text-sm font-bold uppercase tracking-wider text-glessios-text-heading">
-              Plataforma
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white">
+              Navegação
             </h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/portal/login" className="hover:text-glessios-orange transition-colors flex items-center gap-1">
+                <Link href="/#solucoes" className="hover:text-[#FF650F] transition-colors">
+                  Nossas Soluções
+                </Link>
+              </li>
+              <li>
+                <Link href="/#sobre" className="hover:text-[#FF650F] transition-colors">
+                  Sobre Nós & Valores
+                </Link>
+              </li>
+              <li>
+                <Link href="/#atuacao" className="hover:text-[#FF650F] transition-colors">
+                  Áreas de Atuação
+                </Link>
+              </li>
+              <li>
+                <Link href="/#equipe" className="hover:text-[#FF650F] transition-colors">
+                  Nossa Equipe
+                </Link>
+              </li>
+              <li>
+                <Link href="/#depoimentos" className="hover:text-[#FF650F] transition-colors">
+                  Depoimentos
+                </Link>
+              </li>
+              <li>
+                <Link href="/portal/login" className="hover:text-[#FF650F] transition-colors flex items-center gap-1">
                   Portal do Cliente
                   <ArrowUpRight className="w-3.5 h-3.5" />
                 </Link>
               </li>
-              <li>
-                <Link href="/admin/login" className="hover:text-glessios-orange transition-colors">
-                  Painel de Gestão ERP
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog" className="hover:text-glessios-orange transition-colors">
-                  Blog de Tendências IA
-                </Link>
-              </li>
-              <li>
-                <Link href="/#orcamento" className="hover:text-glessios-orange transition-colors">
-                  Solicitação de Visita Técnica
-                </Link>
-              </li>
             </ul>
           </div>
 
-          {/* Coluna 4: Contato & Localização */}
+          {/* Coluna 4: Contato Direto */}
           <div className="flex flex-col space-y-3">
-            <h4 className="text-sm font-bold uppercase tracking-wider text-glessios-text-heading">
-              Contato Direto
+            <h4 className="text-xs font-bold uppercase tracking-wider text-white">
+              Entre em Contato
             </h4>
             <div className="space-y-2.5 text-sm">
               <div className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-glessios-orange shrink-0 mt-0.5" />
-                <span>Curitiba e Região Metropolitana — PR</span>
+                <MapPin className="w-4 h-4 text-[#FF650F] shrink-0 mt-0.5" />
+                <span>
+                  Rua Buenos Aires, 437 / 203<br />
+                  Jardim Botânico / Porto Alegre / RS<br />
+                  CEP: 90670-130 / Brasil
+                </span>
               </div>
               <div className="flex items-center gap-2.5">
-                <Phone className="w-4 h-4 text-glessios-orange shrink-0" />
-                <span>(41) 99999-9999</span>
+                <Phone className="w-4 h-4 text-[#FF650F] shrink-0" />
+                <a href="https://wa.me/5551981192976" className="hover:text-[#FF650F] transition-colors">
+                  +55 51 98119.2976 (w)
+                </a>
               </div>
               <div className="flex items-center gap-2.5">
-                <Mail className="w-4 h-4 text-glessios-orange shrink-0" />
-                <span>contato@icthus.com.br</span>
+                <Phone className="w-4 h-4 text-[#FF650F] shrink-0" />
+                <a href="tel:+555135746167" className="hover:text-[#FF650F] transition-colors">
+                  55 51 3574.6167
+                </a>
+              </div>
+              <div className="flex flex-col gap-1 pt-1">
+                <div className="flex items-center gap-2.5">
+                  <Mail className="w-4 h-4 text-[#FF650F] shrink-0" />
+                  <a href="mailto:glessios@hotmail.com" className="hover:text-[#FF650F] transition-colors">
+                    glessios@hotmail.com
+                  </a>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Mail className="w-4 h-4 text-[#FF650F] shrink-0" />
+                  <a href="mailto:glessios@gmail.com" className="hover:text-[#FF650F] transition-colors">
+                    glessios@gmail.com
+                  </a>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Linha Inferior de Direitos & Assinatura */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-glessios-text-body/80 gap-4">
-          <p>© {new Date().getFullYear()} ICTHUS Soluções e Design. Todos os direitos reservados.</p>
+        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
+          <p>© {new Date().getFullYear()} Glessios Gusso • Soluções e Design. Todos os direitos reservados.</p>
           <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-            <Link href="/portal/login" className="hover:text-glessios-orange transition-colors">
+            <Link href="/portal/login" className="hover:text-[#FF650F] transition-colors">
               Portal do Cliente
             </Link>
-            <span className="text-glessios-border-dark">•</span>
-            <Link href="/admin/login" className="hover:text-glessios-orange transition-colors">
+            <span>•</span>
+            <Link href="/admin/login" className="hover:text-[#FF650F] transition-colors">
               Acesso Administrativo
             </Link>
-            <span className="text-glessios-border-dark">•</span>
-            <span className="text-glessios-orange font-mono">Plataforma v1.0.0</span>
+            <span>•</span>
+            <span className="text-[#FF650F] font-mono">Glessios v2.0</span>
           </div>
         </div>
       </div>

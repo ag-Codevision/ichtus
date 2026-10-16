@@ -3,33 +3,31 @@
 @tailwind utilities;
 
 :root {
-  --bg-deep-black: #0B0C0D;
-  --bg-charcoal: #111214;
-  --bg-graphite: #1B1B1D;
-  --bg-graphite-hover: #252527;
+  --bg-main: #121316;
+  --bg-surface: #F8F9FA;
+  --bg-card: #FFFFFF;
   --color-orange: #FF650F;
-  --color-orange-hover: #FF781B;
-  --color-ivory: #F7F5F2;
-  --text-heading: #F8F7F5;
-  --text-body: #B4B1AE;
-  --border-subtle: rgba(255, 255, 255, 0.08);
+  --color-orange-hover: #EA580C;
+  --text-heading: #121316;
+  --text-body: #4B5058;
+  --text-muted: #717680;
+  --border-subtle: #E5E7EB;
+  --border-card: rgba(229, 231, 235, 0.9);
 }
 
-/* ====================================================
-   MODO CLARO (LIGHT THEME) — Variáveis e Adaptações
-   ==================================================== */
-html.light,
-:root[data-theme="light"] {
-  --bg-deep-black: #F8F9FA;
-  --bg-charcoal: #FFFFFF;
-  --bg-graphite: #FFFFFF;
-  --bg-graphite-hover: #F1F3F5;
+/* Modo escuro opcional caso o usuário ative no toggle */
+html.dark,
+:root[data-theme="dark"] {
+  --bg-main: #121316;
+  --bg-surface: #18191D;
+  --bg-card: #1B1C20;
   --color-orange: #FF650F;
   --color-orange-hover: #FF781B;
-  --color-ivory: #FFFFFF;
-  --text-heading: #0F172A;
-  --text-body: #475569;
-  --border-subtle: rgba(0, 0, 0, 0.08);
+  --text-heading: #FFFFFF;
+  --text-body: #D1D5DB;
+  --text-muted: #9CA3AF;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-card: rgba(255, 255, 255, 0.1);
 }
 
 * {
@@ -37,7 +35,7 @@ html.light,
 }
 
 html {
-  background-color: var(--bg-deep-black);
+  background-color: var(--bg-main);
   color: var(--text-body);
   scroll-behavior: smooth;
   text-rendering: optimizeLegibility;
@@ -49,158 +47,250 @@ body {
   min-height: 100vh;
   margin: 0;
   overflow-x: hidden;
-  background-color: var(--bg-deep-black);
+  background-color: var(--bg-main);
   color: var(--text-body);
+  font-family: var(--font-manrope), var(--font-inter), system-ui, -apple-system, sans-serif;
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 /* Custom Selection */
 ::selection {
-  background-color: #FF650F;
-  color: #FFFFFF;
+  background-color: #FFEDD5;
+  color: #C2410C;
 }
 
-/* Custom Scrollbar - Dark Mode */
+/* Scrollbar Clean */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-deep-black);
+  background: #F1F5F9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #252527;
+  background: #CBD5E1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #FF650F;
+  background: #94A3B8;
 }
 
-/* Custom Scrollbar - Light Mode */
-html.light ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+/* Grid Arquitetônico de Fundo Minimalista */
+.architectural-grid {
+  background-image: 
+    linear-gradient(to right, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
 }
 
-html.light ::-webkit-scrollbar-thumb:hover {
-  background: #FF650F;
-}
-
-/* Utilitários Visuais Cinematográficos */
-.editorial-glow-orange {
-  box-shadow: 0 0 50px -10px rgba(255, 101, 15, 0.4);
-}
-
-.editorial-card {
-  background-color: #1B1B1D;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* Card Clean com Sombra Arquitetônica */
+.clean-card {
+  background-color: #FFFFFF;
+  border: 1px solid var(--border-card);
+  box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.05);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.editorial-card:hover {
+.clean-card:hover {
   border-color: rgba(255, 101, 15, 0.35);
-  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6), 0 0 20px -5px rgba(255, 101, 15, 0.15);
+  box-shadow: 0 12px 30px -8px rgba(15, 23, 42, 0.08);
   transform: translateY(-2px);
 }
 
-.orange-gradient-btn {
-  background: linear-gradient(115deg, #FF5D09 0%, #FF6B12 55%, #FA6B17 100%);
-  color: #FFFFFF !important;
+/* Botão Laranja Profissional */
+.clean-btn-primary {
+  background-color: #FF650F;
+  color: #FFFFFF;
   font-weight: 600;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px -2px rgba(255, 101, 15, 0.4);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.orange-gradient-btn:hover {
-  box-shadow: 0 0 25px 0 rgba(255, 101, 15, 0.5);
+.clean-btn-primary:hover {
+  background-color: #EA580C;
+  box-shadow: 0 6px 16px -4px rgba(255, 101, 15, 0.45);
   transform: translateY(-1px);
 }
 
-/* ====================================================
-   SOBREPOSIÇÕES EXCLUSIVAS DO MODO CLARO (LIGHT THEME)
-   ==================================================== */
-
-html.light body {
-  background-color: #F8F9FA !important;
-  color: #475569 !important;
+.clean-btn-primary:active {
+  transform: translateY(0);
 }
 
-html.light .bg-glessios-black {
-  background-color: #F8F9FA !important;
+/* =======================================================================
+   CINEMATIC HERO & MOTION KEYFRAMES (AWWWARDS / LINEAR / APPLE STANDARD)
+   ======================================================================= */
+
+@keyframes heroAtmosphereIn {
+  0% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
 }
 
-html.light .bg-glessios-charcoal {
-  background-color: #FFFFFF !important;
+@keyframes heroMaskRevealUp {
+  0% {
+    transform: translateY(105%);
+    opacity: 0;
+    filter: blur(8px);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0%);
+    opacity: 1;
+    filter: blur(0px);
+  }
 }
 
-html.light .bg-glessios-graphite {
-  background-color: #FFFFFF !important;
-  border-color: rgba(0, 0, 0, 0.08) !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+@keyframes heroFadeElevate {
+  0% {
+    transform: translateY(18px);
+    opacity: 0;
+    filter: blur(4px);
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+    filter: blur(0px);
+  }
 }
 
-html.light .bg-glessios-graphite-hover:hover {
-  background-color: #F1F5F9 !important;
+@keyframes heroSculptureArrival {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(24px);
+    filter: blur(10px) brightness(0.6);
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0px) brightness(1);
+  }
 }
 
-html.light .text-glessios-text-heading {
-  color: #0F172A !important;
+@keyframes laserProgressScan {
+  0% {
+    left: 0%;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
 }
 
-html.light .text-glessios-text-body {
-  color: #475569 !important;
+@keyframes shineSweep {
+  0% {
+    transform: translateX(-150%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(250%) skewX(-20deg);
+  }
 }
 
-html.light .border-glessios-border-dark,
-html.light .border-white\/10,
-html.light .border-white\/5 {
-  border-color: rgba(0, 0, 0, 0.08) !important;
+/* Classes Utilitárias da Coreografia Cinematográfica da Hero */
+.animate-hero-atmosphere {
+  animation: heroAtmosphereIn 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-html.light .editorial-card {
-  background-color: #FFFFFF !important;
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
-  box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.04);
+.animate-hero-badge {
+  animation: heroFadeElevate 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
 }
 
-html.light .editorial-card:hover {
-  border-color: rgba(255, 101, 15, 0.45) !important;
-  box-shadow: 0 12px 25px -4px rgba(0, 0, 0, 0.08), 0 0 15px -3px rgba(255, 101, 15, 0.15) !important;
+.animate-hero-headline-1 {
+  animation: heroMaskRevealUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.38s both;
 }
 
-/* Navbar e Cabeçalhos com Backdrop Blur no Modo Claro */
-html.light header.bg-glessios-black\/90,
-html.light .bg-glessios-black\/90,
-html.light .bg-glessios-black\/80 {
-  background-color: rgba(255, 255, 255, 0.92) !important;
-  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+.animate-hero-headline-2 {
+  animation: heroMaskRevealUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.48s both;
 }
 
-/* Links e Menus de Navegação no Modo Claro */
-html.light nav a.text-glessios-text-body {
-  color: #475569 !important;
+.animate-hero-supporting {
+  animation: heroFadeElevate 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.68s both;
 }
 
-html.light nav a.text-glessios-text-body:hover {
-  color: #0F172A !important;
+.animate-hero-cta {
+  animation: heroFadeElevate 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.88s both;
 }
 
-/* Modais e Painéis Flutuantes no Modo Claro */
-html.light .bg-glessios-charcoal\/80 {
-  background-color: rgba(255, 255, 255, 0.85) !important;
+.animate-hero-metrics {
+  animation: heroFadeElevate 0.75s cubic-bezier(0.16, 1, 0.3, 1) 1.05s both;
 }
 
-/* Inputs e Campos de Formulário no Modo Claro */
-html.light input:not([type="checkbox"]):not([type="radio"]),
-html.light select,
-html.light textarea {
-  background-color: #FFFFFF !important;
-  color: #0F172A !important;
-  border-color: #CBD5E1 !important;
+.animate-hero-sculpture {
+  animation: heroSculptureArrival 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
 }
 
-html.light input::placeholder,
-html.light textarea::placeholder {
-  color: #94A3B8 !important;
+/* Efeito Shine Reflexivo nos Botões Primários */
+.btn-shine-effect {
+  position: relative;
+  overflow: hidden;
 }
+
+.btn-shine-effect::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.32),
+    transparent
+  );
+  transform: translateX(-150%) skewX(-20deg);
+  pointer-events: none;
+}
+
+.btn-shine-effect:hover::after {
+  animation: shineSweep 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Indicador de corte e faísca a laser industrial */
+.laser-cut-indicator {
+  position: relative;
+}
+
+.laser-cut-indicator::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 4px;
+  background: #FFFFFF;
+  box-shadow: 0 0 12px 3px rgba(255, 120, 27, 0.9), 0 0 4px #FFFFFF;
+  border-radius: 9999px;
+  animation: laserProgressScan 2.8s ease-in-out infinite;
+}
+
+/* Respeito estrito a Acessibilidade (prefers-reduced-motion) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

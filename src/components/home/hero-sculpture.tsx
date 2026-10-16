@@ -263,19 +263,6 @@ export function HeroSculpture() {
           style={{ transform: "translateZ(28px)" }}
         />
       </div>
-
-      {/* Floating Badge Técnico com Efeito Acrílico e LED */}
-      <div className="absolute -bottom-2 sm:-bottom-4 right-2 sm:right-6 bg-glessios-graphite/90 backdrop-blur-md border border-glessios-border-orange/60 px-4 py-2.5 rounded-2xl flex items-center gap-3 shadow-orange-glow/20 z-30 transition-transform hover:scale-105">
-        <span className="w-2.5 h-2.5 rounded-full bg-glessios-orange animate-ping shrink-0" />
-        <div className="flex flex-col text-left">
-          <span className="text-[10px] uppercase tracking-wider text-glessios-text-body font-medium">
-            Comunicação Visual Premium
-          </span>
-          <span className="text-xs font-extrabold text-white font-mono flex items-center gap-1.5">
-            Acrílico Cortado a Laser • Halo LED
-          </span>
-        </div>
-      </div>
     </div>
   );
 }

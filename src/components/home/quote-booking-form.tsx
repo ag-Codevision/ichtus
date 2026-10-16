@@ -3,16 +3,18 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import {
   ArrowRight,
   CheckCircle2,
-  Calendar,
-  Building2,
   Phone,
   Mail,
+  MapPin,
   User,
   Sparkles,
   MessageSquare,
+  Building2,
+  Calendar,
 } from "lucide-react";
 
 export function QuoteBookingForm() {
@@ -20,7 +22,7 @@ export function QuoteBookingForm() {
     contactName: "",
     contactPhone: "",
     contactEmail: "",
-    serviceType: "Fachada Comercial em ACM",
+    serviceType: "Design & Identidade Visual",
     notes: "",
     wantVisit: false,
     visitDate: "",
@@ -41,8 +43,8 @@ export function QuoteBookingForm() {
         contactName: formData.contactName,
         contactPhone: formData.contactPhone,
         contactEmail: formData.contactEmail || null,
-        notes: `Tipo de Solução: ${formData.serviceType}\nDetalhes do Projeto: ${formData.notes}`,
-        estimatedValue: formData.serviceType.includes("Fachada") ? 8500 : 3800,
+        notes: `Serviço Solicitado: ${formData.serviceType}\nDetalhes: ${formData.notes}`,
+        estimatedValue: formData.serviceType.includes("Fachada") ? 8500 : 3500,
       };
 
       if (formData.wantVisit && formData.visitDate) {
@@ -59,223 +61,342 @@ export function QuoteBookingForm() {
       if (res.ok && data.success) {
         setIsSuccess(true);
       } else {
-        setErrorMessage(data.error || "Ocorreu um erro ao enviar sua solicitação.");
+        setErrorMessage(data.error || "Ocorreu um erro ao enviar sua mensagem.");
       }
     } catch {
-      setErrorMessage("Erro de conexão com o servidor. Tente novamente.");
+      setErrorMessage("Erro ao conectar com o servidor. Tente novamente ou chame no WhatsApp.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto rounded-3xl bg-glessios-graphite border border-glessios-border-orange/50 p-8 sm:p-10 shadow-2xl relative overflow-hidden">
-      {/* Luz ambiente de fundo */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-glessios-orange/10 blur-[80px] pointer-events-none -z-10" />
+    <div id="contato" className="scroll-mt-24 text-white">
+      {/* Título da Seção */}
+      <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
+        <Badge variant="orange" className="font-semibold tracking-wider">
+          <Sparkles className="w-3.5 h-3.5" />
+          Fale Conosco
+        </Badge>
+        <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
+          Entre em contato
+        </h2>
+        <p className="text-sm sm:text-base text-zinc-400">
+          Nosso trabalho é pensar em soluções, deixe-nos te ajudar. Retornamos com rapidez e atenção dedicada.
+        </p>
+      </div>
 
-      {isSuccess ? (
-        <div className="text-center py-10 space-y-6 animate-in fade-in duration-300">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-8 h-8" />
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
-              Solicitação Enviada com Sucesso!
-            </h3>
-            <p className="text-sm text-glessios-text-body max-w-md mx-auto leading-relaxed">
-              Recebemos suas especificações. Seu projeto já entrou em nossa esteira de engenharia e você receberá uma confirmação no WhatsApp <span className="text-glessios-orange font-semibold">{formData.contactPhone}</span>.
-            </p>
-          </div>
-
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <LinkToWhatsApp phone={formData.contactPhone} name={formData.contactName} />
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => {
-                setIsSuccess(false);
-                setFormData({
-                  contactName: "",
-                  contactPhone: "",
-                  contactEmail: "",
-                  serviceType: "Fachada Comercial em ACM",
-                  notes: "",
-                  wantVisit: false,
-                  visitDate: "",
-                });
-              }}
-            >
-              Enviar Outro Orçamento
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2 text-center sm:text-left">
-            <Badge variant="orange" className="text-xs">
-              <Sparkles className="w-3.5 h-3.5" />
-              Atendimento Técnico Direto
-            </Badge>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
-              Solicite seu Orçamento & Estudo 3D
-            </h3>
-            <p className="text-xs sm:text-sm text-glessios-text-body">
-              Preencha os dados abaixo. Retornamos com estudo preliminar e estimativa de investimento em até 24h.
-            </p>
-          </div>
-
-          {errorMessage && (
-            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
-              {errorMessage}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-glessios-text-heading flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-glessios-orange" />
-                Seu Nome / Empresa *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.contactName}
-                onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
-                placeholder="Ex: João da Silva / Loja Tech"
-                className="w-full px-4 py-3 rounded-xl bg-glessios-charcoal border border-glessios-border-dark text-white text-sm focus:outline-none focus:border-glessios-orange focus:ring-1 focus:ring-glessios-orange transition-all"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-glessios-text-heading flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-glessios-orange" />
-                WhatsApp para Contato *
-              </label>
-              <input
-                type="tel"
-                required
-                value={formData.contactPhone}
-                onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                placeholder="(41) 99999-9999"
-                className="w-full px-4 py-3 rounded-xl bg-glessios-charcoal border border-glessios-border-dark text-white text-sm focus:outline-none focus:border-glessios-orange focus:ring-1 focus:ring-glessios-orange transition-all"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-glessios-text-heading flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-glessios-orange" />
-                E-mail Corporativo
-              </label>
-              <input
-                type="email"
-                value={formData.contactEmail}
-                onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-                placeholder="contato@empresa.com.br"
-                className="w-full px-4 py-3 rounded-xl bg-glessios-charcoal border border-glessios-border-dark text-white text-sm focus:outline-none focus:border-glessios-orange focus:ring-1 focus:ring-glessios-orange transition-all"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-glessios-text-heading flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-glessios-orange" />
-                Tipo de Solução
-              </label>
-              <select
-                value={formData.serviceType}
-                onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl bg-glessios-charcoal border border-glessios-border-dark text-white text-sm focus:outline-none focus:border-glessios-orange focus:ring-1 focus:ring-glessios-orange transition-all"
-              >
-                <option value="Fachada Comercial em ACM">Fachada Comercial em ACM</option>
-                <option value="Letreiro Luminoso LED / Neon">Letreiro Luminoso LED / Neon</option>
-                <option value="Corte Router CNC / Laser">Corte Router CNC / Laser</option>
-                <option value="Totem Publicitário & Pórtico">Totem Publicitário & Pórtico</option>
-                <option value="Envelopamento de Frota">Envelopamento de Frota</option>
-                <option value="Sinalização Arquitetônica Interna">Sinalização Arquitetônica Interna</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Opção de Agendamento de Visita Técnica */}
-          <div className="p-4 rounded-xl bg-glessios-charcoal border border-glessios-border-dark space-y-3">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.wantVisit}
-                onChange={(e) => setFormData({ ...formData, wantVisit: e.target.checked })}
-                className="w-4 h-4 rounded text-glessios-orange focus:ring-glessios-orange bg-glessios-graphite border-glessios-border-dark"
-              />
-              <span className="text-xs sm:text-sm font-semibold text-white flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-glessios-orange" />
-                Desejo agendar visita técnica prévia de medição no local
-              </span>
-            </label>
-
-            {formData.wantVisit && (
-              <div className="pt-2 animate-in fade-in duration-200">
-                <label className="text-[11px] uppercase tracking-wider text-glessios-text-body block mb-1">
-                  Data e Horário Preferencial:
-                </label>
-                <input
-                  type="datetime-local"
-                  required={formData.wantVisit}
-                  value={formData.visitDate}
-                  onChange={(e) => setFormData({ ...formData, visitDate: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-lg bg-glessios-graphite border border-glessios-border-dark text-white text-xs focus:outline-none focus:border-glessios-orange"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Descrição e Medidas */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-glessios-text-heading flex items-center gap-1.5">
-              <MessageSquare className="w-3.5 h-3.5 text-glessios-orange" />
-              Medidas Aproximadas ou Detalhes da Ideia
-            </label>
-            <textarea
-              rows={3}
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Ex: Fachada de 6x3 metros, cor grafite com letras caixa em acrílico iluminadas..."
-              className="w-full px-4 py-3 rounded-xl bg-glessios-charcoal border border-glessios-border-dark text-white text-sm placeholder:text-glessios-text-body/40 focus:outline-none focus:border-glessios-orange focus:ring-1 focus:ring-glessios-orange transition-all"
-            />
-          </div>
-
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            isLoading={isLoading}
-            className="w-full gap-2 text-base font-bold shadow-orange-glow"
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Painel da Esquerda: Dados de Contato Direto */}
+        <div className="lg:col-span-5 space-y-6">
+          <SpotlightCard
+            isDark={true}
+            className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] space-y-6 shadow-xl"
           >
-            Enviar Solicitação para Engenharia
-            <ArrowRight className="w-5 h-5" />
-          </Button>
-        </form>
-      )}
+            <h3 className="text-xl font-extrabold text-white pb-3 border-b border-white/[0.08]">
+              Canais Diretos de Atendimento
+            </h3>
+
+            {/* Telefones & WhatsApp */}
+            <div className="space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-[#FF650F] flex items-center justify-center text-white shrink-0 shadow-md">
+                  <Phone className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs uppercase font-bold tracking-wider text-[#FF650F]">
+                    WhatsApp (Atendimento Rápido)
+                  </span>
+                  <a
+                    href="https://wa.me/5551981192976"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-base sm:text-lg font-extrabold text-white hover:text-[#FF650F] transition-colors"
+                  >
+                    +55 51 98119.2976 (w)
+                  </a>
+                  <a
+                    href="tel:+555135746167"
+                    className="block text-sm text-zinc-400 hover:text-white transition-colors mt-0.5"
+                  >
+                    55 51 3574.6167
+                  </a>
+                </div>
+              </div>
+
+              {/* Endereço */}
+              <div className="flex items-start gap-4 pt-3 border-t border-white/[0.08]">
+                <div className="w-10 h-10 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center text-[#FF650F] shrink-0">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs uppercase font-bold tracking-wider text-zinc-400">
+                    Endereço
+                  </span>
+                  <p className="text-sm font-semibold text-white mt-0.5">
+                    Rua Buenos Aires, 437 / 203
+                  </p>
+                  <p className="text-xs text-zinc-400">
+                    Jardim Botânico / Porto Alegre / RS
+                  </p>
+                  <p className="text-xs text-[#FF650F] font-mono mt-0.5">
+                    CEP: 90670-130 / Brasil
+                  </p>
+                </div>
+              </div>
+
+              {/* E-mails */}
+              <div className="flex items-start gap-4 pt-3 border-t border-white/[0.08]">
+                <div className="w-10 h-10 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center text-[#FF650F] shrink-0">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs uppercase font-bold tracking-wider text-zinc-400">
+                    E-mails
+                  </span>
+                  <a
+                    href="mailto:glessios@hotmail.com"
+                    className="block text-sm font-semibold text-white hover:text-[#FF650F] transition-colors mt-0.5"
+                  >
+                    glessios@hotmail.com
+                  </a>
+                  <a
+                    href="mailto:glessios@gmail.com"
+                    className="block text-sm font-semibold text-white hover:text-[#FF650F] transition-colors"
+                  >
+                    glessios@gmail.com
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Botão WhatsApp */}
+            <div className="pt-2">
+              <a
+                href="https://wa.me/5551981192976?text=Ol%C3%A1!%20Gostaria%20de%20saber%20mais%20sobre%20as%20solu%C3%A7%C3%B5es%20da%20Glessios."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg transition-all"
+              >
+                Conversar pelo WhatsApp
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            </div>
+          </SpotlightCard>
+        </div>
+
+        {/* Painel da Direita: Formulário */}
+        <div className="lg:col-span-7">
+          <SpotlightCard
+            isDark={true}
+            className="rounded-3xl bg-[#18191D] border border-white/[0.08] p-8 sm:p-10 shadow-2xl relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/10 blur-[80px] pointer-events-none -z-10" />
+
+            {isSuccess ? (
+              <div className="text-center py-10 space-y-6 animate-in fade-in duration-300">
+                <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
+                    Mensagem Enviada com Sucesso!
+                  </h3>
+                  <p className="text-sm text-zinc-300 max-w-md mx-auto leading-relaxed">
+                    Agradecemos seu contato, <span className="text-white font-semibold">{formData.contactName}</span>. Retornaremos em breve no número <span className="text-[#FF650F] font-semibold">{formData.contactPhone}</span>.
+                  </p>
+                </div>
+
+                <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <a
+                    href={`https://wa.me/5551981192976?text=Ol%C3%A1,%20meu%20nome%20%C3%A9%20${encodeURIComponent(formData.contactName)}%20e%20acabei%20de%20enviar%20uma%20mensagem%20pelo%20site.`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow transition-all"
+                  >
+                    Confirmar no WhatsApp
+                    <ArrowRight className="w-4 h-4" />
+                  </a>
+                  <Button
+                    variant="outline-dark"
+                    size="md"
+                    onClick={() => {
+                      setIsSuccess(false);
+                      setFormData({
+                        contactName: "",
+                        contactPhone: "",
+                        contactEmail: "",
+                        serviceType: "Design & Identidade Visual",
+                        notes: "",
+                        wantVisit: false,
+                        visitDate: "",
+                      });
+                    }}
+                  >
+                    Enviar Outra Mensagem
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-1">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-white">
+                    Envie sua mensagem
+                  </h3>
+                  <p className="text-xs sm:text-sm text-zinc-400">
+                    Preencha os campos abaixo e entraremos em contato.
+                  </p>
+                </div>
+
+                {errorMessage && (
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+                    {errorMessage}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="contactName" className="text-xs font-semibold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-[#FF650F]" />
+                      Seu Nome / Empresa *
+                    </label>
+                    <input
+                      id="contactName"
+                      name="contactName"
+                      type="text"
+                      required
+                      value={formData.contactName}
+                      onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+                      placeholder="Ex: João da Silva / Loja Tech"
+                      className="w-full px-4 py-3 rounded-xl bg-[#121316] border border-white/[0.08] text-white text-sm focus:outline-none focus:border-[#FF650F] focus:ring-1 focus:ring-[#FF650F] transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="contactPhone" className="text-xs font-semibold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-[#FF650F]" />
+                      WhatsApp para Contato *
+                    </label>
+                    <input
+                      id="contactPhone"
+                      name="contactPhone"
+                      type="tel"
+                      required
+                      value={formData.contactPhone}
+                      onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                      placeholder="(51) 98119-2976"
+                      className="w-full px-4 py-3 rounded-xl bg-[#121316] border border-white/[0.08] text-white text-sm focus:outline-none focus:border-[#FF650F] focus:ring-1 focus:ring-[#FF650F] transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="contactEmail" className="text-xs font-semibold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-[#FF650F]" />
+                      E-mail
+                    </label>
+                    <input
+                      id="contactEmail"
+                      name="contactEmail"
+                      type="email"
+                      value={formData.contactEmail}
+                      onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                      placeholder="seuemail@exemplo.com"
+                      className="w-full px-4 py-3 rounded-xl bg-[#121316] border border-white/[0.08] text-white text-sm focus:outline-none focus:border-[#FF650F] focus:ring-1 focus:ring-[#FF650F] transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="serviceType" className="text-xs font-semibold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-[#FF650F]" />
+                      Área de Interesse
+                    </label>
+                    <select
+                      id="serviceType"
+                      name="serviceType"
+                      value={formData.serviceType}
+                      onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl bg-[#121316] border border-white/[0.08] text-white text-sm focus:outline-none focus:border-[#FF650F] focus:ring-1 focus:ring-[#FF650F] transition-all"
+                    >
+                      <option value="Design & Identidade Visual">Design & Identidade Visual</option>
+                      <option value="Letreiros Luminosos & Caixa Alta">Letreiros Luminosos & Caixa Alta</option>
+                      <option value="Fachadas Comerciais em ACM">Fachadas Comerciais em ACM</option>
+                      <option value="Placas & Sinalização Arquitetônica">Placas & Sinalização Arquitetônica</option>
+                      <option value="Painéis & Router CNC">Painéis & Router CNC</option>
+                      <option value="Quadros Decorativos">Quadros Decorativos</option>
+                      <option value="Troféus Personalizados">Troféus Personalizados</option>
+                      <option value="Consultoria & Otimização de Custos">Consultoria & Otimização de Custos</option>
+                      <option value="Gerenciamento de Projetos">Gerenciamento de Projetos</option>
+                      <option value="Produtos Web & Presença Digital">Produtos Web & Presença Digital</option>
+                      <option value="Outros Serviços">Outros Serviços</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="notes" className="text-xs font-semibold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+                    <MessageSquare className="w-3.5 h-3.5 text-[#FF650F]" />
+                    Como podemos te ajudar? (Mensagem)
+                  </label>
+                  <textarea
+                    id="notes"
+                    name="notes"
+                    rows={3}
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Descreva seu projeto, ideias ou necessidades..."
+                    className="w-full px-4 py-3 rounded-xl bg-[#121316] border border-white/[0.08] text-white text-sm placeholder:text-zinc-500 focus:outline-none focus:border-[#FF650F] focus:ring-1 focus:ring-[#FF650F] transition-all"
+                  />
+                </div>
+
+                {/* Opção de Reunião ou Medição */}
+                <div className="p-3.5 rounded-xl bg-[#121316] border border-white/[0.08] space-y-2">
+                  <label htmlFor="wantVisit" className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      id="wantVisit"
+                      name="wantVisit"
+                      type="checkbox"
+                      checked={formData.wantVisit}
+                      onChange={(e) => setFormData({ ...formData, wantVisit: e.target.checked })}
+                      className="w-4 h-4 rounded text-[#FF650F] focus:ring-[#FF650F] bg-[#18191D] border-white/20"
+                    />
+                    <span className="text-xs font-semibold text-white flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5 text-[#FF650F]" />
+                      Gostaria de agendar uma reunião ou medição no local
+                    </span>
+                  </label>
+
+                  {formData.wantVisit && (
+                    <div className="pt-2">
+                      <input
+                        type="datetime-local"
+                        required={formData.wantVisit}
+                        value={formData.visitDate}
+                        onChange={(e) => setFormData({ ...formData, visitDate: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg bg-[#18191D] border border-white/[0.08] text-white text-xs focus:outline-none focus:border-[#FF650F]"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Botão Enviar solicitado na copy */}
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  isLoading={isLoading}
+                  className="w-full gap-2 text-base font-bold shadow-lg"
+                >
+                  Enviar
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
+              </form>
+            )}
+          </SpotlightCard>
+        </div>
+      </div>
     </div>
-  );
-}
-
-function LinkToWhatsApp({ phone, name }: { phone: string; name: string }) {
-  const cleanPhone = phone.replace(/\D/g, "");
-  const target = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
-  const text = encodeURIComponent(
-    `Olá! Sou ${name}, acabei de solicitar um orçamento para fachada pelo site e gostaria de conversar.`
-  );
-
-  return (
-    <a
-      href={`https://wa.me/5541999999999?text=${text}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg transition-all"
-    >
-      Conversar Agora pelo WhatsApp
-      <ArrowRight className="w-4 h-4" />
-    </a>
   );
 }
