@@ -29,8 +29,8 @@ export function SpotlightCard({
   const [opacity, setOpacity] = useState<number>(0);
 
   const defaultColor = isDark
-    ? "rgba(255, 101, 15, 0.12)"
-    : "rgba(255, 101, 15, 0.08)";
+    ? "rgba(255, 101, 15, 0.04)"
+    : "rgba(255, 101, 15, 0.03)";
 
   const color = spotlightColor || defaultColor;
 
@@ -58,33 +58,32 @@ export function SpotlightCard({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={cn(
-        "relative overflow-hidden rounded-2xl transition-all duration-300",
+        "relative overflow-hidden transition-all duration-300",
         className
       )}
       {...props}
     >
-      {/* Camada do Spotlight seguindo o cursor */}
+      {/* Camada difusa do Spotlight seguindo o cursor (sem manchas duras) */}
       <div
-        className="pointer-events-none absolute -inset-px transition-opacity duration-300 z-10"
+        className="pointer-events-none absolute inset-0 rounded-[inherit] transition-opacity duration-300 z-10"
         style={{
           opacity,
-          background: `radial-gradient(${spotlightSize}px circle at ${position.x}px ${position.y}px, ${color}, transparent 80%)`,
+          background: `radial-gradient(${spotlightSize}px circle at ${position.x}px ${position.y}px, ${color}, transparent 65%)`,
         }}
       />
       
-      {/* Borda reflexiva iluminada pelo spotlight */}
+      {/* Borda reflexiva orgânica com precisão de cantos */}
       <div
-        className="pointer-events-none absolute inset-0 rounded-2xl transition-opacity duration-300 z-20"
+        className="pointer-events-none absolute inset-0 rounded-[inherit] transition-opacity duration-300 z-20"
         style={{
           opacity,
-          maskImage: "linear-gradient(black, black) content-box, linear-gradient(black, black)",
-          WebkitMaskImage: "linear-gradient(black, black) content-box, linear-gradient(black, black)",
-          maskComposite: "exclude",
-          WebkitMaskComposite: "xor",
-          padding: "1px",
+          border: "1px solid transparent",
           background: `radial-gradient(${spotlightSize * 0.75}px circle at ${position.x}px ${position.y}px, ${
-            isDark ? "rgba(255, 120, 27, 0.45)" : "rgba(255, 101, 15, 0.35)"
-          }, transparent 70%)`,
+            isDark ? "rgba(255, 101, 15, 0.35)" : "rgba(255, 101, 15, 0.25)"
+          }, transparent 70%) border-box`,
+          WebkitMask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
+          WebkitMaskComposite: "xor",
+          maskComposite: "exclude",
         }}
       />
 

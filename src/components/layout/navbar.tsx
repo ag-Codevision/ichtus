@@ -6,22 +6,26 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Menu, X, User } from "lucide-react";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = React.useState(false);
+  const [scrollProgress, setScrollProgress] = React.useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const pathname = usePathname();
 
   React.useEffect(() => {
     const handleScroll = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = totalHeight > 0 ? (window.scrollY / totalHeight) * 100 : 0;
+      setScrollProgress(progress);
+
       if (window.scrollY > 20) {
         setIsScrolled(true);
       } else {
         setIsScrolled(false);
       }
     };
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -132,12 +136,10 @@ export function Navbar() {
               Portal do Cliente
             </Button>
           </Link>
-          <ThemeToggle />
         </div>
 
         {/* Menu mobile */}
         <div className="flex items-center gap-2 md:hidden">
-          <ThemeToggle />
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="text-white hover:text-[#FF650F] p-2"
@@ -147,6 +149,12 @@ export function Navbar() {
           </button>
         </div>
       </div>
+
+      {/* Barra de Progresso de Scroll Cinematográfica Ultrafina */}
+      <div
+        className="absolute bottom-0 left-0 h-[2px] bg-gradient-to-r from-[#FF650F] via-amber-400 to-[#FF650F] transition-all duration-100 ease-out pointer-events-none"
+        style={{ width: `${scrollProgress}%`, opacity: scrollProgress > 0.5 ? 1 : 0 }}
+      />
 
       {/* Drawer Mobile */}
       {mobileMenuOpen && (

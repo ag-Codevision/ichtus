@@ -89,10 +89,10 @@ export function HeroRotatingWord() {
         }
       `}</style>
 
-      <span className="inline-block overflow-hidden align-baseline h-[1.2em] min-w-[150px] sm:min-w-[240px] md:min-w-[340px] relative select-none">
+      <span className="inline-flex items-baseline overflow-hidden align-baseline h-[1.12em] min-w-[150px] sm:min-w-[240px] md:min-w-[340px] relative select-none">
         <span
           key={wordIndex}
-          className={`inline-block font-extrabold text-[#FF650F] ${
+          className={`inline-block font-extrabold text-[#FF650F] leading-none ${
             stage === "entering"
               ? "rotating-word-in"
               : stage === "exiting"

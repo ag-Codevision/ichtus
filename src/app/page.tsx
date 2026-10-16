@@ -2,6 +2,9 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { HeroSculpture } from "@/components/home/hero-sculpture";
 import { HeroRotatingWord } from "@/components/home/hero-rotating-word";
+import { HeroParallaxContainer } from "@/components/home/hero-parallax-container";
+import { MagneticButton } from "@/components/ui/magnetic-button";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { SolutionsIntroSection } from "@/components/home/solutions-intro-section";
 import { AboutMissionSection } from "@/components/home/about-mission-section";
 import { PortfolioGallery } from "@/components/home/portfolio-gallery";
@@ -21,9 +24,9 @@ export default function HomePage() {
 
       <main className="flex-grow pt-20">
         {/* ====================================================
-            1. HERO SECTION (COPY DA HERO 100% INALTERADA)
+            1. HERO SECTION (EXPERIÊNCIA CINEMATOGRÁFICA INTERATIVA)
             ==================================================== */}
-        <section className="relative overflow-hidden pt-12 pb-20 md:pt-16 md:pb-28 bg-[#121316] text-white border-b border-white/[0.08]">
+        <HeroParallaxContainer className="overflow-hidden pt-12 pb-20 md:pt-16 md:pb-28 bg-[#121316] text-white border-b border-white/[0.08]">
           {/* Vídeo Cinematográfico de Fundo */}
           <video
             autoPlay
@@ -41,8 +44,14 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-r from-[#121316]/95 via-[#121316]/75 to-[#121316]/45 pointer-events-none z-[1]" />
           <div className="absolute inset-0 bg-gradient-to-b from-[#121316]/85 via-transparent to-[#121316] pointer-events-none z-[1]" />
 
-          {/* Suave iluminação quente de fundo */}
-          <div className="absolute top-1/4 right-1/4 w-[500px] h-[300px] bg-orange-500/15 blur-[130px] rounded-full pointer-events-none z-[1]" />
+          {/* Suave iluminação quente com resposta ao cursor */}
+          <div
+            className="absolute top-1/4 right-1/4 w-[500px] h-[300px] bg-orange-500/15 blur-[130px] rounded-full pointer-events-none z-[1] will-change-transform"
+            style={{
+              transform: "translate3d(var(--parallax-x-inv, 0px), var(--parallax-y-inv, 0px), 0)",
+              transition: "transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+            }}
+          />
 
           <div className="max-w-7xl mx-auto px-6 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
@@ -62,8 +71,9 @@ export default function HomePage() {
                     </span>
                   </span>
                   <span className="block py-0.5">
-                    <span className="inline-block animate-hero-headline-2">
-                      para <HeroRotatingWord />
+                    <span className="inline-flex items-baseline gap-x-3 animate-hero-headline-2">
+                      <span className="leading-none">para</span>
+                      <HeroRotatingWord />
                     </span>
                   </span>
                 </h1>
@@ -72,45 +82,61 @@ export default function HomePage() {
                   Nosso trabalho é pensar em soluções, deixe-nos te ajudar!
                 </p>
 
-                {/* CTAs de Conversão com microinterações */}
+                {/* CTAs de Conversão com microinterações Magnéticas */}
                 <div className="flex flex-col sm:flex-row items-center gap-3.5 pt-2 w-full sm:w-auto animate-hero-cta">
-                  <Link href="/#contato" className="w-full sm:w-auto">
-                    <Button variant="primary" size="lg" className="w-full sm:w-auto gap-3 font-bold text-base shadow-lg">
-                      Solicitar Orçamento Exclusivo
-                      <ArrowRight className="w-5 h-5" />
-                    </Button>
-                  </Link>
-                  <Link href="/#portfolio" className="w-full sm:w-auto">
-                    <Button variant="dark-secondary" size="lg" className="w-full sm:w-auto text-base">
-                      Explorar Portfólio
-                    </Button>
-                  </Link>
+                  <MagneticButton strength={0.2} className="w-full sm:w-auto">
+                    <Link href="/#contato" className="w-full sm:w-auto block">
+                      <Button variant="primary" size="lg" className="w-full sm:w-auto gap-3 font-bold text-base shadow-lg">
+                        Solicitar Orçamento Exclusivo
+                        <ArrowRight className="w-5 h-5" />
+                      </Button>
+                    </Link>
+                  </MagneticButton>
+                  <MagneticButton strength={0.12} className="w-full sm:w-auto">
+                    <Link href="/#portfolio" className="w-full sm:w-auto block">
+                      <Button variant="dark-secondary" size="lg" className="w-full sm:w-auto text-base">
+                        Explorar Portfólio
+                      </Button>
+                    </Link>
+                  </MagneticButton>
                 </div>
 
-                {/* Métricas e Selos de Confiança */}
+                {/* Métricas e Selos de Confiança com Contadores Dinâmicos */}
                 <div className="pt-8 grid grid-cols-3 gap-6 w-full border-t border-white/10 mt-2 animate-hero-metrics">
                   <div>
-                    <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono">+12 Anos</span>
+                    <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono">
+                      <AnimatedCounter to={12} prefix="+" suffix=" Anos" duration={1600} />
+                    </span>
                     <p className="text-xs text-zinc-400 mt-0.5 font-medium">Expertise fabril</p>
                   </div>
                   <div>
-                    <span className="text-2xl sm:text-3xl font-extrabold text-[#FF650F] font-mono">+1.800</span>
+                    <span className="text-2xl sm:text-3xl font-extrabold text-[#FF650F] font-mono">
+                      <AnimatedCounter to={1800} prefix="+" suffix="" duration={2000} />
+                    </span>
                     <p className="text-xs text-zinc-400 mt-0.5 font-medium">Obras entregues</p>
                   </div>
                   <div>
-                    <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono">100% ART</span>
+                    <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono">
+                      <AnimatedCounter to={100} prefix="" suffix="% ART" duration={1500} />
+                    </span>
                     <p className="text-xs text-zinc-400 mt-0.5 font-medium">Engenharia e NR-35</p>
                   </div>
                 </div>
               </div>
 
-              {/* Coluna da Escultura Metálica Interativa */}
-              <div className="lg:col-span-5 flex items-center justify-center animate-hero-sculpture">
+              {/* Coluna da Escultura Metálica Interativa com Parallax Suave */}
+              <div
+                className="lg:col-span-5 flex items-center justify-center animate-hero-sculpture will-change-transform"
+                style={{
+                  transform: "translate3d(var(--parallax-x, 0px), var(--parallax-y, 0px), 0)",
+                  transition: "transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+                }}
+              >
                 <HeroSculpture />
               </div>
             </div>
           </div>
-        </section>
+        </HeroParallaxContainer>
 
         {/* ====================================================
             2. NÓS TEMOS A SOLUÇÃO QUE VOCÊ PROCURA
