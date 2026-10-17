@@ -8,7 +8,7 @@ interface WhatsAppButtonProps {
 }
 
 export function WhatsAppButton({
-  phone = "5541999999999",
+  phone = "5551981192976",
   message = "Olá! Gostaria de um orçamento para comunicação visual e fachadas.",
 }: WhatsAppButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -18,19 +18,19 @@ export function WhatsAppButton({
 
   return (
     <aside aria-label="Atendimento via WhatsApp" className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
-      {/* Tooltip flutuante ao passar o mouse */}
+      {/* Tooltip flutuante ao passar o mouse com suporte a Dark e Light Mode */}
       <span
         className={`pointer-events-none hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-xl border backdrop-blur-md transition-all duration-300 ${
           isHovered
-            ? "opacity-100 translate-x-0 bg-[#0B0C0D]/90 text-white border-emerald-500/40"
-            : "opacity-0 translate-x-3 bg-glessios-graphite/90 text-glessios-text-body border-glessios-border-dark"
+            ? "opacity-100 translate-x-0 bg-white/95 dark:bg-[#141519]/95 text-zinc-900 dark:text-white border-emerald-500/40 shadow-emerald-500/10"
+            : "opacity-0 translate-x-3 bg-white/80 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 border-black/[0.08] dark:border-white/[0.08]"
         }`}
       >
-        <span className={`w-2 h-2 rounded-full ${isHovered ? "bg-emerald-400 animate-ping" : "bg-glessios-orange"}`} />
+        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
         Fale conosco no WhatsApp
       </span>
 
-      {/* Botão Flutuante: Laranja por padrão -> Verde no hover */}
+      {/* Botão Flutuante Oficial WhatsApp */}
       <a
         href={whatsappUrl}
         target="_blank"
@@ -38,29 +38,30 @@ export function WhatsAppButton({
         aria-label="Abrir conversa no WhatsApp"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="group relative w-14 h-14 rounded-full flex items-center justify-center text-white transition-all duration-300 ease-out transform hover:scale-110 active:scale-95 bg-orange-gradient shadow-[0_4px_20px_rgba(255,101,15,0.45)] hover:!bg-none hover:!bg-[#25D366] hover:shadow-[0_6px_28px_rgba(37,211,102,0.6)] focus:outline-none focus:ring-4 focus:ring-emerald-400/40"
+        className="group relative w-14 h-14 rounded-full flex items-center justify-center text-white transition-all duration-300 ease-out transform hover:scale-110 active:scale-95 bg-gradient-to-tr from-[#1EBE5D] via-[#25D366] to-[#2EE876] shadow-[0_6px_24px_rgba(37,211,102,0.48)] hover:shadow-[0_8px_32px_rgba(37,211,102,0.72)] focus:outline-none focus:ring-4 focus:ring-emerald-400/40"
       >
-        {/* Halo de pulso sutil */}
+        {/* Halo de pulso suave verde */}
         <span
-          className={`absolute inset-0 rounded-full transition-colors duration-300 -z-10 animate-ping opacity-30 ${
-            isHovered ? "bg-[#25D366]" : "bg-glessios-orange"
-          }`}
+          className="absolute inset-0 rounded-full bg-[#25D366] -z-10 animate-ping opacity-30 pointer-events-none"
         />
 
-        {/* Ícone Oficial Vetorial do WhatsApp */}
+        {/* Ícone Oficial WhatsApp Vetorial: Balão Sólido Branco + Fone Verde Esculpido */}
         <svg
           viewBox="0 0 24 24"
-          width="30"
-          height="30"
-          fill="currentColor"
-          className="transition-transform duration-300 group-hover:rotate-6 drop-shadow-sm"
+          width="32"
+          height="32"
+          className="transition-transform duration-300 group-hover:rotate-6 drop-shadow-[0_2px_4px_rgba(0,0,0,0.18)]"
           aria-hidden="true"
         >
-          <path d="M17.507 14.307l-.009.075c-.239.987-.852 1.936-1.722 2.222-.503.193-1.041.241-1.57.172-2.128-.276-4.14-1.464-5.698-3.023-1.56-1.558-2.748-3.57-3.024-5.698-.07-.529-.022-1.067.171-1.57.286-.87 1.235-1.483 2.222-1.722.342-.083.708-.052 1.03.088.471.205.86.59 1.134 1.05.626 1.052 1.253 2.103 1.88 3.155.158.265.176.589.048.868-.128.28-.387.48-.682.528l-1.033.167c-.085.014-.16.06-.21.127-.05.067-.068.152-.05.234.347 1.626 1.487 2.766 3.113 3.113.082.018.167 0 .234-.05.067-.05.113-.125.127-.21l.167-1.033c.048-.295.248-.554.528-.682.279-.128.603-.11.868.048 1.052.627 2.103 1.254 3.155 1.88.46.274.845.663 1.05 1.134.14.322.171.688.088 1.03z" />
+          {/* Balão de mensagem oficial branco preenchido */}
           <path
-            fillRule="evenodd"
-            clipRule="evenodd"
-            d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2.05 21.95l4.908-1.353A9.956 9.956 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18.2a8.166 8.166 0 01-4.227-1.177l-.303-.18-2.923.805.814-2.863-.196-.317A8.17 8.17 0 013.8 12c0-4.529 3.671-8.2 8.2-8.2 4.529 0 8.2 3.671 8.2 8.2 0 4.529-3.671 8.2-8.2 8.2z"
+            fill="#FFFFFF"
+            d="M12.012 2c-5.506 0-9.989 4.478-9.989 9.984a9.964 9.964 0 0 0 1.333 4.993L2 22l5.233-1.237a9.994 9.994 0 0 0 4.779 1.217h.004c5.505 0 9.988-4.478 9.989-9.984 0-2.669-1.037-5.176-2.925-7.062A9.925 9.925 0 0 0 12.012 2z"
+          />
+          {/* Fone telefônico recortado verde oficial WhatsApp */}
+          <path
+            fill="#25D366"
+            d="M17.472 14.382c-.301-.15-1.78-.879-2.056-.98-.277-.1-.478-.15-.678.15-.2.302-.779.98-.954 1.18-.175.2-.351.226-.652.076-.301-.15-1.27-.468-2.42-1.493-.895-.798-1.5-1.784-1.676-2.085-.175-.301-.019-.464.132-.614.136-.134.301-.35.451-.525.151-.176.2-.301.3-.502.101-.2.051-.377-.025-.527-.076-.151-.678-1.633-.929-2.235-.245-.586-.494-.506-.678-.515-.176-.008-.377-.01-.578-.01-.2 0-.528.075-.804.376-.276.301-1.054 1.03-1.054 2.512 0 1.482 1.08 2.912 1.23 3.113.15.201 2.124 3.243 5.146 4.547.719.31 1.28.496 1.718.636.722.23 1.378.197 1.897.12.578-.087 1.78-.727 2.031-1.43.251-.703.251-1.306.176-1.43-.075-.126-.276-.201-.577-.352z"
           />
         </svg>
       </a>
