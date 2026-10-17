@@ -27,8 +27,13 @@ DASHBOARD CENTRAL UNIFICADO:
 - Local:    http://localhost:3005/admin
 
 CREDENCIAIS OFICIAIS:
-- E-mail: admin@glessios.com.br
-- Senha:  Admin@Glessios2026!
+- SUPER ADMIN:
+  E-mail: ag.codevision@gmail.com.br
+  Senha:  Omeg@256489
+
+- ADMIN OPERACIONAL:
+  E-mail: admin@glessios.com.br
+  Senha:  Admin@Glessios2026!
 
 DICA DE ACESSO RAPIDO:
 Na tela de login do admin, ha o botao:

@@ -11,7 +11,8 @@ Estrutura oficial de acessos simplificada em **estritamente 2 papéis (*Roles*) 
 
 | Papel (*Role*) | Conta Oficial | Senha Padrão | Escopo de Acesso | O que gerencia no Painel? |
 | :--- | :--- | :--- | :--- | :--- |
-| **`ADMIN`** | `admin@glessios.com.br` | `Admin@Glessios2026!` | **Acesso Total Unificado** | **🏢 Gestão & Negócios:** CRM Kanban, Propostas A4, Financeiro & DRE, Faturamento e Agendamentos.<br><br>**⚙️ Fábrica & CNC:** Linha de Produção (8 Fases), Provas de Arte WACLI, Corte Router CNC, Impressão UV e Estoque de Insumos (ACM/LED). |
+| **`ADMIN`** (Super Admin) | `ag.codevision@gmail.com.br` | `Omeg@256489` | **Acesso Total Super Admin** | **👑 Controle Supremo:** Acesso irrestrito a todos os módulos, configurações, CRM, Finanças, DRE, Fábrica CNC e Estoque. |
+| **`ADMIN`** (Operações) | `admin@glessios.com.br` | `Admin@Glessios2026!` | **Acesso Total Unificado** | **🏢 Gestão & Negócios:** CRM Kanban, Propostas A4, Financeiro & DRE, Faturamento e Agendamentos.<br><br>**⚙️ Fábrica & CNC:** Linha de Produção (8 Fases), Provas de Arte WACLI, Corte Router CNC, Impressão UV e Estoque de Insumos (ACM/LED). |
 | **`CUSTOMER`** | `contato@lojaconcept.com.br` | `Cliente@Glessios2026!` | **Portal do Cliente** | Linha do tempo de fabricação da fachada, aprovação/ajuste de Maquetes 3D em alta resolução e pagamento de faturas via PIX QR Code. |
 
 *(Para testes do cliente, existe também a conta demo espelho `renata@conceptbatel.com.br` acessível pelo botão de 1 clique).*

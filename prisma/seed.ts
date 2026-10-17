@@ -22,6 +22,26 @@ async function main() {
   });
   console.log(`👤 Administrador criado: ${adminUser.email}`);
 
+  // 1.1 Super Administrador
+  const superAdminPasswordHash = await bcrypt.hash("Omeg@256489", 10);
+  const superAdminUser = await prisma.user.upsert({
+    where: { email: "ag.codevision@gmail.com.br" },
+    update: {
+      passwordHash: superAdminPasswordHash,
+      role: UserRole.ADMIN,
+      isActive: true,
+    },
+    create: {
+      name: "Super Administrador (CodeVision)",
+      email: "ag.codevision@gmail.com.br",
+      passwordHash: superAdminPasswordHash,
+      phone: "5541999998888",
+      role: UserRole.ADMIN,
+      isActive: true,
+    },
+  });
+  console.log(`👑 Super Administrador configurado: ${superAdminUser.email}`);
+
   // 2. Colunas do Kanban CRM (conforme RF-03.1 da SPEC.md)
   const columns = [
     { name: "Novo Lead", order: 1, color: "#3B82F6", isSystem: true },
