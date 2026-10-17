@@ -57,7 +57,7 @@ export function EditProfileModal({
 
   if (!isOpen) return null;
 
-  // Trata upload de imagem local via FileReader (converte em Base64)
+  // Trata upload de imagem local via FileReader com redimensionamento e recorte quadrado no Canvas (gera ~20KB a 35KB)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -67,17 +67,50 @@ export function EditProfileModal({
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      setErrorMsg("A foto selecionada deve ter no máximo 2MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMsg("A foto selecionada deve ter no máximo 10MB.");
       return;
     }
 
     setErrorMsg(null);
     const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      setAvatarUrl(result);
-      setUrlInput("");
+    reader.onload = (event) => {
+      const img = document.createElement("img");
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const MAX_DIM = 320;
+          const width = img.width;
+          const height = img.height;
+
+          // Recorte 1:1 centralizado
+          const minDim = Math.min(width, height);
+          const startX = (width - minDim) / 2;
+          const startY = (height - minDim) / 2;
+
+          canvas.width = MAX_DIM;
+          canvas.height = MAX_DIM;
+
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, MAX_DIM, MAX_DIM);
+            const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.88);
+            setAvatarUrl(compressedDataUrl);
+            setUrlInput("");
+          } else {
+            setAvatarUrl(event.target?.result as string);
+          }
+        } catch (err) {
+          console.error("Falha ao redimensionar imagem:", err);
+          setAvatarUrl(event.target?.result as string);
+        }
+      };
+      img.onerror = () => {
+        setErrorMsg("Não foi possível carregar o arquivo de imagem.");
+      };
+      img.src = event.target?.result as string;
     };
     reader.readAsDataURL(file);
   };
@@ -118,19 +151,26 @@ export function EditProfileModal({
         }),
       });
 
-      const data = await res.json();
-      if (data.success && data.user) {
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `Erro HTTP ${res.status}`);
+      }
+
+      if (data?.success && data?.user) {
         setSuccessMsg("Perfil atualizado com sucesso!");
         onProfileUpdated(data.user);
         setTimeout(() => {
           onClose();
-        }, 900);
+        }, 800);
       } else {
-        setErrorMsg(data.error || "Erro ao salvar alterações.");
+        setErrorMsg(data?.error || "Erro ao salvar alterações.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Falha ao salvar perfil:", err);
-      setErrorMsg("Erro de conexão ao salvar alterações.");
+      setErrorMsg(err.message?.includes("HTTP") ? `Erro no servidor: ${err.message}` : "Erro de conexão ao salvar alterações.");
     } finally {
       setIsLoading(false);
     }

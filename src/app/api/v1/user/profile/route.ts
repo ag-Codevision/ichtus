@@ -112,7 +112,7 @@ export async function PATCH(request: Request) {
       },
     });
 
-    // Atualiza os cookies de sessão correspondentes para refletir o novo nome e avatar
+    // Atualiza os cookies de sessão correspondentes para refletir o novo nome (avatar leve ou omitido no cookie)
     const cookieStore = await cookies();
     const adminCookie = cookieStore.get("glessios_admin_session")?.value;
     const portalCookie = cookieStore.get("glessios_portal_session")?.value;
@@ -127,7 +127,12 @@ export async function PATCH(request: Request) {
       try {
         const parsed = JSON.parse(adminCookie);
         parsed.name = updatedUser.name;
-        parsed.avatarUrl = updatedUser.avatarUrl;
+        // NUNCA salvar string base64 em cookies (limite de 4KB por cookie no protocolo HTTP)
+        if (updatedUser.avatarUrl && !updatedUser.avatarUrl.startsWith("data:") && updatedUser.avatarUrl.length < 300) {
+          parsed.avatarUrl = updatedUser.avatarUrl;
+        } else {
+          delete parsed.avatarUrl;
+        }
         response.cookies.set("glessios_admin_session", JSON.stringify(parsed), {
           path: "/",
           maxAge: 60 * 60 * 24 * 7,
@@ -140,7 +145,12 @@ export async function PATCH(request: Request) {
       try {
         const parsed = JSON.parse(portalCookie);
         parsed.name = updatedUser.name;
-        parsed.avatarUrl = updatedUser.avatarUrl;
+        // NUNCA salvar string base64 em cookies (limite de 4KB por cookie no protocolo HTTP)
+        if (updatedUser.avatarUrl && !updatedUser.avatarUrl.startsWith("data:") && updatedUser.avatarUrl.length < 300) {
+          parsed.avatarUrl = updatedUser.avatarUrl;
+        } else {
+          delete parsed.avatarUrl;
+        }
         response.cookies.set("glessios_portal_session", JSON.stringify(parsed), {
           path: "/",
           maxAge: 60 * 60 * 24 * 7,
