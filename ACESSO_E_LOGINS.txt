@@ -3,9 +3,13 @@
            GUIA DE LINKS DE LOGIN, ROLES E ACESSOS DO SISTEMA
 ================================================================================
 
+AMBIENTE DE PRODUÇÃO (VPS):
+URL Base: http://72.62.141.188:3005
+Status:   ONLINE (Containers Docker glessios_app e glessios_postgres ativos)
+
 AMBIENTE LOCAL:
 URL Base: http://localhost:3005
-Tema: Suporte a Modo Claro e Modo Escuro (alternador Sol/Lua em todas as telas)
+Tema:     Suporte a Modo Claro e Modo Escuro (alternador Sol/Lua em todas as telas)
 
 --------------------------------------------------------------------------------
 1. PERFIL: ADMIN (ADMINISTRADOR GERAL & OPERACOES FABRIS INTEGRADAS)
