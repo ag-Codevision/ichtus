@@ -32,7 +32,9 @@ import {
   Truck,
   Eye,
   X,
+  UserCog,
 } from "lucide-react";
+import { EditProfileModal } from "@/components/profile/EditProfileModal";
 
 interface CustomerDashboardData {
   customer: {
@@ -45,7 +47,7 @@ interface CustomerDashboardData {
     neighborhood: string | null;
     city: string | null;
     state: string | null;
-    user: { id: string; name: string; email: string; phone: string | null };
+    user: { id: string; name: string; email?: string; phone: string | null; avatarUrl?: string | null };
   };
   serviceOrders: Array<{
     id: string;
@@ -137,6 +139,9 @@ export default function PortalDashboardPage() {
   const [selectedInvoiceForPix, setSelectedInvoiceForPix] = useState<CustomerDashboardData["invoices"][0] | null>(null);
   const [copiedPix, setCopiedPix] = useState(false);
 
+  // Modal de Edição de Perfil do Cliente
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
@@ -217,10 +222,41 @@ export default function PortalDashboardPage() {
 
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <div className="hidden sm:flex flex-col text-right">
-              <span className="text-xs font-bold text-white">{data.customer.tradeName}</span>
-              <span className="text-[10px] text-glessios-text-muted">{data.customer.user.email}</span>
-            </div>
+
+            {/* Informações do Cliente & Botão de Editar Perfil (Conforme LGPD: sem exibir e-mail) */}
+            <button
+              onClick={() => setIsEditProfileOpen(true)}
+              className="flex items-center gap-2.5 p-1.5 pl-3 rounded-2xl border border-glessios-border-dark bg-glessios-graphite hover:border-glessios-orange/40 transition-all text-left group"
+              title="Clique para editar seu nome e foto de perfil"
+            >
+              <div className="hidden sm:flex flex-col text-right max-w-[150px]">
+                <span className="text-xs font-bold text-white group-hover:text-glessios-orange transition-colors truncate">
+                  {data.customer.user.name || data.customer.tradeName}
+                </span>
+                <span className="text-[10px] text-glessios-text-body font-mono -mt-0.5 truncate">
+                  Cliente Contratante
+                </span>
+              </div>
+
+              <div className="relative shrink-0">
+                <div className="w-8 h-8 rounded-xl overflow-hidden border border-glessios-border-orange/60 bg-orange-gradient flex items-center justify-center font-black text-white text-xs shadow-orange-glow">
+                  {data.customer.user.avatarUrl ? (
+                    <img
+                      src={data.customer.user.avatarUrl}
+                      alt={data.customer.user.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span>
+                      {(data.customer.user.name?.[0] || data.customer.tradeName?.[0] || "C").toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-glessios-graphite" />
+              </div>
+
+              <UserCog className="w-3.5 h-3.5 text-glessios-text-body group-hover:text-glessios-orange transition-colors hidden sm:block" />
+            </button>
 
             <Button
               variant="outline"
@@ -810,6 +846,38 @@ export default function PortalDashboardPage() {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Modal de Edição de Perfil do Cliente */}
+      {data && (
+        <EditProfileModal
+          isOpen={isEditProfileOpen}
+          onClose={() => setIsEditProfileOpen(false)}
+          initialData={{
+            id: data.customer.user.id,
+            name: data.customer.user.name,
+            role: "CUSTOMER",
+            avatarUrl: data.customer.user.avatarUrl,
+            phone: data.customer.user.phone,
+          }}
+          onProfileUpdated={(updated) => {
+            setData((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                customer: {
+                  ...prev.customer,
+                  user: {
+                    ...prev.customer.user,
+                    name: updated.name,
+                    avatarUrl: updated.avatarUrl,
+                    phone: updated.phone || null,
+                  },
+                },
+              };
+            });
+          }}
+        />
       )}
     </div>
   );
