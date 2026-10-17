@@ -64,7 +64,7 @@ import { SpotlightCard } from "@/components/ui/spotlight-card";
 export function ActionAreasSection() {
   return (
     <section id="atuacao" className="py-24 bg-[#121316] border-b border-white/[0.08] relative scroll-mt-20 text-white">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Cabeçalho com subtítulo abaixo do título */}
         <div className="max-w-3xl mb-16 space-y-4">
           <Badge variant="orange" className="font-semibold tracking-wider">

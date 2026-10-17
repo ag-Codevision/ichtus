@@ -69,7 +69,7 @@ export default function PortalLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-[#F8F9FA] dark:bg-glessios-black text-zinc-900 dark:text-glessios-text-body p-6 transition-colors duration-300">
+    <div className="min-h-screen flex flex-col justify-between bg-[#F8F9FA] dark:bg-glessios-black text-zinc-900 dark:text-glessios-text-body px-4 sm:px-6 lg:px-8 py-6 transition-colors duration-300">
       <div className="max-w-7xl mx-auto w-full flex items-center justify-between py-4">
         <Link href="/" className="flex items-center gap-3 py-1 group" aria-label="Glessios - Soluções & Design">
           <div className="p-1.5 px-3 rounded-xl bg-zinc-900/90 dark:bg-transparent border border-zinc-800/80 dark:border-transparent transition-all">

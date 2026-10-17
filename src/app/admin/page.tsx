@@ -26,7 +26,7 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<"all" | "business" | "factory">("all");
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-in fade-in duration-300">
       {/* Cabeçalho do Dashboard */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-white dark:bg-glessios-graphite border border-zinc-200 dark:border-glessios-border-dark shadow-sm">
         <div className="space-y-1">

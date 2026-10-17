@@ -62,7 +62,7 @@ export function Navbar() {
           : "bg-[#121316]/75 backdrop-blur-sm py-4 border-b border-white/[0.04]"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group py-1" aria-label="Glessios Soluções Visuais">
           <Image

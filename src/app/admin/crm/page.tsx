@@ -210,10 +210,7 @@ export default function CrmKanbanPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-glessios-black text-glessios-text-body">
-      <AdminNav />
-
-      <main className="flex-grow p-6 max-w-[1600px] mx-auto w-full flex flex-col space-y-6">
+    <div className="w-full max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col space-y-6 animate-in fade-in duration-300">
         {/* Cabeçalho do CRM e Métricas em Tempo Real */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-4 border-b border-glessios-border-dark">
           <div className="space-y-1">
@@ -420,7 +417,6 @@ export default function CrmKanbanPage() {
             })}
           </div>
         )}
-      </main>
 
       {/* Modal para Criação de Novo Lead Manual */}
       {isNewLeadModalOpen && (

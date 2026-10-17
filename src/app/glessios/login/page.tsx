@@ -69,7 +69,7 @@ export default function GlessiosLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-[#F8F9FA] dark:bg-glessios-black text-zinc-900 dark:text-glessios-text-body p-6 transition-colors duration-300">
+    <div className="min-h-screen flex flex-col justify-between bg-[#F8F9FA] dark:bg-glessios-black text-zinc-900 dark:text-glessios-text-body px-4 sm:px-6 lg:px-8 py-6 transition-colors duration-300">
       {/* Cabeçalho */}
       <div className="max-w-7xl mx-auto w-full flex items-center justify-between py-4">
         <Link href="/" className="flex items-center gap-3 py-1 group" aria-label="ICTHUS - Soluções & Design">

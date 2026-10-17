@@ -53,7 +53,7 @@ export default function HomePage() {
             }}
           />
 
-          <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
               {/* Coluna de Texto & Proposta de Valor com Coreografia de Entrada */}
               <div className="lg:col-span-7 flex flex-col items-start text-left space-y-6">
@@ -172,7 +172,7 @@ export default function HomePage() {
             8. ENTRE EM CONTATO & FORMULÁRIO (ORÇAMENTO)
             ==================================================== */}
         <section id="orcamento" className="py-24 bg-[#0E0F11] border-t border-white/[0.08] relative scroll-mt-20">
-          <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <QuoteBookingForm />
           </div>
         </section>

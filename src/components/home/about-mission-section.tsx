@@ -24,7 +24,7 @@ export function AboutMissionSection() {
       <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-orange-500/10 blur-[130px] rounded-full pointer-events-none -z-10" />
       <div className="absolute bottom-10 left-0 w-[400px] h-[400px] bg-orange-500/5 blur-[120px] rounded-full pointer-events-none -z-10" />
 
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* ====================================================
             BLOCO 1: SOBRE NÓS (Introdução e Pilares)
             ==================================================== */}

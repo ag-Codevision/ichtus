@@ -92,7 +92,7 @@ const SERVICES = [
 export function MainServicesSection() {
   return (
     <section id="servicos" className="py-24 bg-[#F8F9FA] border-b border-zinc-200/90 relative scroll-mt-20 text-zinc-900">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Cabeçalho com subtítulo abaixo do título */}
         <div className="max-w-3xl mb-16 space-y-4">
           <Badge variant="orange-light" className="font-semibold tracking-wider">

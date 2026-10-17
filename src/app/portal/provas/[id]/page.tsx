@@ -154,7 +154,7 @@ export default function ArtworkProofPage() {
   return (
     <div className="min-h-screen flex flex-col bg-glessios-black text-glessios-text-body">
       {/* Header Simples do Portal */}
-      <header className="bg-glessios-graphite border-b border-glessios-border-dark py-4 px-6">
+      <header className="bg-glessios-graphite border-b border-glessios-border-dark py-4 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-orange-gradient flex items-center justify-center font-extrabold text-white text-base shadow-orange-glow">
@@ -174,7 +174,7 @@ export default function ArtworkProofPage() {
         </div>
       </header>
 
-      <main className="flex-grow p-6 max-w-6xl mx-auto w-full space-y-8">
+      <main className="flex-grow px-4 sm:px-6 lg:px-8 py-8 max-w-6xl mx-auto w-full space-y-8">
         {/* Banner de Feedback se acabou de aprovar */}
         {decisionSuccess && (
           <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-sm font-semibold flex items-center gap-3 animate-in fade-in">

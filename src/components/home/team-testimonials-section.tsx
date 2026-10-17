@@ -48,7 +48,7 @@ export function TeamTestimonialsSection() {
           SEÇÃO: NOSSA EQUIPE
           ==================================================== */}
       <section id="equipe" className="py-24 border-b border-white/[0.08] relative scroll-mt-20">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Cabeçalho com subtítulo abaixo do título */}
           <div className="max-w-3xl mb-16 space-y-4">
             <Badge variant="orange" className="font-semibold tracking-wider">
@@ -119,7 +119,7 @@ export function TeamTestimonialsSection() {
           SEÇÃO: DEPOIMENTOS
           ==================================================== */}
       <section id="depoimentos" className="py-24 border-b border-white/[0.08] relative scroll-mt-20">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Cabeçalho com subtítulo abaixo do título */}
           <div className="max-w-3xl mb-16 space-y-4">
             <Badge variant="orange" className="font-semibold tracking-wider">

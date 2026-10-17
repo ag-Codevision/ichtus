@@ -48,7 +48,7 @@ export function SolutionsIntroSection() {
       {/* Sutil difusão âmbar decorativa de fundo */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-orange-500/5 blur-[150px] rounded-full pointer-events-none -z-10" />
 
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Cabeçalho Editorial com a copy aprovada */}
         <div className="max-w-4xl mx-auto text-center space-y-6">
           <Badge variant="orange-light" className="py-1.5 px-4 font-semibold tracking-wider">

@@ -289,10 +289,7 @@ export default function FinanceiroAdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-glessios-dark text-glessios-ivory flex flex-col font-sans">
-      <AdminNav />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col space-y-6 animate-in fade-in duration-300">
         {/* Cabeçalho */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
@@ -762,7 +759,6 @@ export default function FinanceiroAdminPage() {
             </div>
           </div>
         )}
-      </main>
 
       {/* Modal Interativo de Cobrança PIX */}
       {pixModalOpen && selectedInvoiceForPix && (

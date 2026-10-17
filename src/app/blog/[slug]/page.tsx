@@ -97,7 +97,7 @@ export default async function BlogPostPage({ params }: PageProps) {
       />
 
       <main className="flex-grow pt-28 pb-20">
-        <article className="max-w-4xl mx-auto px-6">
+        <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Breadcrumb e Voltar */}
           <div className="mb-8">
             <Link

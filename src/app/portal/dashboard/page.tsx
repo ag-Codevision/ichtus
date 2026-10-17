@@ -200,7 +200,7 @@ export default function PortalDashboardPage() {
     <div className="min-h-screen bg-glessios-dark text-glessios-ivory flex flex-col font-sans">
       {/* Barra de Navegação do Portal */}
       <header className="bg-glessios-graphite border-b border-glessios-border-dark sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-orange-gradient flex items-center justify-center font-extrabold text-white text-base shadow-orange-glow">
@@ -235,7 +235,7 @@ export default function PortalDashboardPage() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Banner de Boas-Vindas */}
         <div className="bg-gradient-to-r from-glessios-graphite via-glessios-graphite to-glessios-charcoal border border-glessios-border-orange/30 rounded-3xl p-6 md:p-8 mb-8 relative overflow-hidden shadow-2xl">
           <div className="absolute top-0 right-0 w-80 h-80 bg-glessios-orange/10 rounded-full blur-3xl pointer-events-none" />

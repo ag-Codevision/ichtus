@@ -23,7 +23,7 @@ export function AdminTopBar({ onOpenMobileMenu }: AdminTopBarProps) {
   };
 
   return (
-    <header className="h-14 px-4 sm:px-6 bg-glessios-graphite border-b border-glessios-border-dark flex items-center justify-between sticky top-0 z-30 shrink-0">
+    <header className="h-14 px-4 sm:px-6 lg:px-8 bg-glessios-graphite border-b border-glessios-border-dark flex items-center justify-between sticky top-0 z-30 shrink-0">
       <div className="flex items-center gap-3">
         {/* Botão para abrir a Sidebar no Mobile */}
         <button

@@ -165,10 +165,7 @@ export default function ProducaoPage() {
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-glessios-black text-glessios-text-body">
-      <AdminNav />
-
-      <main className="flex-grow p-6 max-w-7xl mx-auto w-full flex flex-col space-y-6">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col space-y-6 animate-in fade-in duration-300">
         {/* Cabeçalho */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-glessios-border-dark">
           <div className="space-y-1">
@@ -412,7 +409,6 @@ export default function ProducaoPage() {
             })}
           </div>
         )}
-      </main>
 
       {/* Modal para Upload/Cadastro de Prova Digital de Arte */}
       {uploadModalOrder && (

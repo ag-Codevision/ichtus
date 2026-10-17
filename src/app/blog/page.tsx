@@ -37,7 +37,7 @@ export default async function BlogIndexPage() {
       <Navbar />
 
       <main className="flex-grow pt-28 pb-20">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Cabeçalho do Blog */}
           <div className="max-w-3xl mb-14 space-y-4">
             <Badge variant="orange" className="font-semibold tracking-wider">
