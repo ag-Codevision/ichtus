@@ -12,30 +12,35 @@ URL Base: http://localhost:3005
 Tema:     Suporte a Modo Claro e Modo Escuro (alternador Sol/Lua em todas as telas)
 
 --------------------------------------------------------------------------------
-1. PERFIL: ADMIN (ADMINISTRADOR GERAL & OPERACOES FABRIS INTEGRADAS)
+1. PERFIL: ADMIN (ADMINISTRADOR GERAL & OPERACOES INTEGRADAS)
 --------------------------------------------------------------------------------
 Funcao: Centraliza toda a gestao estrategica, comercial, financeira e a
 operacao tecnica do chao de fabrica (projetos, corte CNC, serralheria,
-montagem, baixas de estoque e instalacao).
+montagem, baixas de estoque e instalacao) TUDO EM UM UNICO PAINEL.
 
 LINK DE LOGIN DO ADMIN:
-http://localhost:3005/glessios/login (redirecionamento automático configurado de /admin/login)
+- Producao: http://72.62.141.188:3005/admin/login
+- Local:    http://localhost:3005/admin/login
+
+DASHBOARD CENTRAL UNIFICADO:
+- Producao: http://72.62.141.188:3005/admin
+- Local:    http://localhost:3005/admin
 
 CREDENCIAIS OFICIAIS:
 - E-mail: admin@glessios.com.br
 - Senha:  Admin@Glessios2026!
 
-CONTA COMPLEMENTAR (ESTACAO TECNICA / PROJETISTA):
-- E-mail: projetista@glessios.com.br
-- Senha:  Designer@Glessios2026!
-
 DICA DE ACESSO RAPIDO:
-Na tela de login do admin (/glessios/login), ha o botao:
+Na tela de login do admin, ha o botao:
 "Entrar com Conta de Admin Demo (1 Clique)" que autentica instantaneamente.
 
 MODULOS E ROTAS ACESSIVEIS PELO ADMIN:
+- Central de Comando (Dashboard):
+  http://72.62.141.188:3005/admin
+  (Visao consolidada lado a lado: Gestao/Negocios + Fabrica/CNC)
+
 - CRM Comercial Kanban:
-  http://localhost:3005/admin/crm
+  http://72.62.141.188:3005/admin/crm
   (Gestao de leads, arraste entre etapas e conversao em Ordem de Servico)
 
 - Producao & Linha Fabril (8 Etapas):

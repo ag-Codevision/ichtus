@@ -1,44 +1,40 @@
-# 🔐 Guia Oficial de Credenciais, Acessos e Infraestrutura — ICTHUS / Glessios
+# 🔐 Guia Oficial de Credenciais e Acessos — ICTHUS / Glessios
 
-Documentação centralizada de credenciais de acesso, links dos ambientes (Produção na VPS e Local), perfis de permissão unificados e dados técnicos da infraestrutura.
+Estrutura oficial de acessos simplificada em **estritamente 2 papéis (*Roles*) e 2 contas oficiais**:
 
----
-
-## 🌐 1. Ambientes Disponíveis
-
-| Ambiente | URL Base | Finalidade | Status |
-| :--- | :--- | :--- | :--- |
-| **Produção (VPS)** | [http://72.62.141.188:3005](http://72.62.141.188:3005) | Servidor na nuvem (Hostinger VPS Ubuntu 24.04) | 🟢 **Online / Operacional** |
-| **Desenvolvimento Local** | [http://localhost:3005](http://localhost:3005) | Ambiente local de desenvolvimento | 🟢 **Ativo** |
+1. **`ADMIN` (Administrador Geral & Operações Integradas):** Controle total de ponta a ponta (**Gestão & Negócios + Fábrica & Operações CNC**) tudo em um único painel.
+2. **`CUSTOMER` (Cliente Contratante):** Acesso exclusivo e seguro ao Portal do Cliente.
 
 ---
 
-## 👥 2. Tabela de Perfis e Credenciais de Acesso
+## 👥 1. Tabela de Perfis e Credenciais Oficiais
 
-| Perfil (*Role*) | Nome de Exibição | E-mail de Login | Senha Padrão | Escopo e Permissões |
+| Papel (*Role*) | Conta Oficial | Senha Padrão | Escopo de Acesso | O que gerencia no Painel? |
 | :--- | :--- | :--- | :--- | :--- |
-| **`ADMIN` (Principal)** | Administrador Geral & Operações | `admin@glessios.com.br` | `Admin@Glessios2026!` | **Controle Total:** CRM Kanban, Agendamentos de Campo, Linha Fabril (8 etapas), Provas Digitais de Arte (WACLI WhatsApp), Controle de Estoque (ACM, LED, Lonas), Módulo Financeiro, PIX com baixa automática, DRE e Propostas Executivas A4. |
-| **`ADMIN` (Projetista)** | Carlos Mendes (Admin / Projetista) | `projetista@glessios.com.br` | `Designer@Glessios2026!` | **Operação Técnica:** Estação de trabalho para corte CNC Router, serralheria, montagem e modelagem técnica. |
-| **`CUSTOMER` (Oficial)** | Renata Vasconcelos (Loja Concept) | `contato@lojaconcept.com.br` | `Cliente@Glessios2026!` | **Portal do Cliente:** Acompanhamento do cronograma da fachada, aprovação/ajuste de maquetes 3D em alta resolução e quitação de faturas via PIX QR Code. |
-| **`CUSTOMER` (Atalho Demo)** | Renata Vasconcelos | `renata@conceptbatel.com.br` | `Cliente@Glessios2026!` | **Atalho Rápido:** Acesso instantâneo com 1 clique pelo botão *"Acessar com Conta Demo"* na tela do portal. |
+| **`ADMIN`** | `admin@glessios.com.br` | `Admin@Glessios2026!` | **Acesso Total Unificado** | **🏢 Gestão & Negócios:** CRM Kanban, Propostas A4, Financeiro & DRE, Faturamento e Agendamentos.<br><br>**⚙️ Fábrica & CNC:** Linha de Produção (8 Fases), Provas de Arte WACLI, Corte Router CNC, Impressão UV e Estoque de Insumos (ACM/LED). |
+| **`CUSTOMER`** | `contato@lojaconcept.com.br` | `Cliente@Glessios2026!` | **Portal do Cliente** | Linha do tempo de fabricação da fachada, aprovação/ajuste de Maquetes 3D em alta resolução e pagamento de faturas via PIX QR Code. |
+
+*(Para testes do cliente, existe também a conta demo espelho `renata@conceptbatel.com.br` acessível pelo botão de 1 clique).*
 
 ---
 
-## 🧭 3. Links Rápidos de Login e Módulos do Sistema
+## 🧭 2. Links Rápidos de Login e Painéis
 
 ### 🛠️ Acesso Administrativo (`ADMIN`)
 
-* **Tela de Login (Produção):** [http://72.62.141.188:3005/admin/login](http://72.62.141.188:3005/admin/login) *(redirecionamento oficial para `/glessios/login`)*
+* **Painel Central Unificado (Produção):** [http://72.62.141.188:3005/admin](http://72.62.141.188:3005/admin)
+* **Tela de Login (Produção):** [http://72.62.141.188:3005/admin/login](http://72.62.141.188:3005/admin/login) *(ou `/glessios/login`)*
 * **Tela de Login (Local):** [http://localhost:3005/admin/login](http://localhost:3005/admin/login)
-  * *Dica:* Na tela de login existe o botão **"Entrar com Conta de Admin Demo (1 Clique)"** que preenche e autentica de forma instantânea.
+  * *Atalho Rápido:* Botão **"Entrar com Conta de Admin Demo (1 Clique)"** preenche e autentica automaticamente.
 
-#### Módulos Operacionais do Painel:
-* **CRM Comercial Kanban:** [Acessar em Produção](http://72.62.141.188:3005/admin/crm) • [Acessar Local](http://localhost:3005/admin/crm)
-* **Produção & Linha Fabril (8 Fases):** [Acessar em Produção](http://72.62.141.188:3005/admin/producao) • [Acessar Local](http://localhost:3005/admin/producao)
-* **Controle de Estoque & Chapas ACM:** [Acessar em Produção](http://72.62.141.188:3005/admin/estoque) • [Acessar Local](http://localhost:3005/admin/estoque)
-* **Agendamentos de Campo & Instalação:** [Acessar em Produção](http://72.62.141.188:3005/admin/agendamentos) • [Acessar Local](http://localhost:3005/admin/agendamentos)
-* **Gestão Financeira & DRE:** [Acessar em Produção](http://72.62.141.188:3005/admin/financeiro) • [Acessar Local](http://localhost:3005/admin/financeiro)
-* **Proposta Comercial Executiva A4:** [Acessar em Produção](http://72.62.141.188:3005/admin/propostas/cm8a7b6c5000108l4f1h20987) • [Acessar Local](http://localhost:3005/admin/propostas/cm8a7b6c5000108l4f1h20987)
+#### Módulos Operacionais do Painel Unificado:
+* **Central de Comando (Dashboard):** [Produção](http://72.62.141.188:3005/admin) • [Local](http://localhost:3005/admin)
+* **CRM Comercial Kanban:** [Produção](http://72.62.141.188:3005/admin/crm) • [Local](http://localhost:3005/admin/crm)
+* **Linha de Produção & Fábrica (8 Fases):** [Produção](http://72.62.141.188:3005/admin/producao) • [Local](http://localhost:3005/admin/producao)
+* **Controle de Estoque (ACM, LEDs):** [Produção](http://72.62.141.188:3005/admin/estoque) • [Local](http://localhost:3005/admin/estoque)
+* **Gestão Financeira & DRE:** [Produção](http://72.62.141.188:3005/admin/financeiro) • [Local](http://localhost:3005/admin/financeiro)
+* **Agendamentos de Campo & Medição:** [Produção](http://72.62.141.188:3005/admin/agendamentos) • [Local](http://localhost:3005/admin/agendamentos)
+* **Proposta Comercial Executiva A4:** [Produção](http://72.62.141.188:3005/admin/propostas/cm8a7b6c5000108l4f1h20987) • [Local](http://localhost:3005/admin/propostas/cm8a7b6c5000108l4f1h20987)
 
 ---
 
@@ -46,12 +42,12 @@ Documentação centralizada de credenciais de acesso, links dos ambientes (Produ
 
 * **Tela de Login (Produção):** [http://72.62.141.188:3005/portal/login](http://72.62.141.188:3005/portal/login)
 * **Tela de Login (Local):** [http://localhost:3005/portal/login](http://localhost:3005/portal/login)
-  * *Dica:* Botão **"Acessar com Conta Demo"** para autenticação instantânea com 1 clique.
-* **Dashboard do Cliente:** [Acessar em Produção](http://72.62.141.188:3005/portal/dashboard) • [Acessar Local](http://localhost:3005/portal/dashboard)
+  * *Atalho Rápido:* Botão **"Acessar com Conta Demo"**.
+* **Dashboard do Cliente:** [Produção](http://72.62.141.188:3005/portal/dashboard) • [Local](http://localhost:3005/portal/dashboard)
 
 ---
 
-## 🖥️ 4. Dados Técnicos da VPS e Deploy
+## 🖥️ 3. Dados Técnicos da VPS e Deploy
 
 | Parâmetro | Valor Configurado |
 | :--- | :--- |
@@ -63,9 +59,7 @@ Documentação centralizada de credenciais de acesso, links dos ambientes (Produ
 | **Porta Externa** | `3005` (`0.0.0.0:3005 -> 3000/tcp`) |
 | **Health Check URL** | [http://72.62.141.188:3005/api/v1/health](http://72.62.141.188:3005/api/v1/health) |
 
-### 🚀 Como Atualizar o Deploy em Produção:
-Sempre que fizer novas alterações no código local e quiser enviar para a VPS, basta executar no terminal:
+### 🚀 Atualizar Produção com 1 Comando:
 ```powershell
 npm run deploy:vps
 ```
-*O script empacota os arquivos, envia via SSH/SFTP e reconstrói os containers na VPS de forma 100% automatizada.*

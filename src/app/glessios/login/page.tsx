@@ -30,7 +30,7 @@ export default function GlessiosLoginPage() {
 
       const data = await res.json();
       if (data.success) {
-        router.push("/admin/crm");
+        router.push("/admin");
       } else {
         setErrorMsg(data.error || "Credenciais inválidas. Tente novamente.");
       }
@@ -57,7 +57,7 @@ export default function GlessiosLoginPage() {
 
       const data = await res.json();
       if (data.success) {
-        router.push("/admin/crm");
+        router.push("/admin");
       } else {
         setErrorMsg(data.error || "Falha no acesso de demonstração.");
       }

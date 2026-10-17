@@ -4,9 +4,9 @@ import * as bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🔐 Sincronizando usuários para os 2 roles unificados do sistema...");
+  console.log("🔐 Sincronizando usuários para os 2 roles oficiais do sistema (ADMIN e CUSTOMER)...");
 
-  // 1. Role ADMIN (Administração Geral & Gestão Operacional Fabril Completa)
+  // 1. Role ADMIN Oficial (Administração Geral & Gestão Operacional Fabril Completa)
   const adminPass = await bcrypt.hash("Admin@Glessios2026!", 10);
   const admin = await prisma.user.upsert({
     where: { email: "admin@glessios.com.br" },
@@ -25,30 +25,15 @@ async function main() {
       isActive: true,
     },
   });
-  console.log(`✅ [ADMIN Principal] ${admin.email} (Senha: Admin@Glessios2026!)`);
+  console.log(`✅ [ADMIN Único] ${admin.email} (Senha: Admin@Glessios2026!)`);
 
-  // 2. Operador Técnico / Projetista (Unificado sob o papel ADMIN)
-  const designerPass = await bcrypt.hash("Designer@Glessios2026!", 10);
-  const designer = await prisma.user.upsert({
+  // Remove ou desativa a conta legada de projetista para manter apenas 1 conta admin
+  await prisma.user.deleteMany({
     where: { email: "projetista@glessios.com.br" },
-    update: {
-      passwordHash: designerPass,
-      isActive: true,
-      role: UserRole.ADMIN,
-      name: "Carlos Mendes (Admin / Projetista)",
-    },
-    create: {
-      name: "Carlos Mendes (Admin / Projetista)",
-      email: "projetista@glessios.com.br",
-      passwordHash: designerPass,
-      phone: "5541988881111",
-      role: UserRole.ADMIN,
-      isActive: true,
-    },
   });
-  console.log(`✅ [ADMIN / Projetista] ${designer.email} (Senha: Designer@Glessios2026!)`);
+  console.log("ℹ️ Conta de projetista isolada descontinuada. Todo o acesso operacional foi unificado no Admin.");
 
-  // 3. Role CUSTOMER (Cliente Contratante - Acesso Exclusivo ao Portal do Cliente)
+  // 2. Role CUSTOMER Oficial (Cliente Contratante - Acesso Exclusivo ao Portal do Cliente)
   const customerPass = await bcrypt.hash("Cliente@Glessios2026!", 10);
   const customerUser = await prisma.user.upsert({
     where: { email: "contato@lojaconcept.com.br" },
@@ -89,9 +74,9 @@ async function main() {
       },
     });
   }
-  console.log(`✅ [CUSTOMER] ${customerUser.email} (Senha: Cliente@Glessios2026!)`);
+  console.log(`✅ [CUSTOMER Oficial] ${customerUser.email} (Senha: Cliente@Glessios2026!)`);
 
-  // Conta de teste adicional do cliente
+  // Conta demo espelho para o botão de 1 clique do portal
   const existingRenata = await prisma.user.findUnique({
     where: { email: "renata@conceptbatel.com.br" },
   });
@@ -103,7 +88,7 @@ async function main() {
     console.log(`✅ [CUSTOMER Demo] renata@conceptbatel.com.br (Senha: Cliente@Glessios2026!)`);
   }
 
-  console.log("\n🎉 Estrutura de papéis unificada com sucesso (ADMIN e CUSTOMER)!");
+  console.log("\n🎉 Estrutura de papéis finalizada com sucesso: Apenas ADMIN e CUSTOMER!");
 }
 
 main()
