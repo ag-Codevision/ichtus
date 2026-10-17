@@ -1,9 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AdminNav } from "@/components/admin/admin-nav";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/utils";
 import {
   Calendar,
@@ -12,11 +10,7 @@ import {
   Users,
   Plus,
   CheckCircle2,
-  AlertCircle,
-  Phone,
-  Filter,
   X,
-  MessageSquare,
   Wrench,
   Truck,
   Building2,
@@ -134,31 +128,31 @@ export default function AgendamentosPage() {
     TECHNICAL_VISIT_MEASUREMENT: {
       label: "Visita Técnica & Medição",
       icon: Building2,
-      badge: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+      badge: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
     },
     INTERNAL_PRODUCTION_RUN: {
       label: "Produção Interna CNC",
       icon: Wrench,
-      badge: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+      badge: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
     },
     EXTERNAL_INSTALLATION: {
       label: "Instalação Externa Fachada",
       icon: Users,
-      badge: "bg-orange-gradient text-white border-none font-bold",
+      badge: "bg-orange-500/10 text-glessios-orange border-orange-500/20 font-bold",
     },
     DELIVERY_PICKUP: {
       label: "Entrega / Retirada",
       icon: Truck,
-      badge: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+      badge: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
     },
   };
 
   const statusConfig = {
-    SCHEDULED: { label: "Agendado", badge: "bg-blue-500/15 text-blue-400" },
-    IN_PROGRESS: { label: "Em Rota / Em Andamento", badge: "bg-amber-500/15 text-amber-400" },
-    COMPLETED: { label: "Concluído", badge: "bg-emerald-500/15 text-emerald-400" },
-    CANCELLED: { label: "Cancelado", badge: "bg-rose-500/15 text-rose-400" },
-    RESCHEDULED: { label: "Reagendado", badge: "bg-purple-500/15 text-purple-400" },
+    SCHEDULED: { label: "Agendado", badge: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
+    IN_PROGRESS: { label: "Em Rota / Em Andamento", badge: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
+    COMPLETED: { label: "Concluído", badge: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
+    CANCELLED: { label: "Cancelado", badge: "bg-rose-500/10 text-rose-600 dark:text-rose-400" },
+    RESCHEDULED: { label: "Reagendado", badge: "bg-purple-500/10 text-purple-600 dark:text-purple-400" },
   };
 
   const filtered = appointments.filter((app) => {
@@ -169,198 +163,205 @@ export default function AgendamentosPage() {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col space-y-6 animate-in fade-in duration-300">
-        {/* Cabeçalho */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-glessios-border-dark">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white flex items-center gap-3">
-              <Calendar className="w-7 h-7 text-glessios-orange" />
-              Agendamentos & Equipes de Campo
-            </h1>
-            <p className="text-xs text-glessios-text-body">
-              Controle de visitas de medição, execução de montagens e cronograma de instalação externa de fachadas.
-            </p>
-          </div>
-
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => setIsModalOpen(true)}
-            className="gap-2 text-xs font-bold shadow-orange-glow self-start sm:self-auto"
-          >
-            <Plus className="w-4 h-4" />
-            Novo Agendamento Técnico
-          </Button>
-        </div>
-
-        {/* Filtros de Tipo e Status */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-glessios-graphite p-4 rounded-2xl border border-glessios-border-dark">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-glessios-text-body font-semibold">Tipo:</span>
-            {["ALL", "TECHNICAL_VISIT_MEASUREMENT", "EXTERNAL_INSTALLATION", "INTERNAL_PRODUCTION_RUN"].map((t) => (
-              <button
-                key={t}
-                onClick={() => setTypeFilter(t)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                  typeFilter === t
-                    ? "bg-glessios-orange text-white"
-                    : "bg-glessios-charcoal text-glessios-text-body hover:text-white border border-glessios-border-dark"
-                }`}
-              >
-                {t === "ALL" ? "Todos" : typeConfig[t as keyof typeof typeConfig]?.label || t}
-              </button>
-            ))}
-          </div>
-
+      {/* Cabeçalho - M3 Expressive Card */}
+      <div className="p-6 sm:p-7 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-glessios-text-body font-semibold">Status:</span>
-            {["ALL", "SCHEDULED", "IN_PROGRESS", "COMPLETED"].map((s) => (
-              <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                  statusFilter === s
-                    ? "bg-white text-black font-bold"
-                    : "bg-glessios-charcoal text-glessios-text-body hover:text-white border border-glessios-border-dark"
-                }`}
-              >
-                {s === "ALL" ? "Todos" : statusConfig[s as keyof typeof statusConfig]?.label || s}
-              </button>
-            ))}
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-glessios-orange bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">
+              Operações Externas
+            </span>
           </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight flex items-center gap-3">
+            <Calendar className="w-7 h-7 text-glessios-orange" />
+            Agendamentos & Equipes de Campo
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
+            Controle de visitas de medição, execução de montagens e cronograma de instalação externa de fachadas.
+          </p>
         </div>
 
-        {/* Lista de Agendamentos */}
-        {isLoading ? (
-          <div className="text-center py-20 text-xs text-glessios-text-body">
-            Carregando agenda técnica...
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="p-12 text-center rounded-2xl bg-glessios-graphite border border-glessios-border-dark">
-            <Calendar className="w-10 h-10 text-glessios-orange mx-auto mb-3 opacity-60" />
-            <h4 className="text-white font-bold text-sm">Nenhum compromisso encontrado</h4>
-            <p className="text-xs text-glessios-text-body mt-1">
-              Cadastre uma nova visita técnica ou filtre por outro status.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((app) => {
-              const cfg = typeConfig[app.type] || typeConfig.TECHNICAL_VISIT_MEASUREMENT;
-              const Icon = cfg.icon;
-              const st = statusConfig[app.status] || statusConfig.SCHEDULED;
+        <Button
+          variant="primary"
+          size="md"
+          onClick={() => setIsModalOpen(true)}
+          className="gap-2 text-xs font-bold rounded-full shadow-sm self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" />
+          Novo Agendamento Técnico
+        </Button>
+      </div>
 
-              return (
-                <div
-                  key={app.id}
-                  className="rounded-2xl bg-glessios-graphite border border-glessios-border-dark p-6 flex flex-col justify-between space-y-4 hover:border-glessios-orange/40 hover:shadow-card-hover transition-all"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className={`text-[10px] uppercase px-2.5 py-1 rounded-md border ${cfg.badge}`}>
-                        {cfg.label}
+      {/* Filtros de Tipo e Status - M3 Filter Container */}
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#18191E] p-4 rounded-3xl border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold mr-1">Tipo:</span>
+          {["ALL", "TECHNICAL_VISIT_MEASUREMENT", "EXTERNAL_INSTALLATION", "INTERNAL_PRODUCTION_RUN"].map((t) => (
+            <button
+              key={t}
+              onClick={() => setTypeFilter(t)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                typeFilter === t
+                  ? "bg-glessios-orange text-white shadow-sm"
+                  : "bg-black/[0.03] dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+              }`}
+            >
+              {t === "ALL" ? "Todos" : typeConfig[t as keyof typeof typeConfig]?.label || t}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold mr-1">Status:</span>
+          {["ALL", "SCHEDULED", "IN_PROGRESS", "COMPLETED"].map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                statusFilter === s
+                  ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-sm font-bold"
+                  : "bg-black/[0.03] dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+              }`}
+            >
+              {s === "ALL" ? "Todos" : statusConfig[s as keyof typeof statusConfig]?.label || s}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Lista de Agendamentos - M3 Expressive Cards Grid */}
+      {isLoading ? (
+        <div className="text-center py-24 text-xs text-zinc-500 dark:text-zinc-400 flex items-center justify-center">
+          <div className="w-5 h-5 border-2 border-glessios-orange border-t-transparent rounded-full animate-spin mr-3" />
+          Carregando agenda técnica...
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="p-16 text-center rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1">
+          <Calendar className="w-12 h-12 text-zinc-400 mx-auto mb-3 opacity-30" />
+          <h4 className="text-zinc-900 dark:text-white font-bold text-sm">Nenhum compromisso encontrado</h4>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+            Cadastre uma nova visita técnica ou filtre por outro status.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filtered.map((app) => {
+            const cfg = typeConfig[app.type] || typeConfig.TECHNICAL_VISIT_MEASUREMENT;
+            const st = statusConfig[app.status] || statusConfig.SCHEDULED;
+
+            return (
+              <div
+                key={app.id}
+                className="rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] p-6 flex flex-col justify-between space-y-4 shadow-m3-1 hover:shadow-m3-2 hover:border-orange-500/40 transition-all"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full border ${cfg.badge}`}>
+                      {cfg.label}
+                    </span>
+                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${st.badge}`}>
+                      {st.label}
+                    </span>
+                  </div>
+
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-white leading-tight">
+                    {app.title}
+                  </h3>
+
+                  {app.serviceOrder && (
+                    <div className="text-xs text-glessios-orange font-mono font-bold">
+                      Vínculo: {app.serviceOrder.code}
+                    </div>
+                  )}
+
+                  <div className="space-y-2 pt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-glessios-orange shrink-0" />
+                      <span className="font-semibold text-zinc-900 dark:text-white">
+                        {formatDateTime(app.scheduledAt)}
                       </span>
-                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${st.badge}`}>
-                        {st.label}
-                      </span>
+                      <span className="text-[11px] text-zinc-400">({app.durationMinutes} min)</span>
                     </div>
 
-                    <h3 className="text-lg font-bold text-white leading-tight">
-                      {app.title}
-                    </h3>
-
-                    {app.serviceOrder && (
-                      <div className="text-xs text-glessios-orange font-mono font-semibold">
-                        Vínculo: {app.serviceOrder.code}
+                    {app.locationAddress && (
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-glessios-orange shrink-0 mt-0.5" />
+                        <span className="leading-snug">{app.locationAddress}</span>
                       </div>
                     )}
 
-                    <div className="space-y-2 pt-2 text-xs text-glessios-text-body">
+                    {app.assignedTeam && (
                       <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-glessios-orange shrink-0" />
-                        <span className="font-semibold text-white">
-                          {formatDateTime(app.scheduledAt)}
-                        </span>
-                        <span className="text-[10px]">({app.durationMinutes} min)</span>
+                        <Users className="w-4 h-4 text-glessios-orange shrink-0" />
+                        <span>Equipe: {app.assignedTeam}</span>
                       </div>
-
-                      {app.locationAddress && (
-                        <div className="flex items-start gap-2">
-                          <MapPin className="w-4 h-4 text-glessios-orange shrink-0 mt-0.5" />
-                          <span>{app.locationAddress}</span>
-                        </div>
-                      )}
-
-                      {app.assignedTeam && (
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-glessios-orange shrink-0" />
-                          <span>Equipe: {app.assignedTeam}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {app.notes && (
-                      <p className="text-xs bg-glessios-charcoal p-3 rounded-xl border border-glessios-border-dark text-glessios-text-body/90 line-clamp-3">
-                        {app.notes}
-                      </p>
                     )}
                   </div>
 
-                  {/* Ações Rápidas de Mudança de Status */}
-                  <div className="pt-4 border-t border-glessios-border-dark flex items-center justify-between gap-2">
-                    {app.status === "SCHEDULED" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleUpdateStatus(app.id, "IN_PROGRESS")}
-                        className="text-xs w-full justify-center"
-                      >
-                        Iniciar Atendimento
-                      </Button>
-                    )}
-                    {app.status === "IN_PROGRESS" && (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => handleUpdateStatus(app.id, "COMPLETED")}
-                        className="text-xs w-full justify-center bg-emerald-600 hover:bg-emerald-500 border-none text-white font-bold"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                        Concluir
-                      </Button>
-                    )}
-                    {app.status === "COMPLETED" && (
-                      <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Serviço Finalizado
-                      </span>
-                    )}
-                  </div>
+                  {app.notes && (
+                    <p className="text-xs bg-black/[0.02] dark:bg-white/[0.03] p-3 rounded-2xl border border-black/[0.04] dark:border-white/[0.04] text-zinc-600 dark:text-zinc-400 line-clamp-3">
+                      {app.notes}
+                    </p>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        )}
 
-      {/* Modal para Agendamento Técnico */}
+                {/* Ações Rápidas de Mudança de Status */}
+                <div className="pt-4 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between gap-2">
+                  {app.status === "SCHEDULED" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleUpdateStatus(app.id, "IN_PROGRESS")}
+                      className="text-xs w-full justify-center rounded-xl border-black/10 dark:border-white/10"
+                    >
+                      Iniciar Atendimento
+                    </Button>
+                  )}
+                  {app.status === "IN_PROGRESS" && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleUpdateStatus(app.id, "COMPLETED")}
+                      className="text-xs w-full justify-center bg-emerald-600 hover:bg-emerald-500 border-none text-white font-bold rounded-xl"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                      Concluir
+                    </Button>
+                  )}
+                  {app.status === "COMPLETED" && (
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 mx-auto">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Serviço Finalizado
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal para Agendamento Técnico - M3 Expressive Dialog */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg bg-glessios-graphite border border-glessios-border-orange/60 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-glessios-border-dark">
-              <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-glessios-orange" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between pb-4 border-b border-black/10 dark:border-white/10">
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-glessios-orange">
+                  <Calendar className="w-4 h-4" />
+                </div>
                 Novo Agendamento Técnico
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-glessios-text-body hover:text-white"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleCreateAppointment} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase text-glessios-text-heading">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
                   Título do Compromisso *
                 </label>
                 <input
@@ -369,28 +370,28 @@ export default function AgendamentosPage() {
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   placeholder="Ex: Medição Técnica — Academia Iron Batel"
-                  className="w-full px-4 py-2.5 rounded-xl bg-glessios-charcoal border border-glessios-border-dark text-white text-xs focus:outline-none focus:border-glessios-orange"
+                  className="w-full px-4 py-2.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/10 dark:border-white/10 text-zinc-900 dark:text-white text-xs focus:outline-none focus:border-glessios-orange transition-all placeholder:text-zinc-400"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase text-glessios-text-heading">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
                     Tipo de Agendamento
                   </label>
                   <select
                     value={form.type}
                     onChange={(e) => setForm({ ...form, type: e.target.value as any })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-glessios-charcoal border border-glessios-border-dark text-white text-xs focus:outline-none focus:border-glessios-orange"
+                    className="w-full px-4 py-2.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/10 dark:border-white/10 text-zinc-900 dark:text-white text-xs focus:outline-none focus:border-glessios-orange transition-all"
                   >
-                    <option value="TECHNICAL_VISIT_MEASUREMENT">Visita Técnica e Medição</option>
-                    <option value="EXTERNAL_INSTALLATION">Instalação Externa de Fachada</option>
-                    <option value="INTERNAL_PRODUCTION_RUN">Produção Interna CNC</option>
-                    <option value="DELIVERY_PICKUP">Entrega / Retirada</option>
+                    <option value="TECHNICAL_VISIT_MEASUREMENT" className="bg-white dark:bg-[#1A1B20] text-zinc-900 dark:text-white">Visita Técnica e Medição</option>
+                    <option value="EXTERNAL_INSTALLATION" className="bg-white dark:bg-[#1A1B20] text-zinc-900 dark:text-white">Instalação Externa de Fachada</option>
+                    <option value="INTERNAL_PRODUCTION_RUN" className="bg-white dark:bg-[#1A1B20] text-zinc-900 dark:text-white">Produção Interna CNC</option>
+                    <option value="DELIVERY_PICKUP" className="bg-white dark:bg-[#1A1B20] text-zinc-900 dark:text-white">Entrega / Retirada</option>
                   </select>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase text-glessios-text-heading">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
                     Data e Hora *
                   </label>
                   <input
@@ -398,14 +399,14 @@ export default function AgendamentosPage() {
                     required
                     value={form.scheduledAt}
                     onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
-                    className="w-full px-4 py-2 rounded-xl bg-glessios-charcoal border border-glessios-border-dark text-white text-xs focus:outline-none focus:border-glessios-orange"
+                    className="w-full px-4 py-2 rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/10 dark:border-white/10 text-zinc-900 dark:text-white text-xs focus:outline-none focus:border-glessios-orange transition-all"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase text-glessios-text-heading">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
                     Equipe Responsável
                   </label>
                   <input
@@ -413,25 +414,25 @@ export default function AgendamentosPage() {
                     value={form.assignedTeam}
                     onChange={(e) => setForm({ ...form, assignedTeam: e.target.value })}
                     placeholder="Equipe 01 - Fachadas"
-                    className="w-full px-4 py-2.5 rounded-xl bg-glessios-charcoal border border-glessios-border-dark text-white text-xs focus:outline-none focus:border-glessios-orange"
+                    className="w-full px-4 py-2.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/10 dark:border-white/10 text-zinc-900 dark:text-white text-xs focus:outline-none focus:border-glessios-orange transition-all placeholder:text-zinc-400"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold uppercase text-glessios-text-heading">
-                    WhatsApp para Confirmar
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
+                    WhatsApp para Notificar
                   </label>
                   <input
                     type="tel"
                     value={form.notifyPhone}
                     onChange={(e) => setForm({ ...form, notifyPhone: e.target.value })}
                     placeholder="(41) 99999-9999"
-                    className="w-full px-4 py-2.5 rounded-xl bg-glessios-charcoal border border-glessios-border-dark text-white text-xs focus:outline-none focus:border-glessios-orange"
+                    className="w-full px-4 py-2.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/10 dark:border-white/10 text-zinc-900 dark:text-white text-xs focus:outline-none focus:border-glessios-orange transition-all placeholder:text-zinc-400"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase text-glessios-text-heading">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
                   Endereço do Local
                 </label>
                 <input
@@ -439,12 +440,12 @@ export default function AgendamentosPage() {
                   value={form.locationAddress}
                   onChange={(e) => setForm({ ...form, locationAddress: e.target.value })}
                   placeholder="Rua / Avenida, Número, Bairro, Cidade"
-                  className="w-full px-4 py-2.5 rounded-xl bg-glessios-charcoal border border-glessios-border-dark text-white text-xs focus:outline-none focus:border-glessios-orange"
+                  className="w-full px-4 py-2.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/10 dark:border-white/10 text-zinc-900 dark:text-white text-xs focus:outline-none focus:border-glessios-orange transition-all placeholder:text-zinc-400"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase text-glessios-text-heading">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
                   Orientações para a Equipe de Campo
                 </label>
                 <textarea
@@ -452,19 +453,20 @@ export default function AgendamentosPage() {
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
                   placeholder="Trazer fita métrica laser, EPI de altura, verificar ponto de energia..."
-                  className="w-full px-4 py-2 rounded-xl bg-glessios-charcoal border border-glessios-border-dark text-white text-xs focus:outline-none focus:border-glessios-orange"
+                  className="w-full px-4 py-2 rounded-xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/10 dark:border-white/10 text-zinc-900 dark:text-white text-xs focus:outline-none focus:border-glessios-orange transition-all placeholder:text-zinc-400"
                 />
               </div>
 
-              <div className="pt-4 flex items-center justify-end gap-3">
+              <div className="pt-2 flex items-center justify-end gap-2.5">
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   onClick={() => setIsModalOpen(false)}
+                  className="border-black/10 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-xl"
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" variant="primary">
+                <Button type="submit" variant="primary" className="rounded-xl">
                   Confirmar Agendamento
                 </Button>
               </div>

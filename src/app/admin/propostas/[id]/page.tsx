@@ -107,12 +107,12 @@ export default function PropostaComercialPage() {
   validityDate.setDate(validityDate.getDate() + 15);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-900 font-sans p-4 md:p-8 print:p-0 print:bg-white">
-      {/* Barra de Ações Superior (Oculta na Impressão) */}
-      <div className="max-w-4xl mx-auto mb-6 flex items-center justify-between print:hidden">
+    <div className="min-h-screen bg-[#FDF9F6] dark:bg-[#0E0F12] text-zinc-900 font-sans p-4 md:p-8 print:p-0 print:bg-white transition-colors">
+      {/* Barra de Ações Superior (Oculta na Impressão) - M3 Expressive Card */}
+      <div className="max-w-4xl mx-auto mb-6 p-4 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between print:hidden">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-xs text-zinc-400 hover:text-white transition-colors"
+          className="flex items-center gap-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Voltar para o Painel
@@ -122,7 +122,7 @@ export default function PropostaComercialPage() {
           <ThemeToggle />
           <Button
             onClick={handlePrint}
-            className="bg-glessios-orange hover:bg-glessios-orange-light text-white text-xs font-bold gap-2 px-4 shadow-lg"
+            className="bg-orange-gradient hover:opacity-95 text-white text-xs font-bold gap-2 px-4 rounded-full shadow-sm"
           >
             <Printer className="w-4 h-4" />
             Imprimir / Salvar em PDF

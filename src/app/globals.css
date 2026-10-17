@@ -5,29 +5,66 @@
 :root {
   --font-manrope: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --bg-main: #F8F9FA;
-  --bg-surface: #FFFFFF;
-  --bg-card: #FFFFFF;
+  
+  /* M3 Expressive Light Mode Surfaces */
+  --m3-surface: #FDF9F6;
+  --m3-surface-container-lowest: #FFFFFF;
+  --m3-surface-container-low: #F6F1EC;
+  --m3-surface-container: #EFE8E2;
+  --m3-surface-container-high: #E8E1DA;
+  --m3-surface-container-highest: #E1DAD3;
+  
+  --m3-primary: #FF650F;
+  --m3-primary-hover: #E45508;
+  --m3-primary-container: #FFE5D9;
+  --m3-on-primary-container: #491700;
+  
+  --m3-on-surface: #1E1B19;
+  --m3-on-surface-variant: #59514A;
+  --m3-outline: rgba(0, 0, 0, 0.08);
+  --m3-outline-focus: rgba(255, 101, 15, 0.4);
+  
+  --bg-main: var(--m3-surface);
+  --bg-surface: var(--m3-surface-container-lowest);
+  --bg-card: var(--m3-surface-container-lowest);
   --color-orange: #FF650F;
   --color-orange-hover: #EA580C;
-  --text-heading: #121316;
-  --text-body: #4B5058;
-  --text-muted: #717680;
-  --border-subtle: #E5E7EB;
-  --border-card: rgba(229, 231, 235, 0.9);
+  --text-heading: #1E1B19;
+  --text-body: #59514A;
+  --text-muted: #7E756F;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-card: rgba(0, 0, 0, 0.06);
 }
 
-/* Modo escuro opcional caso o usuário ative no toggle */
+/* Modo escuro M3 Expressive */
 html.dark,
 :root[data-theme="dark"] {
-  --bg-main: #0B0C0D;
-  --bg-surface: #121316;
-  --bg-card: #1B1B1D;
+  /* M3 Expressive Dark Mode Surfaces */
+  --m3-surface: #0E0F12;
+  --m3-surface-container-lowest: #08090A;
+  --m3-surface-container-low: #141519;
+  --m3-surface-container: #1C1D22;
+  --m3-surface-container-high: #24262D;
+  --m3-surface-container-highest: #2E3039;
+  
+  --m3-primary: #FF650F;
+  --m3-primary-hover: #FF781B;
+  --m3-primary-container: rgba(255, 101, 15, 0.16);
+  --m3-on-primary-container: #FFDBC9;
+  
+  --m3-on-surface: #F5EFEB;
+  --m3-on-surface-variant: #C9BFB8;
+  --m3-outline: rgba(255, 255, 255, 0.08);
+  --m3-outline-focus: rgba(255, 101, 15, 0.5);
+  
+  --bg-main: var(--m3-surface);
+  --bg-surface: var(--m3-surface-container-low);
+  --bg-card: var(--m3-surface-container);
   --color-orange: #FF650F;
   --color-orange-hover: #FF781B;
   --text-heading: #FFFFFF;
-  --text-body: #D1D5DB;
-  --text-muted: #9CA3AF;
+  --text-body: #C9BFB8;
+  --text-muted: #8E8681;
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-card: rgba(255, 255, 255, 0.1);
 }

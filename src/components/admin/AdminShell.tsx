@@ -28,7 +28,7 @@ export function AdminShell({ children }: AdminShellProps) {
   };
 
   return (
-    <div className="min-h-screen bg-glessios-black text-glessios-text-body flex">
+    <div className="min-h-screen bg-[#FDF9F6] dark:bg-[#0E0F12] text-[#1E1B19] dark:text-[#F5EFEB] flex transition-colors duration-200">
       {/* Sidebar Retrátil Fixa */}
       <AdminSidebar
         isCollapsed={isCollapsed}

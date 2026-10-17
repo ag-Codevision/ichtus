@@ -8,8 +8,6 @@ import {
   Trash2,
   Check,
   User,
-  ShieldCheck,
-  Sparkles,
   Link as LinkIcon,
   Upload,
 } from "lucide-react";
@@ -185,26 +183,26 @@ export function EditProfileModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md bg-white dark:bg-glessios-graphite border border-zinc-200 dark:border-glessios-border-dark rounded-3xl p-6 sm:p-7 shadow-2xl space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
         {/* Cabeçalho do Modal */}
-        <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-glessios-border-dark">
+        <div className="flex items-center justify-between pb-3 border-b border-black/10 dark:border-white/10">
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-glessios-orange bg-glessios-orange/15 px-2 py-0.5 rounded-full border border-glessios-border-orange">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-glessios-orange bg-orange-500/10 px-2.5 py-0.5 rounded-full border border-orange-500/20">
                 {initialData?.role === "ADMIN" ? "Perfil do Administrador" : "Perfil do Cliente"}
               </span>
-              <span className="text-[10px] text-zinc-500 dark:text-glessios-text-body font-mono">
+              <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
                 Privacidade LGPD
               </span>
             </div>
-            <h3 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight">
+            <h3 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
               Editar Meu Perfil
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 dark:text-glessios-text-body dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/[0.05] transition-colors"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
             aria-label="Fechar modal"
           >
             <X className="w-5 h-5" />
@@ -213,12 +211,12 @@ export function EditProfileModal({
 
         {/* Mensagens de Feedback */}
         {errorMsg && (
-          <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-semibold">
+          <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold">
             {errorMsg}
           </div>
         )}
         {successMsg && (
-          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2">
+          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2">
             <Check className="w-4 h-4 shrink-0" />
             {successMsg}
           </div>
@@ -226,9 +224,9 @@ export function EditProfileModal({
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Seção da Foto de Perfil */}
-          <div className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-glessios-border-dark">
+          <div className="flex flex-col items-center gap-3 p-5 rounded-3xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.06]">
             <div className="relative group">
-              <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-glessios-orange shadow-orange-glow flex items-center justify-center bg-orange-gradient text-white font-extrabold text-2xl">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-orange-500/40 shadow-sm flex items-center justify-center bg-orange-gradient text-white font-extrabold text-2xl">
                 {avatarUrl ? (
                   <img
                     src={avatarUrl}
@@ -244,7 +242,7 @@ export function EditProfileModal({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute -bottom-1.5 -right-1.5 p-2 rounded-xl bg-zinc-900 text-white hover:bg-glessios-orange transition-colors shadow-lg border border-white/20"
+                className="absolute -bottom-1 -right-1 p-2 rounded-full bg-zinc-900 dark:bg-zinc-800 text-white hover:bg-glessios-orange transition-colors shadow-md border border-white/20"
                 title="Carregar nova foto"
               >
                 <Camera className="w-3.5 h-3.5" />
@@ -266,7 +264,7 @@ export function EditProfileModal({
                 size="sm"
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-xs gap-1.5 h-8 px-3 rounded-xl border-zinc-300 dark:border-glessios-border-dark text-zinc-700 dark:text-glessios-text-heading hover:text-white"
+                className="text-xs gap-1.5 h-8 px-3 rounded-full border-black/10 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
               >
                 <Upload className="w-3.5 h-3.5 text-glessios-orange" />
                 Carregar Foto
@@ -277,7 +275,7 @@ export function EditProfileModal({
                 size="sm"
                 variant="outline"
                 onClick={() => setIsUrlMode(!isUrlMode)}
-                className="text-xs gap-1.5 h-8 px-3 rounded-xl border-zinc-300 dark:border-glessios-border-dark text-zinc-700 dark:text-glessios-text-heading hover:text-white"
+                className="text-xs gap-1.5 h-8 px-3 rounded-full border-black/10 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
               >
                 <LinkIcon className="w-3.5 h-3.5" />
                 URL
@@ -287,7 +285,7 @@ export function EditProfileModal({
                 <button
                   type="button"
                   onClick={handleRemovePhoto}
-                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors"
+                  className="p-1.5 rounded-full text-rose-500 hover:bg-rose-500/10 transition-colors"
                   title="Remover foto de perfil"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -303,7 +301,7 @@ export function EditProfileModal({
                   placeholder="https://exemplo.com/minha-foto.jpg"
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-glessios-charcoal border border-zinc-200 dark:border-glessios-border-dark text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-glessios-orange"
+                  className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-[#141519] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-glessios-orange"
                 />
                 <Button
                   type="button"
@@ -320,7 +318,7 @@ export function EditProfileModal({
 
           {/* Campo Nome de Exibição */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold uppercase tracking-wide text-zinc-700 dark:text-glessios-text-heading flex items-center gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-glessios-orange" />
               Nome Completo / Exibição *
             </label>
@@ -330,21 +328,21 @@ export function EditProfileModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex: Carlos Eduardo ou Concept Batel"
-              className="w-full px-4 py-2.5 rounded-xl bg-zinc-50 dark:bg-glessios-charcoal border border-zinc-200 dark:border-glessios-border-dark text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 focus:outline-none focus:border-glessios-orange focus:ring-1 focus:ring-glessios-orange transition-colors"
+              className="w-full px-4 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/10 dark:border-white/10 text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 focus:outline-none focus:border-glessios-orange focus:ring-1 focus:ring-glessios-orange transition-all"
             />
-            <p className="text-[11px] text-zinc-500 dark:text-glessios-text-body/70">
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
               Este é o nome que aparecerá no topo do painel e nas operações.
             </p>
           </div>
 
           {/* Botões de Ação */}
-          <div className="pt-2 flex items-center justify-end gap-3 border-t border-zinc-200 dark:border-glessios-border-dark">
+          <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-black/10 dark:border-white/10">
             <Button
               type="button"
               variant="ghost"
               onClick={onClose}
               disabled={isLoading}
-              className="text-xs rounded-xl"
+              className="text-xs rounded-full"
             >
               Cancelar
             </Button>
@@ -352,9 +350,9 @@ export function EditProfileModal({
               type="submit"
               variant="primary"
               disabled={isLoading}
-              className="text-xs font-bold px-5 py-2 rounded-xl bg-glessios-orange hover:bg-glessios-orange-hover text-white shadow-orange-glow"
+              className="text-xs font-bold px-5 py-2 rounded-full bg-orange-gradient hover:opacity-95 text-white shadow-sm"
             >
-              {isLoading ? "Salvando no Banco..." : "Salvar Alterações"}
+              {isLoading ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </div>
         </form>

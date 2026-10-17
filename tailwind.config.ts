@@ -53,6 +53,22 @@ const config: Config = {
             light: "rgba(0, 0, 0, 0.08)",
           },
         },
+        // Material Design 3 Expressive Tokens
+        m3: {
+          surface: "var(--m3-surface)",
+          "container-lowest": "var(--m3-surface-container-lowest)",
+          "container-low": "var(--m3-surface-container-low)",
+          container: "var(--m3-surface-container)",
+          "container-high": "var(--m3-surface-container-high)",
+          "container-highest": "var(--m3-surface-container-highest)",
+          primary: "var(--m3-primary)",
+          "primary-hover": "var(--m3-primary-hover)",
+          "primary-container": "var(--m3-primary-container)",
+          "on-primary-container": "var(--m3-on-primary-container)",
+          "on-surface": "var(--m3-on-surface)",
+          "on-surface-variant": "var(--m3-on-surface-variant)",
+          outline: "var(--m3-outline)",
+        },
       },
       fontFamily: {
         sans: ["var(--font-manrope)", "var(--font-inter)", "sans-serif"],
@@ -60,6 +76,9 @@ const config: Config = {
         mono: ["var(--font-mono)", "monospace"],
       },
       boxShadow: {
+        "m3-1": "0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03)",
+        "m3-2": "0 4px 16px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03)",
+        "m3-3": "0 12px 32px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04)",
         "orange-glow": "0 0 35px -5px rgba(255, 101, 15, 0.35)",
         "orange-glow-lg": "0 0 60px -10px rgba(255, 101, 15, 0.5)",
         "card-dark": "0 10px 30px -10px rgba(0, 0, 0, 0.5)",
@@ -74,6 +93,8 @@ const config: Config = {
         lg: "0.75rem",
         xl: "1rem",
         "2xl": "1.5rem",
+        "3xl": "1.75rem",
+        "4xl": "2.25rem",
       },
       transitionTimingFunction: {
         "cinematic-ease": "cubic-bezier(0.16, 1, 0.3, 1)", // EaseOutExpo para entradas suaves
