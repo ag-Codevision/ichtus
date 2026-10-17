@@ -29,11 +29,11 @@ export function Badge({
     
     // Neutro sutil
     graphite:
-      "bg-slate-100 text-slate-700 border border-slate-200/80 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
+      "bg-zinc-100 text-zinc-700 border border-zinc-200/80 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700",
     
     // Outline discreto
     outline:
-      "bg-transparent text-slate-600 border border-slate-300 dark:text-slate-400 dark:border-slate-700",
+      "bg-transparent text-zinc-600 border border-zinc-300 dark:text-zinc-400 dark:border-zinc-700",
     
     // Sucesso / Aprovado
     success:

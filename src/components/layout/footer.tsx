@@ -173,7 +173,7 @@ export function Footer() {
               Portal do Cliente
             </Link>
             <span>•</span>
-            <Link href="/admin/login" className="hover:text-[#FF650F] transition-colors">
+            <Link href="/glessios/login" className="hover:text-[#FF650F] transition-colors">
               Acesso Administrativo
             </Link>
           </div>

@@ -48,7 +48,7 @@ export function AdminUserMenu() {
     setIsOpen(false);
     // Remove o cookie da sessão administrativa
     document.cookie = "glessios_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-    router.push("/admin/login");
+    router.push("/glessios/login");
   };
 
   const isDark = theme === "dark";

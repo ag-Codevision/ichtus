@@ -15,6 +15,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/admin/login",
+        destination: "/glessios/login",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

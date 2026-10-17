@@ -15,7 +15,7 @@ operacao tecnica do chao de fabrica (projetos, corte CNC, serralheria,
 montagem, baixas de estoque e instalacao).
 
 LINK DE LOGIN DO ADMIN:
-http://localhost:3005/admin/login
+http://localhost:3005/glessios/login (redirecionamento automático configurado de /admin/login)
 
 CREDENCIAIS OFICIAIS:
 - E-mail: admin@glessios.com.br
@@ -26,7 +26,7 @@ CONTA COMPLEMENTAR (ESTACAO TECNICA / PROJETISTA):
 - Senha:  Designer@Glessios2026!
 
 DICA DE ACESSO RAPIDO:
-Na tela de login do admin (/admin/login), ha o botao:
+Na tela de login do admin (/glessios/login), ha o botao:
 "Entrar com Conta de Admin Demo (1 Clique)" que autentica instantaneamente.
 
 MODULOS E ROTAS ACESSIVEIS PELO ADMIN:

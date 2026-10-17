@@ -76,7 +76,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="bg-glessios-black text-glessios-text-body font-sans antialiased selection:bg-glessios-orange selection:text-white">
+      <body className="bg-[#F8F9FA] dark:bg-glessios-black text-zinc-900 dark:text-glessios-text-body font-sans antialiased selection:bg-glessios-orange selection:text-white transition-colors duration-200">
         <ThemeProvider>
           {children}
           <WhatsAppButton />

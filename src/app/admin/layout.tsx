@@ -11,9 +11,11 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
 
-  // Rotas que não devem exibir a sidebar retrátil (tela de login e proposta A4 para impressão)
+  // Rotas que não devem exibir a sidebar retrátil (telas de login e proposta A4 para impressão)
   const isExcluded =
-    pathname === "/admin/login" || pathname?.startsWith("/admin/propostas/");
+    pathname === "/admin/login" ||
+    pathname === "/glessios/login" ||
+    pathname?.startsWith("/admin/propostas/");
 
   if (isExcluded) {
     return <>{children}</>;
