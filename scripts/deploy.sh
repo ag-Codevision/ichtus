@@ -33,6 +33,10 @@ if [ ! -f .env ]; then
     fi
 fi
 
+# 2.1 Garantir diretório de uploads com permissão total de escrita
+mkdir -p ./public/uploads/leads
+chmod -R 777 ./public/uploads 2>/dev/null || true
+
 # 3. Limpeza Preventiva de Disco e Build das Imagens
 echo "🧹 Executando limpeza preventiva de cache do Docker..."
 docker builder prune -af --keep-storage 2GB 2>/dev/null || true

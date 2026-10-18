@@ -58,14 +58,26 @@ export async function POST(request: Request) {
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: "Usuário ou cliente não cadastrado no sistema" },
+        { success: false, error: "Usuário ou cliente não cadastrado no sistema." },
         { status: 404 }
       );
     }
 
-    // Se informou senha, valida via bcrypt ou senha padrão do cliente
+    // Regra do sistema: o cliente só acessa se a chave estiver ligada no CRM (isActive = true)
+    if (!user.isActive) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "O acesso ao Portal do Cliente está desativado para esta conta. Solicite a liberação com a equipe Icthus.",
+        },
+        { status: 403 }
+      );
+    }
+
+    // Se informou senha, valida via bcrypt ou senha padrão oficial
     if (password) {
       const isDefaultDemoPass =
+        password === "Icthus@123" ||
         password === "Cliente@Glessios2026!" ||
         password === "Glessios@2026" ||
         password === "admin123";
@@ -77,7 +89,7 @@ export async function POST(request: Request) {
 
       if (!isValidPass) {
         return NextResponse.json(
-          { success: false, error: "Senha incorreta. Utilize a senha cadastrada ou solicite link de acesso." },
+          { success: false, error: "Senha incorreta. Utilize a senha cadastrada ou a senha padrão inicial (Icthus@123)." },
           { status: 401 }
         );
       }

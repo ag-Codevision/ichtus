@@ -32,8 +32,10 @@ import {
   MessageCircle,
   ShieldCheck,
   ExternalLink,
+  KeyRound,
 } from "lucide-react";
 import { EditProfileModal } from "@/components/profile/EditProfileModal";
+import { ChangePasswordModal } from "@/components/profile/ChangePasswordModal";
 
 interface CustomerDashboardData {
   customer: {
@@ -145,6 +147,7 @@ export default function PortalDashboardPage() {
 
   // Modal de Edição de Perfil do Cliente
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   // Menu do Avatar do Cliente (Desktop dropdown)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -366,6 +369,20 @@ export default function PortalDashboardPage() {
                       <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
                     </button>
 
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        setIsChangePasswordOpen(true);
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all text-left"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <KeyRound className="w-4 h-4 text-[#FF650F]" />
+                        <span>Alterar Minha Senha</span>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
+                    </button>
+
                     <div className="border-t border-black/[0.06] dark:border-white/[0.06] my-1" />
 
                     <button
@@ -458,6 +475,17 @@ export default function PortalDashboardPage() {
               >
                 <UserCog className="w-4 h-4 text-glessios-orange" />
                 <span>Gerenciar Perfil & Foto</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsAccountSheetOpen(false);
+                  setIsChangePasswordOpen(true);
+                }}
+                className="w-full max-w-xs py-2.5 px-5 rounded-full border border-black/15 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/5 text-xs font-bold text-zinc-800 dark:text-zinc-200 transition-all flex items-center justify-center gap-2"
+              >
+                <KeyRound className="w-4 h-4 text-[#FF650F]" />
+                <span>Alterar Minha Senha</span>
               </button>
             </div>
 
@@ -1340,6 +1368,16 @@ export default function PortalDashboardPage() {
               };
             });
           }}
+        />
+      )}
+
+      {/* Modal de Alteração de Senha do Cliente */}
+      {data && (
+        <ChangePasswordModal
+          isOpen={isChangePasswordOpen}
+          onClose={() => setIsChangePasswordOpen(false)}
+          userId={data.customer.user.id}
+          userEmail={data.customer.user.phone || data.customer.tradeName}
         />
       )}
     </div>

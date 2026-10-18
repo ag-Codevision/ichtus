@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { MessageCircle, Phone, Building2, User, MoreVertical, Briefcase, Truck, Wrench, ChevronRight } from "lucide-react";
+import { MessageCircle, Phone, Building2, User, MoreVertical, Briefcase, Truck, Wrench, ChevronRight, Trash2, KeyRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export interface ContactItem {
@@ -20,6 +20,12 @@ export interface ContactItem {
   email: string | null;
   city: string | null;
   state: string | null;
+  user?: {
+    id: string;
+    email: string;
+    isActive: boolean;
+    role: string;
+  } | null;
   _count?: {
     serviceOrders: number;
     invoices: number;
@@ -34,6 +40,7 @@ interface ContactsListGoogleStyleProps {
   isLoading: boolean;
   onSelectContact: (contact: ContactItem) => void;
   onEditContact: (contact: ContactItem) => void;
+  onDeleteContact?: (contact: ContactItem) => void;
 }
 
 // Gera cor tonal elegante para o avatar no padrão Google
@@ -57,6 +64,7 @@ export function ContactsListGoogleStyle({
   isLoading,
   onSelectContact,
   onEditContact,
+  onDeleteContact,
 }: ContactsListGoogleStyleProps) {
   if (isLoading) {
     return (
@@ -162,6 +170,16 @@ export function ContactsListGoogleStyle({
                       <span className="truncate">{contact.city}{contact.state ? `/${contact.state}` : ""}</span>
                     </>
                   )}
+
+                  {contact.user?.isActive && (
+                    <>
+                      <span className="text-zinc-300 dark:text-zinc-700">•</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        <KeyRound className="w-2.5 h-2.5" />
+                        Portal Ativo
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -194,6 +212,21 @@ export function ContactsListGoogleStyle({
                 >
                   <Phone className="w-4 h-4" />
                 </a>
+              )}
+
+              {/* Botão de Excluir Contato */}
+              {onDeleteContact && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteContact(contact);
+                  }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-red-600 hover:bg-red-500/10 transition-colors"
+                  title="Excluir Contato"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               )}
 
               {/* Botão de Ver Ficha */}

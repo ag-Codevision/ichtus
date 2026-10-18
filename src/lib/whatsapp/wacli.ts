@@ -28,6 +28,8 @@ export function normalizePhoneNumber(phone: string): string {
   return digits;
 }
 
+import { getSystemSettings } from "@/lib/settings/system-settings";
+
 /**
  * Cliente de Envio via WACLI (WhatsApp CLI / Daemon Service)
  */
@@ -37,9 +39,10 @@ export async function sendWhatsAppMessage({
   mediaUrl,
 }: WACLiSendOptions): Promise<WACLiResult> {
   const targetNumber = normalizePhoneNumber(to);
-  const wacliApiUrl = process.env.WACLI_API_URL || "http://localhost:3001";
+  const sysSettings = getSystemSettings();
+  const wacliApiUrl = sysSettings?.whatsapp?.apiUrl || process.env.WACLI_API_URL || "http://localhost:3001";
   const wacliPath = process.env.WACLI_PATH || "wacli";
-  const session = process.env.WACLI_SESSION || "glessios-wpp";
+  const session = sysSettings?.whatsapp?.sessionName || process.env.WACLI_SESSION || "glessios-wpp";
 
   // 1. Tentar envio via serviço HTTP do WACLI (se rodando como daemon local)
   try {
@@ -115,15 +118,15 @@ export async function sendWhatsAppMessage({
 }
 
 /**
- * Templates de Mensagens Oficiais da Glessios
+ * Templates de Mensagens Oficiais da Icthus
  */
 export const WhatsAppTemplates = {
   // Notificação de Prova de Arte Pronta para Aprovação
   artworkProofReady: (clientName: string, osCode: string, approvalUrl: string) => `
-🎨 *Glessios Comunicação Visual*
+🎨 *Icthus Comunicação Visual*
 Olá, *${clientName}*!
 
-A prova digital da sua fachada / letreiro da ordem *${osCode}* está pronta para sua avaliação!
+A prova digital do seu projeto / letreiro da ordem *${osCode}* está pronta para sua avaliação!
 
 Confira o mockup 3D, especificações e aprove diretamente pelo link:
 👉 ${approvalUrl}
@@ -133,7 +136,7 @@ Qualquer ajuste pode ser solicitado diretamente pela plataforma com 1 clique!
 
   // Transição de Status da OS
   osStageUpdated: (clientName: string, osCode: string, newStage: string) => `
-⚙️ *Atualização de Produção — Glessios*
+⚙️ *Atualização de Produção — Icthus*
 Olá, *${clientName}*!
 
 A sua ordem *${osCode}* avançou de etapa:
@@ -143,12 +146,37 @@ Acompanhe os detalhes em tempo real no seu Portal do Cliente:
 👉 https://glessios.com.br/portal
   `.trim(),
 
-  // Boas-Vindas e Acesso ao Portal do Cliente
+  // Boas-Vindas e Acesso ao Portal do Cliente com Credenciais
+  welcomeCustomerWithCredentials: (
+    clientName: string,
+    email: string,
+    portalUrl: string,
+    initialPassword: string = "Icthus@123"
+  ) => `
+👋 Olá, *${clientName}*!
+Seja muito bem-vindo(a) à *Icthus*!
+
+Seu perfil de acesso ao nosso *Portal do Cliente* foi liberado com sucesso. Por lá você pode acompanhar tudo em tempo real:
+📐 Aprovação de layouts e projetos
+⚙️ Acompanhamento das etapas de produção
+📄 Faturas e pagamentos com liberação instantânea
+📅 Agendamentos de medição técnica e instalação
+
+🔗 *Acesso ao Portal:* ${portalUrl}
+📧 *Seu Login:* ${email}
+🔑 *Sua Senha Inicial:* ${initialPassword}
+
+*(Recomendamos alterar sua senha para uma de sua preferência no menu do seu perfil ao entrar).*
+
+Qualquer dúvida, estamos à disposição por este canal!
+  `.trim(),
+
+  // Boas-Vindas genérica
   welcomeCustomer: (clientName: string, email: string, portalUrl: string) => `
-👋 *Bem-vindo(a) à Glessios Comunicação Visual!*
+👋 *Bem-vindo(a) à Icthus!*
 Olá, *${clientName}*!
 
-Seu projeto já foi iniciado em nosso sistema integrado. Você pode acompanhar cada etapa da fabricação em tempo real pelo seu Portal:
+Seu projeto já foi iniciado em nosso sistema integrado. Você pode acompanhar cada etapa em tempo real pelo seu Portal:
 
 🔗 *Acesso:* ${portalUrl}
 📧 *Login:* ${email}
@@ -158,7 +186,7 @@ Estamos à disposição para transformar sua marca em um marco visual!
 
   // Envio de Fatura / Cobrança com PIX
   invoicePix: (clientName: string, invoiceCode: string, amount: string, pixCode: string) => `
-💳 *Fatura Emitida — Glessios*
+💳 *Fatura Emitida — Icthus*
 Olá, *${clientName}*!
 
 A fatura *${invoiceCode}* no valor de *${amount}* foi gerada.

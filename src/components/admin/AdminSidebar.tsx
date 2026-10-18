@@ -19,6 +19,8 @@ import {
   Factory,
   Briefcase,
   Users,
+  Settings,
+  Sliders,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -102,6 +104,16 @@ export function AdminSidebar({
       href: "/admin/estoque",
       icon: Package,
       active: pathname.startsWith("/admin/estoque"),
+    },
+  ];
+
+  const systemItems = [
+    {
+      label: "Configurações",
+      description: "WhatsApp, Portal & Sistema",
+      href: "/admin/configuracoes",
+      icon: Settings,
+      active: pathname.startsWith("/admin/configuracoes"),
     },
   ];
 
@@ -343,6 +355,21 @@ export function AdminSidebar({
               )}
             </div>
             {factoryItems.map(renderLink)}
+          </div>
+
+          {/* Grupo 3: Sistema & Conexões */}
+          <div className="space-y-0.5">
+            <div className="py-1">
+              {!isCollapsed || isMobileOpen ? (
+                <div className="px-3 pb-1 pt-1 text-[9px] font-mono uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-bold flex items-center gap-1.5">
+                  <Sliders className="w-3 h-3 text-blue-500" />
+                  <span>Sistema & Conexões</span>
+                </div>
+              ) : (
+                <div className="w-8 mx-auto border-t border-black/[0.08] dark:border-white/10 my-1" />
+              )}
+            </div>
+            {systemItems.map(renderLink)}
           </div>
         </nav>
 

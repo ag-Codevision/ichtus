@@ -20,6 +20,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: "/uploads/:path*",
+        destination: "/api/v1/uploads/:path*",
+      },
+    ];
+  },
   async redirects() {
     return [
       {

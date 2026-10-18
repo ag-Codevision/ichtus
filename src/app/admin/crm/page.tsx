@@ -24,11 +24,31 @@ import {
   Wrench,
   UserCheck,
   Building2,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+  Edit2,
+  ArrowLeft,
+  ArrowRight,
+  Palette,
+  GripVertical,
+  Hand,
+  SlidersHorizontal,
+  AlertCircle,
+  Loader2,
+  MoreVertical,
+  Check,
+  CheckSquare,
+  Paperclip,
+  Clock,
+  MessageSquare,
 } from "lucide-react";
 import { GoogleSearchBarWithChips, FilterChipType } from "@/components/admin/crm/GoogleSearchBarWithChips";
 import { ContactsListGoogleStyle, ContactItem } from "@/components/admin/crm/ContactsListGoogleStyle";
 import { ContactDetailsSheet } from "@/components/admin/crm/ContactDetailsSheet";
 import { ContactFormModal } from "@/components/admin/crm/ContactFormModal";
+import { ClientSearchAutocomplete, SearchedClient } from "@/components/admin/crm/ClientSearchAutocomplete";
+import { LeadCardDrawerModal } from "@/components/admin/crm/LeadCardDrawerModal";
 
 interface Lead {
   id: string;
@@ -51,6 +71,13 @@ interface Lead {
   estimatedValue: number | null;
   priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
   notes: string | null;
+  dueDate: string | null;
+  isCompleted: boolean;
+  coverImage: string | null;
+  tags?: { tag: { id: string; name: string; color: string } }[];
+  checklists?: { id: string; title: string; items: { id: string; isCompleted: boolean }[] }[];
+  attachments?: { id: string; fileName: string; fileUrl: string; fileType: string; isCover: boolean }[];
+  _count?: { comments: number; attachments: number };
   columnId: string;
   orderInColumn: number;
   createdAt: string;
@@ -76,6 +103,7 @@ export default function CrmPage() {
   const [contacts, setContacts] = useState<ContactItem[]>([]);
   const [isContactsLoading, setIsContactsLoading] = useState(true);
   const [contactSearch, setContactSearch] = useState("");
+  const [contactSortBy, setContactSortBy] = useState<string>("default");
   const [activeChipFilter, setActiveChipFilter] = useState<FilterChipType>("ALL");
   const [contactKpis, setContactKpis] = useState({
     total: 0,
@@ -99,8 +127,30 @@ export default function CrmPage() {
   const [kanbanSearch, setKanbanSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<string>("ALL");
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
+  const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
   const [isNewLeadModalOpen, setIsNewLeadModalOpen] = useState(false);
   const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
+
+  // Estados de CRUD de Colunas / Campos do Kanban
+  const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
+  const [editingColumn, setEditingColumn] = useState<Column | null>(null);
+  const [columnForm, setColumnForm] = useState({ name: "", color: "#FF650F" });
+  const [isSavingColumn, setIsSavingColumn] = useState(false);
+
+  // Referência e Estados de Mouse Drag-to-Scroll (Mãozinha fluida do Kanban)
+  const kanbanViewportRef = React.useRef<HTMLDivElement>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartXRef = React.useRef(0);
+  const panScrollLeftRef = React.useRef(0);
+  const isDraggingLeadsRef = React.useRef(false);
+
+  // Estados do Verso do Cartão (Estilo Trello)
+  const [selectedCardLeadId, setSelectedCardLeadId] = useState<string | null>(null);
+  const [isCardModalOpen, setIsCardModalOpen] = useState(false);
+
+  // Cliente selecionado no Seletor Inteligente para nova oportunidade
+  const [selectedClientForNewLead, setSelectedClientForNewLead] = useState<SearchedClient | null>(null);
+
   const [newLeadForm, setNewLeadForm] = useState({
     title: "",
     contactName: "",
@@ -109,13 +159,14 @@ export default function CrmPage() {
     customerId: "",
     estimatedValue: "",
     priority: "MEDIUM",
+    dueDate: "",
     notes: "",
   });
 
   // Clientes disponíveis para vincular no Kanban
   const [availableClients, setAvailableClients] = useState<any[]>([]);
 
-  // Carrega lista de contatos do CRM
+  // Carrega lista de contatos do CRM com ordenação
   const fetchContacts = useCallback(async () => {
     setIsContactsLoading(true);
     try {
@@ -132,6 +183,7 @@ export default function CrmPage() {
         search: contactSearch,
         type: typeParam,
         personType: personTypeParam,
+        sortBy: contactSortBy,
         limit: "100",
       });
 
@@ -148,7 +200,7 @@ export default function CrmPage() {
     } finally {
       setIsContactsLoading(false);
     }
-  }, [contactSearch, activeChipFilter]);
+  }, [contactSearch, activeChipFilter, contactSortBy]);
 
   // Carrega o Kanban de Leads
   const fetchKanban = useCallback(async () => {
@@ -207,18 +259,222 @@ export default function CrmPage() {
     setIsFormModalOpen(true);
   };
 
-  // Handlers do Kanban
+  // Exclusão de contato a partir da lista
+  const handleDeleteContactFromList = async (contactId: string) => {
+    if (!confirm("Tem certeza que deseja excluir este contato? Esta ação removerá ou inativará os dados associados na Icthus.")) return;
+    try {
+      const res = await fetch(`/api/v1/crm/contacts/${contactId}?force=true`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchContacts();
+      } else {
+        alert("Erro ao excluir contato: " + (data.error || "Falha na exclusão."));
+      }
+    } catch {
+      alert("Falha de comunicação com o servidor ao excluir contato.");
+    }
+  };
+
+  // ==========================================
+  // HANDLERS DE CRUD DE CAMPOS / COLUNAS
+  // ==========================================
+  const handleOpenAddColumn = () => {
+    setEditingColumn(null);
+    setColumnForm({ name: "", color: "#FF650F" });
+    setIsColumnModalOpen(true);
+  };
+
+  const handleOpenEditColumn = (col: Column) => {
+    setEditingColumn(col);
+    setColumnForm({ name: col.name, color: col.color || "#FF650F" });
+    setIsColumnModalOpen(true);
+  };
+
+  const handleSaveColumn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!columnForm.name.trim()) return;
+    setIsSavingColumn(true);
+    try {
+      if (editingColumn) {
+        // Atualizar coluna existente
+        const res = await fetch(`/api/v1/crm/kanban/columns/${editingColumn.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(columnForm),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setIsColumnModalOpen(false);
+          fetchKanban();
+        } else {
+          alert("Erro ao atualizar campo: " + (data.error || ""));
+        }
+      } else {
+        // Criar nova coluna
+        const res = await fetch("/api/v1/crm/kanban/columns", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(columnForm),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setIsColumnModalOpen(false);
+          fetchKanban();
+        } else {
+          alert("Erro ao criar campo: " + (data.error || ""));
+        }
+      }
+    } catch {
+      alert("Falha na comunicação com o servidor.");
+    } finally {
+      setIsSavingColumn(false);
+    }
+  };
+
+  const handleDeleteColumn = async (col: Column) => {
+    if (columns.length <= 1) {
+      alert("O funil comercial precisa ter pelo menos um campo.");
+      return;
+    }
+    const hasLeads = col.leads.length > 0;
+    const confirmMsg = hasLeads
+      ? `Deseja realmente excluir o campo "${col.name}"? As ${col.leads.length} oportunidade(s) presentes neste campo serão transferidas para o primeiro campo disponível.`
+      : `Deseja realmente excluir o campo "${col.name}"?`;
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const res = await fetch(`/api/v1/crm/kanban/columns/${col.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchKanban();
+      } else {
+        alert("Erro ao excluir campo: " + (data.error || ""));
+      }
+    } catch {
+      alert("Falha na comunicação com o servidor ao excluir campo.");
+    }
+  };
+
+  const handleMoveColumn = async (index: number, direction: "left" | "right") => {
+    const targetIndex = direction === "left" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= columns.length) return;
+
+    const newColumns = [...columns];
+    const [movedCol] = newColumns.splice(index, 1);
+    newColumns.splice(targetIndex, 0, movedCol);
+
+    // Atualização otimista imediata
+    setColumns(newColumns);
+
+    try {
+      await fetch("/api/v1/crm/kanban/columns/reorder", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ columnIds: newColumns.map((c) => c.id) }),
+      });
+    } catch (err) {
+      console.error("Falha ao salvar reordenação de colunas:", err);
+      fetchKanban();
+    }
+  };
+
+  // Exclusão Rápida de Oportunidade no Kanban
+  const handleDeleteLeadQuick = async (leadId: string) => {
+    try {
+      const res = await fetch(`/api/v1/crm/leads/${leadId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchKanban();
+      } else {
+        alert(data.error || "Erro ao excluir oportunidade.");
+      }
+    } catch {
+      alert("Falha na comunicação ao tentar excluir oportunidade.");
+    }
+  };
+
+  // ==========================================
+  // CONTROLE DE MOUSE DRAG-TO-SCROLL (MÃOZINHA)
+  // ==========================================
+  const handleViewportMouseDown = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    // Não ativa panning se o clique for em card de lead, botão, input ou seletor
+    if (
+      target.closest('[draggable="true"]') ||
+      target.closest("button") ||
+      target.closest("a") ||
+      target.closest("input") ||
+      target.closest("select") ||
+      target.closest("textarea")
+    ) {
+      return;
+    }
+    setIsPanning(true);
+    panStartXRef.current = e.pageX - (kanbanViewportRef.current?.offsetLeft || 0);
+    panScrollLeftRef.current = kanbanViewportRef.current?.scrollLeft || 0;
+  };
+
+  const handleViewportMouseMove = (e: React.MouseEvent) => {
+    if (!isPanning || !kanbanViewportRef.current || isDraggingLeadsRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - (kanbanViewportRef.current.offsetLeft || 0);
+    const walk = (x - panStartXRef.current) * 1.5; // Velocidade fluida
+    kanbanViewportRef.current.scrollLeft = panScrollLeftRef.current - walk;
+  };
+
+  const handleViewportMouseUp = () => {
+    setIsPanning(false);
+  };
+
+  const handleViewportMouseLeave = () => {
+    setIsPanning(false);
+  };
+
+  const handleScrollLeft = () => {
+    kanbanViewportRef.current?.scrollBy({ left: -360, behavior: "smooth" });
+  };
+
+  const handleScrollRight = () => {
+    kanbanViewportRef.current?.scrollBy({ left: 360, behavior: "smooth" });
+  };
+
+  // Handlers do Kanban de Leads
   const handleDragStart = (e: React.DragEvent, leadId: string) => {
+    isDraggingLeadsRef.current = true;
     e.dataTransfer.setData("text/plain", leadId);
     setDraggedLeadId(leadId);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragEnd = () => {
+    isDraggingLeadsRef.current = false;
+    setDraggedLeadId(null);
+    setDragOverColumnId(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, colId: string) => {
     e.preventDefault();
+    if (dragOverColumnId !== colId) {
+      setDragOverColumnId(colId);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOverColumnId(null);
+    }
   };
 
   const handleDrop = async (e: React.DragEvent, targetColumnId: string) => {
     e.preventDefault();
+    isDraggingLeadsRef.current = false;
+    setDragOverColumnId(null);
     const leadId = e.dataTransfer.getData("text/plain") || draggedLeadId;
     if (!leadId) return;
 
@@ -298,6 +554,7 @@ export default function CrmPage() {
       const data = await res.json();
       if (data.success) {
         setIsNewLeadModalOpen(false);
+        setSelectedClientForNewLead(null);
         setNewLeadForm({
           title: "",
           contactName: "",
@@ -306,6 +563,7 @@ export default function CrmPage() {
           customerId: "",
           estimatedValue: "",
           priority: "MEDIUM",
+          dueDate: "",
           notes: "",
         });
         fetchKanban();
@@ -476,6 +734,8 @@ export default function CrmPage() {
               activeFilter={activeChipFilter}
               onFilterChange={setActiveChipFilter}
               counts={contactKpis}
+              sortBy={contactSortBy}
+              onSortChange={setContactSortBy}
             />
 
             {/* Lista de Contatos em Formato Google App */}
@@ -485,6 +745,7 @@ export default function CrmPage() {
                 isLoading={isContactsLoading}
                 onSelectContact={handleOpenContactDetails}
                 onEditContact={handleOpenEditContact}
+                onDeleteContact={(c) => handleDeleteContactFromList(c.id)}
               />
             </div>
           </div>
@@ -496,50 +757,98 @@ export default function CrmPage() {
       {/* ======================================================== */}
       {activeView === "KANBAN" && (
         <div className="space-y-4">
-          {/* Métricas do Funil */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={kanbanSearch}
-                onChange={(e) => setKanbanSearch(e.target.value)}
-                placeholder="Buscar oportunidade, projeto ou contato..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-full bg-white dark:bg-[#18191E] border border-black/[0.08] dark:border-white/[0.08] text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 focus:outline-none focus:border-[#FF650F] shadow-sm"
-              />
+          {/* Barra de Ferramentas Superior do Funil */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={kanbanSearch}
+                  onChange={(e) => setKanbanSearch(e.target.value)}
+                  placeholder="Buscar oportunidade, projeto..."
+                  className="w-full pl-10 pr-4 py-2 rounded-full bg-zinc-50 dark:bg-[#121316] border border-black/[0.08] dark:border-white/[0.08] text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 focus:outline-none focus:border-[#FF650F] shadow-sm"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold flex items-center gap-1 mr-1 shrink-0">
+                  <Filter className="w-3.5 h-3.5 text-[#FF650F]" />
+                  Prioridade:
+                </span>
+                {["ALL", "URGENT", "HIGH", "MEDIUM", "LOW"].map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPriorityFilter(p)}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all shrink-0 ${
+                      priorityFilter === p
+                        ? "bg-[#FF650F] text-white shadow-sm"
+                        : "bg-zinc-100 dark:bg-[#141519] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white border border-black/[0.05] dark:border-white/[0.06]"
+                    }`}
+                  >
+                    {p === "ALL" ? "Todas" : priorityBadges[p as keyof typeof priorityBadges]?.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold flex items-center gap-1 mr-1 shrink-0">
-                <Filter className="w-3.5 h-3.5 text-[#FF650F]" />
-                Prioridade:
-              </span>
-              {["ALL", "URGENT", "HIGH", "MEDIUM", "LOW"].map((p) => (
+            {/* Ações Rápidas: + Nova Coluna / Campo e Navegação Lateral */}
+            <div className="flex items-center gap-2 justify-between md:justify-end">
+              <div className="hidden sm:flex items-center gap-1 bg-zinc-100 dark:bg-[#121316] px-2.5 py-1 rounded-full border border-black/[0.06] dark:border-white/[0.08] text-[11px] text-zinc-500 font-medium">
+                <Hand className="w-3.5 h-3.5 text-[#FF650F]" />
+                <span>Arraste para rolar</span>
+              </div>
+
+              <div className="flex items-center gap-1">
                 <button
-                  key={p}
-                  onClick={() => setPriorityFilter(p)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 ${
-                    priorityFilter === p
-                      ? "bg-[#FF650F] text-white shadow-sm"
-                      : "bg-white dark:bg-[#18191E] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white border border-black/[0.06] dark:border-white/[0.08]"
-                  }`}
+                  type="button"
+                  onClick={handleScrollLeft}
+                  title="Rolar para esquerda"
+                  className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-[#202128] dark:hover:bg-[#282932] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-center text-zinc-600 dark:text-zinc-300 transition-colors shadow-sm"
                 >
-                  {p === "ALL" ? "Todas" : priorityBadges[p as keyof typeof priorityBadges]?.label}
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={handleScrollRight}
+                  title="Rolar para direita"
+                  className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-[#202128] dark:hover:bg-[#282932] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-center text-zinc-600 dark:text-zinc-300 transition-colors shadow-sm"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOpenAddColumn}
+                className="rounded-full text-xs font-bold gap-1.5 border-dashed border-[#FF650F]/50 text-[#FF650F] hover:bg-orange-500/10"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Novo Campo</span>
+              </Button>
             </div>
           </div>
 
-          {/* Colunas do Kanban */}
-          {isKanbanLoading ? (
-            <div className="flex items-center justify-center py-24 text-xs text-zinc-500 dark:text-zinc-400">
-              <div className="w-5 h-5 border-2 border-[#FF650F] border-t-transparent rounded-full animate-spin mr-3" />
-              Carregando funil comercial...
-            </div>
-          ) : (
-            <M3TabPanel activeKey={priorityFilter}>
-              <M3StaggerContainer className="flex gap-4 overflow-x-auto pb-6 items-start no-scrollbar">
-                {columns.map((col) => {
+          {/* CONTÊINER TIPO CARD COM MOUSE DRAG-TO-SCROLL (MÃOZINHA DO MOUSE) */}
+          <div className="rounded-3xl bg-zinc-100/80 dark:bg-[#121316] border border-black/[0.06] dark:border-white/[0.08] p-4 relative shadow-m3-1 overflow-hidden">
+            {isKanbanLoading ? (
+              <div className="flex items-center justify-center py-28 text-xs text-zinc-500 dark:text-zinc-400">
+                <div className="w-5 h-5 border-2 border-[#FF650F] border-t-transparent rounded-full animate-spin mr-3" />
+                Carregando campos do funil comercial...
+              </div>
+            ) : (
+              <div
+                ref={kanbanViewportRef}
+                onMouseDown={handleViewportMouseDown}
+                onMouseMove={handleViewportMouseMove}
+                onMouseUp={handleViewportMouseUp}
+                onMouseLeave={handleViewportMouseLeave}
+                className={`flex gap-4 overflow-x-auto pb-4 pt-1 items-start no-scrollbar select-none ${
+                  isPanning ? "cursor-grabbing" : "cursor-grab"
+                }`}
+              >
+                {columns.map((col, index) => {
                   const filteredLeads = col.leads.filter((lead) => {
                     const matchSearch =
                       lead.contactName.toLowerCase().includes(kanbanSearch.toLowerCase()) ||
@@ -555,52 +864,173 @@ export default function CrmPage() {
                     0
                   );
 
+                  const isDropActive = dragOverColumnId === col.id;
+
                   return (
-                    <M3StaggerItem key={col.id} className="shrink-0">
+                    <div
+                      key={col.id}
+                      className="shrink-0"
+                    >
                       <div
-                        onDragOver={handleDragOver}
+                        onDragOver={(e) => handleDragOver(e, col.id)}
+                        onDragLeave={handleDragLeave}
                         onDrop={(e) => handleDrop(e, col.id)}
-                        className="w-80 rounded-3xl bg-[#F6F1EC] dark:bg-[#141519] border border-black/[0.04] dark:border-white/[0.05] flex flex-col max-h-[calc(100vh-260px)] shadow-m3-1"
+                        className={`w-80 rounded-3xl bg-white dark:bg-[#17181F] border flex flex-col h-fit self-start shadow-m3-1 transition-all duration-200 ${
+                          isDropActive
+                            ? "border-[#FF650F] ring-2 ring-[#FF650F] ring-offset-2 dark:ring-offset-[#121316] scale-[1.01] bg-orange-500/[0.03]"
+                            : "border-black/[0.06] dark:border-white/[0.08]"
+                        }`}
                       >
-                        {/* Cabeçalho da Coluna */}
-                        <div className="p-4 border-b border-black/[0.04] dark:border-white/[0.05] flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                        {/* Cabeçalho da Coluna com Controles de CRUD */}
+                        <div className="p-3.5 border-b border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             <span
-                              className="w-2.5 h-2.5 rounded-full"
+                              className="w-3 h-3 rounded-full shrink-0 shadow-sm"
                               style={{ backgroundColor: col.color || "#FF650F" }}
                             />
-                            <h3 className="font-bold text-sm text-zinc-900 dark:text-white">{col.name}</h3>
-                            <span className="text-[11px] bg-black/[0.05] dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-400 px-2.5 py-0.5 rounded-full font-mono font-semibold">
+                            <h3 className="font-bold text-sm text-zinc-900 dark:text-white truncate" title={col.name}>
+                              {col.name}
+                            </h3>
+                            <span className="text-[10px] bg-zinc-100 dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-400 px-2 py-0.5 rounded-full font-mono font-semibold shrink-0">
                               {filteredLeads.length}
                             </span>
                           </div>
-                          <span className="text-xs font-mono font-bold text-[#FF650F]">
+
+                          {/* Ações de Reordenação e Edição da Coluna */}
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleMoveColumn(index, "left")}
+                              disabled={index === 0}
+                              title="Mover coluna para a esquerda"
+                              className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] disabled:opacity-20 disabled:hover:bg-transparent"
+                            >
+                              <ArrowLeft className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveColumn(index, "right")}
+                              disabled={index === columns.length - 1}
+                              title="Mover coluna para a direita"
+                              className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] disabled:opacity-20 disabled:hover:bg-transparent"
+                            >
+                              <ArrowRight className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditColumn(col)}
+                              title="Editar campo"
+                              className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteColumn(col)}
+                              title="Excluir campo"
+                              className="p-1 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-500/10"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Sub-barra de Total Financeiro */}
+                        <div className="px-3.5 py-1.5 bg-zinc-50 dark:bg-[#14151B] border-b border-black/[0.03] dark:border-white/[0.04] flex items-center justify-between text-[11px]">
+                          <span className="text-zinc-500 font-medium">Volume Estimado:</span>
+                          <span className="font-mono font-bold text-[#FF650F]">
                             {formatCurrency(colValue)}
                           </span>
                         </div>
 
-                        {/* Cards da Coluna */}
-                        <div className="p-3 overflow-y-auto space-y-3 flex-grow min-h-[160px] no-scrollbar">
+                        {/* Cards da Coluna com Expansão Natural (Sem scroll interno) */}
+                        <div className="p-3 space-y-3 flex-grow min-h-[180px]">
+                          {/* Placeholder animado de drop quando arrastando oportunidade */}
+                          {isDropActive && draggedLeadId && (
+                            <div className="p-3 rounded-2xl border-2 border-dashed border-[#FF650F] bg-orange-500/10 text-center animate-pulse flex items-center justify-center gap-2 text-xs font-bold text-[#FF650F]">
+                              <Layers className="w-4 h-4 animate-bounce" />
+                              <span>Solte para fixar oportunidade aqui</span>
+                            </div>
+                          )}
+
                           {filteredLeads.map((lead) => {
                             const pBadge = priorityBadges[lead.priority] || priorityBadges.MEDIUM;
                             const isApprovedStage = col.name.includes("Aprovado") || col.name.includes("Produção");
+                            const isBeingDragged = draggedLeadId === lead.id;
+
+                            // Totalizadores de checklist
+                            const allChecklistItems = lead.checklists?.flatMap((c) => c.items || []) || [];
+                            const completedChecklistItems = allChecklistItems.filter((i) => i.isCompleted).length;
+                            const isChecklistComplete =
+                              allChecklistItems.length > 0 &&
+                              completedChecklistItems === allChecklistItems.length;
 
                             return (
                               <div
                                 key={lead.id}
                                 draggable
                                 onDragStart={(e) => handleDragStart(e, lead.id)}
-                                className="p-4 rounded-2xl bg-white dark:bg-[#1C1D24] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 hover:shadow-m3-2 hover:border-orange-500/40 transition-all cursor-grab active:cursor-grabbing space-y-3"
+                                onDragEnd={handleDragEnd}
+                                onClick={() => {
+                                  setSelectedCardLeadId(lead.id);
+                                  setIsCardModalOpen(true);
+                                }}
+                                className={`group p-4 rounded-2xl border transition-all duration-200 cursor-pointer space-y-3 overflow-hidden ${
+                                  isBeingDragged
+                                    ? "opacity-40 scale-[0.98] rotate-[-1deg] border-dashed border-2 border-[#FF650F] shadow-2xl bg-orange-500/5 cursor-grabbing"
+                                    : "bg-white dark:bg-[#1F2028] border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 hover:shadow-m3-2 hover:-translate-y-0.5 hover:border-orange-500/40"
+                                }`}
                               >
-                                <div className="flex items-center justify-between">
+                                {/* Imagem de Capa do Cartão Estilo Trello */}
+                                {lead.coverImage && (
+                                  <div className="w-full h-28 -mt-4 -mx-4 mb-3 overflow-hidden bg-zinc-900 shrink-0">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={lead.coverImage}
+                                      alt={lead.title}
+                                      className="w-full h-full object-cover object-center"
+                                    />
+                                  </div>
+                                )}
+
+                                {/* Etiquetas Coloridas Estilo Trello */}
+                                {lead.tags && lead.tags.length > 0 && (
+                                  <div className="flex flex-wrap items-center gap-1">
+                                    {lead.tags.map(({ tag }) => (
+                                      <span
+                                        key={tag.id}
+                                        className="h-1.5 px-3 rounded-full shadow-sm"
+                                        style={{ backgroundColor: tag.color }}
+                                        title={tag.name}
+                                      />
+                                    ))}
+                                  </div>
+                                )}
+
+                                <div className="flex items-center justify-between gap-1">
                                   <span
                                     className={`text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full border ${pBadge.className}`}
                                   >
                                     {pBadge.label}
                                   </span>
-                                  <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white">
-                                    {lead.estimatedValue ? formatCurrency(lead.estimatedValue) : "Sob Consulta"}
-                                  </span>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white">
+                                      {lead.estimatedValue ? formatCurrency(lead.estimatedValue) : "Sob Consulta"}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      title="Excluir Oportunidade"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (confirm(`Deseja excluir a oportunidade "${lead.title}"?`)) {
+                                          handleDeleteLeadQuick(lead.id);
+                                        }
+                                      }}
+                                      className="p-1 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
                                 </div>
 
                                 <div>
@@ -618,7 +1048,7 @@ export default function CrmPage() {
                                             setIsDetailsOpen(true);
                                           }
                                         }}
-                                        className="text-[10px] bg-orange-500/10 text-[#FF650F] px-2 py-0.2 rounded-full font-bold hover:underline cursor-pointer"
+                                        className="text-[10px] bg-orange-500/10 text-[#FF650F] px-2 py-0.5 rounded-full font-bold hover:underline cursor-pointer"
                                       >
                                         CRM 360º
                                       </span>
@@ -626,11 +1056,66 @@ export default function CrmPage() {
                                   </div>
                                 </div>
 
-                                <div className="pt-2.5 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between text-xs">
+                                {/* Micro-indicadores estilo Trello (Checklists, Anexos, Comentários, Prazos) */}
+                                {(allChecklistItems.length > 0 ||
+                                  (lead.attachments && lead.attachments.length > 0) ||
+                                  (lead._count && lead._count.comments > 0) ||
+                                  lead.dueDate) && (
+                                  <div className="pt-2 border-t border-black/[0.04] dark:border-white/[0.05] flex flex-wrap items-center gap-2.5 text-[11px] text-zinc-500 font-medium">
+                                    {/* Checklist */}
+                                    {allChecklistItems.length > 0 && (
+                                      <span
+                                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${
+                                          isChecklistComplete
+                                            ? "bg-emerald-500/10 text-emerald-600 font-bold"
+                                            : "text-zinc-500"
+                                        }`}
+                                      >
+                                        <CheckSquare className="w-3 h-3" />
+                                        <span className="font-mono">
+                                          {completedChecklistItems}/{allChecklistItems.length}
+                                        </span>
+                                      </span>
+                                    )}
+
+                                    {/* Anexos */}
+                                    {lead.attachments && lead.attachments.length > 0 && (
+                                      <span className="flex items-center gap-0.5 text-zinc-500">
+                                        <Paperclip className="w-3 h-3" />
+                                        <span className="font-mono">{lead.attachments.length}</span>
+                                      </span>
+                                    )}
+
+                                    {/* Comentários */}
+                                    {lead._count && lead._count.comments > 0 && (
+                                      <span className="flex items-center gap-0.5 text-zinc-500">
+                                        <MessageSquare className="w-3 h-3" />
+                                        <span className="font-mono">{lead._count.comments}</span>
+                                      </span>
+                                    )}
+
+                                    {/* Prazo de Entrega */}
+                                    {lead.dueDate && (
+                                      <span
+                                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                                          new Date(lead.dueDate).getTime() < Date.now()
+                                            ? "bg-red-500/10 text-red-600"
+                                            : "bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300"
+                                        }`}
+                                      >
+                                        <Clock className="w-3 h-3" />
+                                        <span>{formatDate(lead.dueDate)}</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+
+                                <div className="pt-2 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between text-xs">
                                   <a
                                     href={`https://wa.me/${lead.contactPhone.replace(/\D/g, "")}`}
                                     target="_blank"
                                     rel="noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
                                     className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-1"
                                   >
                                     <MessageCircle className="w-3.5 h-3.5" />
@@ -648,7 +1133,10 @@ export default function CrmPage() {
                                       variant="primary"
                                       size="sm"
                                       isLoading={convertingLeadId === lead.id}
-                                      onClick={() => handleConvertToOS(lead.id)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleConvertToOS(lead.id);
+                                      }}
                                       className="w-full text-xs font-bold rounded-xl gap-1.5 py-1.5"
                                     >
                                       <Layers className="w-3.5 h-3.5" />
@@ -661,12 +1149,26 @@ export default function CrmPage() {
                           })}
                         </div>
                       </div>
-                    </M3StaggerItem>
+                    </div>
                   );
                 })}
-              </M3StaggerContainer>
-            </M3TabPanel>
-          )}
+
+                {/* Botão de Adicionar Nova Coluna no Final do Kanban */}
+                <div className="shrink-0 w-72 flex flex-col">
+                  <button
+                    type="button"
+                    onClick={handleOpenAddColumn}
+                    className="w-full py-16 rounded-3xl border-2 border-dashed border-black/10 dark:border-white/10 hover:border-[#FF650F] bg-white/40 dark:bg-[#17181F]/40 hover:bg-orange-500/5 text-zinc-500 hover:text-[#FF650F] transition-all flex flex-col items-center justify-center gap-2 group shadow-sm"
+                  >
+                    <div className="w-10 h-10 rounded-2xl bg-black/[0.04] dark:bg-white/[0.06] group-hover:bg-[#FF650F] group-hover:text-white flex items-center justify-center text-zinc-600 dark:text-zinc-300 transition-colors">
+                      <Plus className="w-5 h-5 stroke-[2.5]" />
+                    </div>
+                    <span className="text-xs font-bold tracking-tight">Adicionar Novo Campo</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -694,6 +1196,7 @@ export default function CrmPage() {
           setSelectedContactId(null);
         }}
         onEdit={handleOpenEditContact}
+        onContactDeleted={fetchContacts}
       />
 
       {/* ======================================================== */}
@@ -730,24 +1233,31 @@ export default function CrmPage() {
             </div>
 
             <form onSubmit={handleCreateLead} className="p-6 space-y-4 overflow-y-auto no-scrollbar flex-1">
-              {/* Selecionar Cliente Existente do CRM */}
-              <div>
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Cliente Vinculado (CRM)
-                </label>
-                <select
-                  value={newLeadForm.customerId}
-                  onChange={(e) => handleSelectClientForLead(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                >
-                  <option value="">-- Cadastrar como Novo / Não Vinculado --</option>
-                  {availableClients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.displayName} ({client.type === "CUSTOMER" ? "Cliente" : client.type})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Seleção Inteligente de Cliente (com busca preditiva ou Lead Avulso) */}
+              <ClientSearchAutocomplete
+                selectedClient={selectedClientForNewLead}
+                onSelectClient={(client) => {
+                  setSelectedClientForNewLead(client);
+                  if (client) {
+                    setNewLeadForm((prev) => ({
+                      ...prev,
+                      customerId: client.id,
+                      contactName: client.displayName,
+                      contactPhone: client.whatsapp || client.phone || prev.contactPhone,
+                      contactEmail: client.email || prev.contactEmail,
+                    }));
+                  } else {
+                    setNewLeadForm((prev) => ({
+                      ...prev,
+                      customerId: "",
+                    }));
+                  }
+                }}
+                onOpenNewContactModal={() => {
+                  setIsNewLeadModalOpen(false);
+                  handleOpenNewContact();
+                }}
+              />
 
               <div>
                 <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
@@ -792,7 +1302,7 @@ export default function CrmPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
                     Valor Estimado (R$)
@@ -820,6 +1330,17 @@ export default function CrmPage() {
                     <option value="HIGH">Alta</option>
                     <option value="URGENT">Urgente</option>
                   </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Data de Entrega (Prazo)
+                  </label>
+                  <input
+                    type="date"
+                    value={newLeadForm.dueDate}
+                    onChange={(e) => setNewLeadForm({ ...newLeadForm, dueDate: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
                 </div>
               </div>
 
@@ -857,6 +1378,136 @@ export default function CrmPage() {
           </div>
         </div>
       )}
+
+      {/* ======================================================== */}
+      {/* MODAL 4: CRIAÇÃO / EDIÇÃO DE CAMPO / COLUNA DO FUNIL     */}
+      {/* ======================================================== */}
+      {isColumnModalOpen && (
+        <div
+          className="fixed inset-0 z-[85] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setIsColumnModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm bg-white dark:bg-[#18191E] rounded-3xl border border-black/[0.08] dark:border-white/[0.08] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.04] dark:border-white/[0.06]">
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FF650F]">
+                  Personalização do Funil
+                </span>
+                <h3 className="text-base font-black text-zinc-900 dark:text-white tracking-tight">
+                  {editingColumn ? "Editar Campo do Funil" : "Novo Campo no Funil"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsColumnModalOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveColumn} className="p-6 space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Nome do Campo / Coluna *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Em Negociação, Em Produção..."
+                  value={columnForm.name}
+                  onChange={(e) => setColumnForm({ ...columnForm, name: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-2">
+                  Cor de Identificação
+                </label>
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  {[
+                    "#FF650F", // Laranja Icthus
+                    "#2563EB", // Azul
+                    "#16A34A", // Verde
+                    "#9333EA", // Roxo
+                    "#D97706", // Âmbar
+                    "#DC2626", // Vermelho
+                    "#DB2777", // Rosa
+                    "#0891B2", // Ciano
+                    "#4B5563", // Grafite
+                  ].map((hex) => (
+                    <button
+                      key={hex}
+                      type="button"
+                      onClick={() => setColumnForm({ ...columnForm, color: hex })}
+                      className={`w-7 h-7 rounded-full transition-transform flex items-center justify-center ${
+                        columnForm.color === hex
+                          ? "scale-110 ring-2 ring-offset-2 ring-black dark:ring-white dark:ring-offset-[#18191E]"
+                          : "hover:scale-105 opacity-80 hover:opacity-100"
+                      }`}
+                      style={{ backgroundColor: hex }}
+                    >
+                      {columnForm.color === hex && <Check className="w-3.5 h-3.5 text-white" />}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={columnForm.color}
+                    onChange={(e) => setColumnForm({ ...columnForm, color: e.target.value })}
+                    className="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent p-0"
+                  />
+                  <span className="text-xs font-mono text-zinc-500 uppercase">{columnForm.color}</span>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsColumnModalOpen(false)}
+                  className="rounded-full px-4 text-xs font-bold"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isLoading={isSavingColumn}
+                  className="rounded-full px-5 text-xs font-bold"
+                >
+                  {editingColumn ? "Atualizar Campo" : "Criar Campo"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 5: O VERSO DO CARTÃO ESTILO TRELLO (CENTRAL TAREFA) */}
+      {/* ======================================================== */}
+      <LeadCardDrawerModal
+        leadId={selectedCardLeadId}
+        isOpen={isCardModalOpen}
+        onClose={() => {
+          setIsCardModalOpen(false);
+          setSelectedCardLeadId(null);
+        }}
+        onLeadUpdated={fetchKanban}
+        columns={columns.map((c) => ({ id: c.id, name: c.name, color: c.color }))}
+        onConvertToOS={handleConvertToOS}
+        onOpenContactDetails={(contactId) => {
+          setSelectedContactId(contactId);
+          setIsDetailsOpen(true);
+        }}
+      />
 
       {/* Botão Flutuante (FAB) de Adicionar no Mobile — Alinhado perfeitamente com o Menu Hamburger */}
       <div className="fixed bottom-[90px] right-6 z-40 lg:hidden">

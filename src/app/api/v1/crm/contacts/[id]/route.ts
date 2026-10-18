@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { CustomerType, PersonType, CustomerStatus } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -207,9 +208,47 @@ export async function PUT(req: NextRequest, { params }: Params) {
       tags,
     } = body;
 
+    const effectiveEmail = email !== undefined ? (email ? email.trim().toLowerCase() : null) : existing.email;
+    const effectiveName = (tradeName || fullName || companyName || contactPerson || existing.tradeName || existing.fullName || existing.companyName || "Cliente").trim();
+    const effectivePhone = whatsapp || phone || existing.whatsapp || existing.phone || null;
+
+    let targetUserId = existing.userId;
+
+    if (effectiveEmail) {
+      if (existing.userId) {
+        // Atualiza dados no User vinculado
+        await prisma.user.update({
+          where: { id: existing.userId },
+          data: {
+            email: effectiveEmail,
+            name: effectiveName,
+            phone: effectivePhone,
+          },
+        }).catch((err) => console.warn("Aviso ao atualizar user vinculado:", err));
+      } else {
+        // Procura ou cria o User com senha padrão Icthus@123
+        let user = await prisma.user.findUnique({ where: { email: effectiveEmail } });
+        if (!user) {
+          const defaultHash = await bcrypt.hash("Icthus@123", 10);
+          user = await prisma.user.create({
+            data: {
+              name: effectiveName,
+              email: effectiveEmail,
+              passwordHash: defaultHash,
+              phone: effectivePhone,
+              role: "CUSTOMER",
+              isActive: false,
+            },
+          });
+        }
+        targetUserId = user.id;
+      }
+    }
+
     const updated = await prisma.customer.update({
       where: { id },
       data: {
+        userId: targetUserId,
         type: type ? (type as CustomerType) : undefined,
         personType: personType ? (personType as PersonType) : undefined,
         status: status ? (status as CustomerStatus) : undefined,
@@ -243,6 +282,16 @@ export async function PUT(req: NextRequest, { params }: Params) {
         bankAccount: bankAccount !== undefined ? bankAccount?.trim() || null : undefined,
         notes: notes !== undefined ? notes?.trim() || null : undefined,
         tags: Array.isArray(tags) ? tags : undefined,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            isActive: true,
+            role: true,
+          },
+        },
       },
     });
 
@@ -303,16 +352,29 @@ export async function DELETE(req: NextRequest, { params }: Params) {
         where: { id },
         data: { status: CustomerStatus.INACTIVE },
       });
+      if (contact.userId) {
+        await prisma.user.update({
+          where: { id: contact.userId },
+          data: { isActive: false },
+        }).catch(() => {});
+      }
       return NextResponse.json({
         success: true,
-        message: "Contato arquivado/inativado devido ao histórico de registros vinculados.",
+        message: "Contato arquivado/inativado e perfil de acesso desativado.",
       });
     }
 
-    // Se não tiver relações, pode deletar o registro
+    // Se não tiver relações ou se for forçado, deleta o registro
     await prisma.customer.delete({
       where: { id },
     });
+
+    if (contact.userId) {
+      const user = await prisma.user.findUnique({ where: { id: contact.userId } });
+      if (user && user.role === "CUSTOMER") {
+        await prisma.user.delete({ where: { id: contact.userId } }).catch(() => {});
+      }
+    }
 
     return NextResponse.json({
       success: true,

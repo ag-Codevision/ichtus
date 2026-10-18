@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Search, X, Users, Briefcase, Truck, Wrench, Building2, User } from "lucide-react";
+import { Search, X, Users, Briefcase, Truck, Wrench, Building2, User, ArrowUpDown } from "lucide-react";
 
 export type FilterChipType = "ALL" | "CUSTOMER" | "SUPPLIER" | "SERVICE_PROVIDER" | "PJ" | "PF";
 
@@ -10,6 +10,8 @@ interface GoogleSearchBarWithChipsProps {
   onSearchChange: (value: string) => void;
   activeFilter: FilterChipType;
   onFilterChange: (filter: FilterChipType) => void;
+  sortBy?: string;
+  onSortChange?: (sort: string) => void;
   counts: {
     total: number;
     customers: number;
@@ -23,6 +25,8 @@ export function GoogleSearchBarWithChips({
   onSearchChange,
   activeFilter,
   onFilterChange,
+  sortBy,
+  onSortChange,
   counts,
 }: GoogleSearchBarWithChipsProps) {
   const chips: { id: FilterChipType; label: string; icon: React.ReactNode; count?: number }[] = [
@@ -36,28 +40,49 @@ export function GoogleSearchBarWithChips({
 
   return (
     <div className="w-full flex flex-col gap-3">
-      {/* Barra de Pesquisa estilo Google App (Material You Pill Bar) */}
-      <div className="relative w-full">
-        <div className="group relative flex items-center w-full h-12 sm:h-13 px-4 rounded-full bg-zinc-100 dark:bg-[#1E1F25] hover:bg-zinc-200/80 dark:hover:bg-[#25272F] focus-within:bg-white dark:focus-within:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] focus-within:border-[#FF650F]/50 shadow-sm transition-all duration-200">
-          <Search className="w-5 h-5 text-zinc-500 dark:text-zinc-400 group-focus-within:text-[#FF650F] transition-colors shrink-0" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Pesquisar contatos, CNPJ, WhatsApp, cidade..."
-            className="w-full h-full bg-transparent px-3 text-sm sm:text-base text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => onSearchChange("")}
-              className="p-1 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors"
-              aria-label="Limpar pesquisa"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+      {/* Barra de Pesquisa + Seletor de Ordenação estilo Google Material You */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full">
+        <div className="relative flex-1">
+          <div className="group relative flex items-center w-full h-12 sm:h-13 px-4 rounded-full bg-zinc-100 dark:bg-[#1E1F25] hover:bg-zinc-200/80 dark:hover:bg-[#25272F] focus-within:bg-white dark:focus-within:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] focus-within:border-[#FF650F]/50 shadow-sm transition-all duration-200">
+            <Search className="w-5 h-5 text-zinc-500 dark:text-zinc-400 group-focus-within:text-[#FF650F] transition-colors shrink-0" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Pesquisar contatos, CNPJ, WhatsApp, cidade..."
+              className="w-full h-full bg-transparent px-3 text-sm sm:text-base text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => onSearchChange("")}
+                className="p-1 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors"
+                aria-label="Limpar pesquisa"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
+
+        {onSortChange && (
+          <div className="flex items-center gap-1.5 px-4 h-12 sm:h-13 rounded-full bg-zinc-100 dark:bg-[#1E1F25] border border-black/[0.06] dark:border-white/[0.08] text-xs font-semibold shrink-0 shadow-sm">
+            <ArrowUpDown className="w-4 h-4 text-[#FF650F] shrink-0" />
+            <select
+              value={sortBy || "default"}
+              onChange={(e) => onSortChange(e.target.value)}
+              aria-label="Ordenar contatos"
+              className="bg-transparent text-xs font-bold text-zinc-800 dark:text-zinc-200 focus:outline-none cursor-pointer"
+            >
+              <option value="default" className="dark:bg-[#1E1F25]">Padrão</option>
+              <option value="name_asc" className="dark:bg-[#1E1F25]">Ordem Alfabética (A-Z)</option>
+              <option value="name_desc" className="dark:bg-[#1E1F25]">Ordem Alfabética (Z-A)</option>
+              <option value="newest" className="dark:bg-[#1E1F25]">Mais Novos Primeiro</option>
+              <option value="oldest" className="dark:bg-[#1E1F25]">Mais Antigos Primeiro</option>
+              <option value="recent_activity" className="dark:bg-[#1E1F25]">Atualizados Recentemente</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Carrossel de Filter Chips deslizáveis estilo Google Material You */}

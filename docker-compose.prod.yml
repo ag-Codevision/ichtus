@@ -74,6 +74,8 @@ services:
       PORT: 3000
     ports:
       - "3005:3000"
+    volumes:
+      - ./public/uploads:/app/public/uploads
     networks:
       - glessios_network
 

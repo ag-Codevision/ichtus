@@ -20,7 +20,8 @@ export async function GET(req: NextRequest) {
     }
 
     if (query) {
-      where.OR = [
+      const cleanDigits = query.replace(/\D/g, "");
+      const conditions: any[] = [
         { tradeName: { contains: query, mode: "insensitive" } },
         { companyName: { contains: query, mode: "insensitive" } },
         { fullName: { contains: query, mode: "insensitive" } },
@@ -29,7 +30,14 @@ export async function GET(req: NextRequest) {
         { phone: { contains: query } },
         { whatsapp: { contains: query } },
         { email: { contains: query, mode: "insensitive" } },
+        { city: { contains: query, mode: "insensitive" } },
       ];
+      if (cleanDigits && cleanDigits.length >= 3) {
+        conditions.push({ documentNumber: { contains: cleanDigits } });
+        conditions.push({ whatsapp: { contains: cleanDigits } });
+        conditions.push({ phone: { contains: cleanDigits } });
+      }
+      where.OR = conditions;
     }
 
     const contacts = await prisma.customer.findMany({

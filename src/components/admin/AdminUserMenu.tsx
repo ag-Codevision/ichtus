@@ -14,6 +14,7 @@ import {
   Building,
   Check,
   UserCog,
+  Settings,
 } from "lucide-react";
 import { EditProfileModal, UserProfileData } from "@/components/profile/EditProfileModal";
 
@@ -164,6 +165,19 @@ export function AdminUserMenu() {
                   Nome & Foto
                 </span>
               </button>
+
+              {/* Configurações do Sistema & WhatsApp */}
+              <Link
+                href="/admin/configuracoes"
+                onClick={() => setIsOpen(false)}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Settings className="w-4 h-4 text-[#FF650F]" />
+                  <span>Configurações & WhatsApp</span>
+                </div>
+                <span className="text-[10px] text-zinc-400 font-mono">Ajustes</span>
+              </Link>
 
               {/* Voltar ao Site */}
               <Link

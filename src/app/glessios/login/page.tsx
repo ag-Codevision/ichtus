@@ -2,12 +2,22 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Lock, Mail, ShieldCheck, Eye, EyeOff, Sparkles } from "lucide-react";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import {
+  Lock,
+  Mail,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ShieldCheck,
+  Cpu,
+  Boxes,
+  TrendingUp,
+  AlertCircle,
+  ExternalLink,
+} from "lucide-react";
+import { AuthSplitLayout } from "@/components/auth/AuthSplitLayout";
 
 export default function GlessiosLoginPage() {
   const router = useRouter();
@@ -33,151 +43,149 @@ export default function GlessiosLoginPage() {
       if (data.success) {
         router.push("/admin");
       } else {
-        setErrorMsg(data.error || "Credenciais inválidas. Tente novamente.");
+        setErrorMsg(data.error || "Credenciais administrativas inválidas. Acesso restrito.");
       }
     } catch (err) {
-      console.error("Erro de login admin:", err);
-      setErrorMsg("Falha na conexão com o servidor. Tente novamente.");
+      console.error("Erro de login administrativo:", err);
+      setErrorMsg("Falha na conexão com o servidor central. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const adminFeatures = [
+    {
+      icon: <Cpu className="w-4 h-4" aria-hidden="true" />,
+      title: "Chão de Fábrica",
+      description: "Controle de usinagem CNC, corte a laser e montagem.",
+    },
+    {
+      icon: <Boxes className="w-4 h-4" aria-hidden="true" />,
+      title: "Estoque & Insumos",
+      description: "Rastreabilidade de chapas ACM, acrílicos e perfis.",
+    },
+    {
+      icon: <TrendingUp className="w-4 h-4" aria-hidden="true" />,
+      title: "DRE & Financeiro",
+      description: "Margem de contribuição e fluxo de caixa em tempo real.",
+    },
+  ];
+
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-[#FDF9F6] dark:bg-[#0E0F12] text-zinc-900 dark:text-white px-4 sm:px-6 lg:px-8 py-6 transition-colors duration-300">
-      {/* Cabeçalho */}
-      <div className="max-w-7xl mx-auto w-full flex items-center justify-between py-4">
-        <Link href="/" className="inline-flex items-center py-1 group" aria-label="ICTHUS - Soluções & Design">
-          <Image
-            src="/logo-horizontal-escuro.png"
-            alt="ICTHUS - Soluções & Design"
-            width={180}
-            height={40}
-            className="h-9 w-auto object-contain group-hover:scale-105 transition-transform dark:hidden"
-            priority
-          />
-          <Image
-            src="/logo-web.png"
-            alt="ICTHUS - Soluções & Design"
-            width={180}
-            height={40}
-            className="h-9 w-auto object-contain group-hover:scale-105 transition-transform hidden dark:block"
-            priority
-          />
-        </Link>
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          <Link
-            href="/"
-            className="text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1.5 transition-colors font-semibold"
+    <AuthSplitLayout
+      variant="admin"
+      badgeText="Acesso Restrito • Equipe"
+      title="Painel de Controle ERP"
+      subtitle="Gestão integrada de CRM, operações industriais, compras e controladoria."
+      showcaseHeadline="Inteligência Operacional e Excelência Fabril"
+      showcaseSubheadline="Núcleo de comando unificado da Glessios. Conectando o comercial ao chão de fábrica."
+      showcaseFeatures={adminFeatures}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Mensagem de Erro Estilizada */}
+        {errorMsg && (
+          <div
+            role="alert"
+            className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold animate-in fade-in duration-200"
           >
-            <ArrowLeft className="w-4 h-4" />
-            Voltar ao Website
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {/* Campo E-mail */}
+        <div className="space-y-1.5">
+          <label
+            htmlFor="admin-email"
+            className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300"
+          >
+            E-mail do Administrador
+          </label>
+          <div className="relative">
+            <Mail
+              className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              id="admin-email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@glessios.com.br"
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/10 dark:border-white/10 text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 focus:outline-none focus:border-[#FF650F] focus:ring-2 focus:ring-[#FF650F]/20 transition-all font-medium"
+            />
+          </div>
+        </div>
+
+        {/* Campo Senha */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label
+              htmlFor="admin-password"
+              className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300"
+            >
+              Senha de Segurança
+            </label>
+          </div>
+          <div className="relative">
+            <Lock
+              className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              id="admin-password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••••••"
+              className="w-full pl-10 pr-11 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/10 dark:border-white/10 text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 focus:outline-none focus:border-[#FF650F] focus:ring-2 focus:ring-[#FF650F]/20 transition-all font-medium"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white p-1 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF650F]"
+              aria-label={showPassword ? "Ocultar senha administrativa" : "Mostrar senha administrativa"}
+              title={showPassword ? "Ocultar senha" : "Ver senha"}
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4 text-[#FF650F]" aria-hidden="true" />
+              ) : (
+                <Eye className="w-4 h-4" aria-hidden="true" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Botão de Ação Principal */}
+        <div className="pt-2">
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={isLoading}
+            className="w-full justify-center gap-2 text-xs font-bold py-3 rounded-full shadow-lg shadow-orange-500/20 bg-gradient-to-r from-[#FF5D09] via-[#FF650F] to-[#FF781B] hover:opacity-95 text-white transition-all transform active:scale-[0.99]"
+          >
+            {isLoading ? "Autenticando Sessão..." : "Entrar no Painel ERP"}
+            <ArrowRight className="w-4 h-4" aria-hidden="true" />
+          </Button>
+        </div>
+
+        {/* Links de Apoio */}
+        <div className="pt-4 border-t border-black/[0.06] dark:border-white/[0.06] text-center">
+          <Link
+            href="/portal/login"
+            className="inline-flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 hover:text-[#FF650F] dark:hover:text-[#FF781B] font-semibold transition-colors py-1 px-2 rounded-lg"
+          >
+            <span>É um cliente da Glessios? Acesse o Portal do Cliente</span>
+            <ExternalLink className="w-3 h-3" aria-hidden="true" />
           </Link>
         </div>
-      </div>
-
-      {/* Card Central - M3 Expressive Surface */}
-      <div className="max-w-md mx-auto w-full my-auto">
-        <Card className="rounded-3xl border border-black/[0.08] dark:border-white/[0.08] shadow-m3-2 bg-white dark:bg-[#18191E] transition-colors p-2 sm:p-4">
-          <CardHeader className="text-center pb-2">
-            <div className="mx-auto w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-glessios-orange mb-4 shadow-sm">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <CardTitle className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">
-              Acesso Administrativo & Operacional
-            </CardTitle>
-            <CardDescription className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 font-medium">
-              Controle de CRM, Chão de Fábrica, Estoque de Insumos e DRE Financeiro
-            </CardDescription>
-          </CardHeader>
-
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4 pt-4">
-              {errorMsg && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-600 dark:text-red-400 text-xs text-center font-semibold">
-                  {errorMsg}
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
-                  E-mail do Administrador
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="admin@glessios.com.br"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/10 dark:border-white/10 text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 focus:outline-none focus:border-glessios-orange focus:ring-1 focus:ring-glessios-orange transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
-                    Senha de Segurança
-                  </label>
-                </div>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    placeholder="••••••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/10 dark:border-white/10 text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 focus:outline-none focus:border-glessios-orange focus:ring-1 focus:ring-glessios-orange transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white p-1 rounded-lg transition-colors focus:outline-none"
-                    aria-label={showPassword ? "Ocultar senha" : "Ver senha"}
-                    title={showPassword ? "Ocultar senha" : "Ver senha"}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-4 h-4 text-glessios-orange" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </CardContent>
-
-            <CardFooter className="flex flex-col gap-3 pt-2">
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={isLoading}
-                className="w-full justify-center gap-2 text-xs font-bold py-2.5 rounded-full shadow-sm bg-orange-gradient hover:opacity-95 text-white transition-all"
-              >
-                {isLoading ? "Autenticando..." : "Entrar no Painel ERP"}
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-
-              <div className="text-center mt-2">
-                <Link
-                  href="/portal/login"
-                  className="text-xs text-zinc-500 dark:text-zinc-400 hover:text-glessios-orange transition-colors font-medium"
-                >
-                  É cliente da Glessios? Acesse o Portal do Cliente
-                </Link>
-              </div>
-            </CardFooter>
-          </form>
-        </Card>
-      </div>
-
-      {/* Rodapé */}
-      <div className="max-w-7xl mx-auto w-full text-center py-4 text-xs text-zinc-400 dark:text-zinc-500">
-        &copy; {new Date().getFullYear()} ICTHUS Soluções & Design. Painel Administrativo Seguro.
-      </div>
-    </div>
+      </form>
+    </AuthSplitLayout>
   );
 }

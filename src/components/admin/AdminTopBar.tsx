@@ -21,6 +21,7 @@ export function AdminTopBar({ onOpenMobileMenu }: AdminTopBarProps) {
     if (pathname.startsWith("/admin/estoque")) return "Controle de Estoque & Insumos";
     if (pathname.startsWith("/admin/financeiro")) return "Gestão Financeira & DRE Fabril";
     if (pathname.startsWith("/admin/propostas")) return "Proposta Comercial Executiva";
+    if (pathname.startsWith("/admin/configuracoes")) return "Configurações do Sistema & WhatsApp";
     return "Painel ERP & Operações";
   };
 

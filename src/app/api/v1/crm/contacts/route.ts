@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { CustomerType, PersonType, CustomerStatus } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 /**
  * GET /api/v1/crm/contacts
- * Listagem paginada de contatos/entidades do CRM com filtros de tipo, pessoa, status e busca textual
+ * Listagem paginada de contatos/entidades do CRM com filtros de tipo, pessoa, status, busca e ordenação
  */
 export async function GET(req: NextRequest) {
   try {
@@ -12,6 +13,7 @@ export async function GET(req: NextRequest) {
     const typeParam = searchParams.get("type");
     const personTypeParam = searchParams.get("personType");
     const statusParam = searchParams.get("status");
+    const sortByParam = searchParams.get("sortBy") || "default";
     const search = searchParams.get("search")?.trim() || "";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "40", 10)));
@@ -45,16 +47,35 @@ export async function GET(req: NextRequest) {
       ];
     }
 
+    // Configuração de Ordenação Dinâmica
+    let orderBy: any = [{ status: "asc" }, { updatedAt: "desc" }];
+    if (sortByParam === "name_asc") {
+      orderBy = [{ tradeName: "asc" }, { fullName: "asc" }, { companyName: "asc" }];
+    } else if (sortByParam === "name_desc") {
+      orderBy = [{ tradeName: "desc" }, { fullName: "desc" }, { companyName: "desc" }];
+    } else if (sortByParam === "newest") {
+      orderBy = [{ createdAt: "desc" }];
+    } else if (sortByParam === "oldest") {
+      orderBy = [{ createdAt: "asc" }];
+    } else if (sortByParam === "recent_activity") {
+      orderBy = [{ updatedAt: "desc" }];
+    }
+
     const [contacts, totalCount, kpisData] = await Promise.all([
       prisma.customer.findMany({
         where,
-        orderBy: [
-          { status: "asc" },
-          { updatedAt: "desc" },
-        ],
+        orderBy,
         skip,
         take: limit,
         include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              isActive: true,
+              role: true,
+            },
+          },
           _count: {
             select: {
               serviceOrders: true,
@@ -185,8 +206,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const cleanEmail = email?.trim()?.toLowerCase() || null;
+    let linkedUserId: string | null = null;
+
+    // Se informado e-mail, cria automaticamente o perfil de acesso no banco
+    if (cleanEmail) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email: cleanEmail },
+      });
+
+      if (existingUser) {
+        linkedUserId = existingUser.id;
+      } else {
+        const defaultPasswordHash = await bcrypt.hash("Icthus@123", 10);
+        const newUser = await prisma.user.create({
+          data: {
+            name: displayName,
+            email: cleanEmail,
+            passwordHash: defaultPasswordHash,
+            phone: whatsapp?.trim() || phone?.trim() || null,
+            role: "CUSTOMER",
+            isActive: false, // Por padrão nasce desligada, sendo necessária a ativação manual pelo admin
+          },
+        });
+        linkedUserId = newUser.id;
+      }
+    }
+
     const created = await prisma.customer.create({
       data: {
+        userId: linkedUserId,
         type: type as CustomerType,
         personType: personType as PersonType,
         status: status as CustomerStatus,
@@ -201,7 +250,7 @@ export async function POST(req: NextRequest) {
         contactRole: contactRole?.trim() || null,
         phone: phone?.trim() || null,
         whatsapp: whatsapp?.trim() || null,
-        email: email?.trim()?.toLowerCase() || null,
+        email: cleanEmail,
         financialEmail: financialEmail?.trim()?.toLowerCase() || null,
         zipCode: zipCode?.trim() || null,
         street: street?.trim() || null,
@@ -221,12 +270,22 @@ export async function POST(req: NextRequest) {
         notes: notes?.trim() || null,
         tags: Array.isArray(tags) ? tags : [],
       },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            isActive: true,
+            role: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json({
       success: true,
       contact: created,
-      message: "Contato registrado com sucesso no CRM!",
+      message: "Contato registrado com sucesso no CRM e perfil de acesso provisionado!",
     });
   } catch (error: any) {
     console.error("Erro ao criar contato no CRM:", error);

@@ -30,6 +30,26 @@ export async function GET(req: NextRequest) {
                 city: true,
               },
             },
+            tags: {
+              include: {
+                tag: true,
+              },
+            },
+            checklists: {
+              orderBy: { order: "asc" },
+              include: {
+                items: {
+                  orderBy: { order: "asc" },
+                },
+              },
+            },
+            attachments: true,
+            _count: {
+              select: {
+                comments: true,
+                attachments: true,
+              },
+            },
           },
         },
       },
@@ -67,6 +87,7 @@ export async function POST(req: NextRequest) {
       notes,
       columnId,
       scheduledVisitDate,
+      dueDate,
     } = body;
 
     if (!contactName || !contactPhone) {
@@ -107,6 +128,7 @@ export async function POST(req: NextRequest) {
         estimatedValue: estimatedValue ? Number(estimatedValue) : null,
         priority,
         notes: notes || null,
+        dueDate: dueDate ? new Date(dueDate) : null,
         columnId: targetColumnId,
         orderInColumn: leadsInCol,
       },

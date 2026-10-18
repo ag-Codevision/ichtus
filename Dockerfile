@@ -46,11 +46,14 @@ RUN adduser --system --uid 1001 nextjs
 RUN apk add --no-cache openssl curl
 
 # Copia artefatos públicos e standalone
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Assegura que o diretório de uploads exista com permissão de escrita
+RUN mkdir -p ./public/uploads/leads && chown -R nextjs:nodejs ./public
 
 USER nextjs
 

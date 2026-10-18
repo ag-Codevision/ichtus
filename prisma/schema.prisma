@@ -241,15 +241,96 @@ model Lead {
   estimatedValue  Decimal?      @db.Decimal(12, 2)
   priority        PriorityLevel @default(MEDIUM)
   notes           String?       @db.Text
+  dueDate         DateTime?     // Data limite / entrega
+  reminderAt      DateTime?     // Lembrete agendado
+  isCompleted     Boolean       @default(false)
+  coverImage      String?       // URL da imagem de capa (estilo Trello)
   assignedToId    String?
   assignedTo      User?         @relation(fields: [assignedToId], references: [id])
   orderInColumn   Int           @default(0)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
+  tags            LeadTagAssignment[]
+  checklists      LeadChecklist[]
+  attachments     LeadAttachment[]
+  comments        LeadComment[]
   serviceOrders   ServiceOrder[]
 
   @@map("leads")
+}
+
+model KanbanTag {
+  id        String              @id @default(cuid())
+  name      String              // Ex: "Urgente", "Fachada ACM", "Letreiro LED"
+  color     String              // Hexadecimal ex: "#EF4444"
+  createdAt DateTime            @default(now())
+  leads     LeadTagAssignment[]
+
+  @@map("kanban_tags")
+}
+
+model LeadTagAssignment {
+  id     String    @id @default(cuid())
+  leadId String
+  lead   Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tagId  String
+  tag    KanbanTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, tagId])
+  @@map("lead_tag_assignments")
+}
+
+model LeadChecklist {
+  id        String              @id @default(cuid())
+  leadId    String
+  lead      Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  title     String              // Ex: "Briefing", "Medições e Vistoria"
+  order     Int                 @default(0)
+  items     LeadChecklistItem[]
+  createdAt DateTime            @default(now())
+
+  @@map("lead_checklists")
+}
+
+model LeadChecklistItem {
+  id          String        @id @default(cuid())
+  checklistId String
+  checklist   LeadChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  title       String
+  isCompleted Boolean       @default(false)
+  order       Int           @default(0)
+  dueDate     DateTime?
+  createdAt   DateTime      @default(now())
+
+  @@map("lead_checklist_items")
+}
+
+model LeadAttachment {
+  id             String   @id @default(cuid())
+  leadId         String
+  lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  fileName       String   // Nome do arquivo ou título do link
+  fileUrl        String   // URL relativa (/uploads/...) ou externa
+  fileType       String   // "IMAGE", "PDF", "DOCUMENT", "LINK"
+  fileSize       Int?     // Em bytes
+  isCover        Boolean  @default(false) // Se é capa do cartão
+  isExternalLink Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@map("lead_attachments")
+}
+
+model LeadComment {
+  id           String   @id @default(cuid())
+  leadId       String
+  lead         Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  authorName   String   // Nome de quem comentou
+  authorAvatar String?
+  content      String   @db.Text
+  createdAt    DateTime @default(now())
+
+  @@map("lead_comments")
 }
 
 // ====================================================

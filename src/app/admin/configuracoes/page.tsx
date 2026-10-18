@@ -1,0 +1,1099 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import Image from "next/image";
+import {
+  QrCode,
+  Smartphone,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  Send,
+  Sliders,
+  Building,
+  KeyRound,
+  Layers,
+  Server,
+  ShieldCheck,
+  Check,
+  Copy,
+  ExternalLink,
+  Power,
+  Lock,
+  Phone,
+  Mail,
+  MapPin,
+  Clock,
+  Sparkles,
+  HelpCircle,
+  Info,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+
+type TabKey = "WHATSAPP" | "PORTAL" | "COMPANY" | "PRODUCTION" | "SERVER";
+
+export default function AdminSettingsPage() {
+  const [activeTab, setActiveTab] = useState<TabKey>("WHATSAPP");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [feedback, setFeedback] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  // Estados do WhatsApp
+  const [wppStatus, setWppStatus] = useState<any>(null);
+  const [isCheckingWpp, setIsCheckingWpp] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+  const [testMessage, setTestMessage] = useState(
+    "👋 Olá! Esta é uma mensagem de teste oficial enviada pelo sistema Icthus / Glessios."
+  );
+  const [isSendingTest, setIsSendingTest] = useState(false);
+  const [testFeedback, setTestFeedback] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  // Estados Gerais de Configurações
+  const [settings, setSettings] = useState<any>({
+    whatsapp: {
+      provider: "wacli",
+      mode: "http",
+      apiUrl: "http://localhost:3001",
+      sessionName: "glessios-wpp",
+      apiKey: "",
+      autoSendCredentials: true,
+      autoSendProofs: true,
+      autoSendOSUpdates: true,
+      autoSendPixInvoice: true,
+      connectedNumber: "+55 (41) 99824-3990",
+      status: "PAIRING_REQUIRED",
+    },
+    company: {
+      tradeName: "Icthus Comunicação Visual",
+      legalName: "Icthus Soluções & Design Visual Ltda",
+      cnpj: "45.123.456/0001-78",
+      email: "contato@glessios.com.br",
+      phone: "(41) 3345-8900",
+      whatsapp: "(41) 99824-3990",
+      address: "Rua das Indústrias, 1024 - CIC",
+      city: "Curitiba",
+      state: "PR",
+    },
+    portal: {
+      defaultPassword: "Icthus@123",
+      portalUrl: "https://glessios.com.br/portal/login",
+      allowSelfRegistration: false,
+      welcomeMessageTemplate:
+        "Olá, *{nome}*! Seu perfil de acesso ao Portal do Cliente Icthus foi liberado com sucesso.\n\n🔗 *Acesso:* {url}\n📧 *Login:* {email}\n🔑 *Senha Inicial:* {senha}",
+    },
+    production: {
+      notifyOnNewProof: true,
+      notifyOnStageChange: true,
+      notifyOnInstallationSchedule: true,
+    },
+    server: {
+      vpsHost: "72.62.141.188",
+      cronEnabled: true,
+    },
+  });
+
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+
+  // Carrega configurações gerais e status do WhatsApp
+  const fetchAllSettings = async () => {
+    setIsLoading(true);
+    try {
+      const [resSettings, resWpp] = await Promise.all([
+        fetch("/api/v1/admin/settings").then((r) => r.json()).catch(() => null),
+        fetch("/api/v1/admin/settings/whatsapp").then((r) => r.json()).catch(() => null),
+      ]);
+
+      if (resSettings?.success && resSettings.settings) {
+        setSettings(resSettings.settings);
+      }
+      if (resWpp?.success) {
+        setWppStatus(resWpp);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar configurações:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllSettings();
+  }, []);
+
+  const refreshWhatsappStatus = async () => {
+    setIsCheckingWpp(true);
+    setTestFeedback(null);
+    try {
+      const res = await fetch("/api/v1/admin/settings/whatsapp");
+      const json = await res.json();
+      if (json.success) {
+        setWppStatus(json);
+        setFeedback({ type: "success", text: "Status do WhatsApp atualizado em tempo real!" });
+      }
+    } catch {
+      setFeedback({ type: "error", text: "Não foi possível sincronizar com o serviço do WhatsApp." });
+    } finally {
+      setIsCheckingWpp(false);
+    }
+  };
+
+  const handleSimulateConnect = async () => {
+    setIsCheckingWpp(true);
+    try {
+      const res = await fetch("/api/v1/admin/settings/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "simulate_connect", phone: "+55 (41) 99824-3990" }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        await refreshWhatsappStatus();
+        setFeedback({ type: "success", text: "Sessão pareada e ativa com sucesso no sistema!" });
+      }
+    } catch {
+      setFeedback({ type: "error", text: "Erro ao confirmar conexão da sessão." });
+    } finally {
+      setIsCheckingWpp(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    setIsCheckingWpp(true);
+    try {
+      const res = await fetch("/api/v1/admin/settings/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "disconnect" }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        await refreshWhatsappStatus();
+        setFeedback({ type: "success", text: "Sessão desconectada. Novo QR Code gerado para pareamento." });
+      }
+    } catch {
+      setFeedback({ type: "error", text: "Erro ao desconectar sessão." });
+    } finally {
+      setIsCheckingWpp(false);
+    }
+  };
+
+  const handleSendTestMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testPhone) {
+      setTestFeedback({ type: "error", text: "Informe um número de telefone com DDD." });
+      return;
+    }
+    setIsSendingTest(true);
+    setTestFeedback(null);
+    try {
+      const res = await fetch("/api/v1/admin/settings/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "test_send",
+          to: testPhone,
+          message: testMessage,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setTestFeedback({
+          type: "success",
+          text: json.message || "Mensagem de teste enviada com sucesso!",
+        });
+      } else {
+        setTestFeedback({
+          type: "error",
+          text: json.error || "Falha ao enviar mensagem de teste.",
+        });
+      }
+    } catch {
+      setTestFeedback({ type: "error", text: "Erro ao comunicar com a API de disparo." });
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
+
+  const handleSaveGeneralSettings = async () => {
+    setIsSaving(true);
+    setFeedback(null);
+    try {
+      const res = await fetch("/api/v1/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setFeedback({ type: "success", text: "Todas as configurações foram salvas com sucesso!" });
+      } else {
+        setFeedback({ type: "error", text: json.error || "Erro ao salvar configurações." });
+      }
+    } catch {
+      setFeedback({ type: "error", text: "Falha de comunicação com o servidor." });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedText(id);
+    setTimeout(() => setCopiedText(null), 2000);
+  };
+
+  return (
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      {/* Topo / Header da Página */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-black/[0.06] dark:border-white/[0.06]">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-[#FF650F]/15 border border-[#FF650F]/30 flex items-center justify-center text-[#FF650F]">
+              <Sliders className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white tracking-tight">
+                Configurações & Conexões
+              </h1>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Gerencie o gateway de WhatsApp, QR Code de pareamento, Portal do Cliente e parâmetros da empresa
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleSaveGeneralSettings}
+            disabled={isSaving}
+            className="bg-[#FF650F] hover:bg-[#E55507] text-white font-bold text-xs rounded-xl shadow-md px-4 py-2 flex items-center gap-2"
+          >
+            {isSaving ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Check className="w-3.5 h-3.5" />
+            )}
+            Salvar Alterações
+          </Button>
+        </div>
+      </div>
+
+      {/* Banner de Feedback Global */}
+      {feedback && (
+        <div
+          className={`p-3.5 rounded-2xl border text-xs font-medium flex items-center justify-between animate-in fade-in ${
+            feedback.type === "success"
+              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+              : "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {feedback.type === "success" ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 shrink-0" />
+            )}
+            <span>{feedback.text}</span>
+          </div>
+          <button onClick={() => setFeedback(null)} className="opacity-70 hover:opacity-100 text-xs">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Abas de Navegação M3 Expressive */}
+      <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.06] overflow-x-auto no-scrollbar">
+        <button
+          onClick={() => setActiveTab("WHATSAPP")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            activeTab === "WHATSAPP"
+              ? "bg-white dark:bg-[#1E1F24] text-[#FF650F] shadow-sm border border-black/5 dark:border-white/10"
+              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+          }`}
+        >
+          <Smartphone className="w-4 h-4" />
+          <span>WhatsApp & QR Code</span>
+          {wppStatus?.status === "CONNECTED" ? (
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          ) : (
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("PORTAL")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            activeTab === "PORTAL"
+              ? "bg-white dark:bg-[#1E1F24] text-[#FF650F] shadow-sm border border-black/5 dark:border-white/10"
+              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+          }`}
+        >
+          <KeyRound className="w-4 h-4" />
+          <span>Portal do Cliente</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("COMPANY")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            activeTab === "COMPANY"
+              ? "bg-white dark:bg-[#1E1F24] text-[#FF650F] shadow-sm border border-black/5 dark:border-white/10"
+              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+          }`}
+        >
+          <Building className="w-4 h-4" />
+          <span>Dados da Empresa</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("PRODUCTION")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            activeTab === "PRODUCTION"
+              ? "bg-white dark:bg-[#1E1F24] text-[#FF650F] shadow-sm border border-black/5 dark:border-white/10"
+              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span>Gatilhos de Produção</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("SERVER")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            activeTab === "SERVER"
+              ? "bg-white dark:bg-[#1E1F24] text-[#FF650F] shadow-sm border border-black/5 dark:border-white/10"
+              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+          }`}
+        >
+          <Server className="w-4 h-4" />
+          <span>Servidor & VPS</span>
+        </button>
+      </div>
+
+      {/* Conteúdo da Aba: WHATSAPP */}
+      {activeTab === "WHATSAPP" && (
+        <div className="space-y-6">
+          {/* Card de Status da Conexão */}
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#16171B] border border-black/[0.08] dark:border-white/[0.08] shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-inner ${
+                    wppStatus?.status === "CONNECTED"
+                      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-500"
+                      : "bg-amber-500/15 border-amber-500/30 text-amber-500"
+                  }`}
+                >
+                  <Smartphone className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-zinc-900 dark:text-white">
+                      Status do Gateway de WhatsApp
+                    </h3>
+                    {wppStatus?.status === "CONNECTED" ? (
+                      <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1" />
+                        Conectado & Pronto
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-bold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse mr-1" />
+                        Pareamento Pendente
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Sessão ativa:{" "}
+                    <code className="text-[#FF650F] font-mono font-bold bg-[#FF650F]/10 px-1.5 py-0.5 rounded">
+                      {wppStatus?.sessionName || "glessios-wpp"}
+                    </code>{" "}
+                    • Endpoint:{" "}
+                    <code className="font-mono text-zinc-600 dark:text-zinc-400">
+                      {wppStatus?.apiUrl || "http://localhost:3001"}
+                    </code>
+                    {wppStatus?.connectedNumber && (
+                      <span className="ml-2 font-bold text-emerald-600 dark:text-emerald-400">
+                        • Número: {wppStatus.connectedNumber}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshWhatsappStatus}
+                  disabled={isCheckingWpp}
+                  className="rounded-xl text-xs h-9"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isCheckingWpp ? "animate-spin" : ""}`} />
+                  Verificar Conexão
+                </Button>
+
+                {wppStatus?.status === "CONNECTED" ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDisconnect}
+                    disabled={isCheckingWpp}
+                    className="rounded-xl text-xs h-9 border-red-500/30 text-red-500 hover:bg-red-500/10"
+                  >
+                    <Power className="w-3.5 h-3.5 mr-1.5" />
+                    Desconectar Aparelho
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={handleSimulateConnect}
+                    disabled={isCheckingWpp}
+                    className="rounded-xl text-xs h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+                    Confirmar Pareamento
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Painel Dividido: QR Code à esquerda e Instruções / Configs à direita */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Bloco 1: QR Code de Pareamento (5 colunas) */}
+            <div className="lg:col-span-5 p-6 rounded-3xl bg-white dark:bg-[#16171B] border border-black/[0.08] dark:border-white/[0.08] shadow-sm flex flex-col items-center text-center">
+              <div className="w-full flex items-center justify-between pb-3 mb-4 border-b border-black/[0.06] dark:border-white/[0.06]">
+                <div className="flex items-center gap-2">
+                  <QrCode className="w-4 h-4 text-[#FF650F]" />
+                  <span className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider font-mono">
+                    QR Code de Autenticação
+                  </span>
+                </div>
+                <Badge variant="outline" className="text-[10px] font-mono">
+                  Sessão Oficial
+                </Badge>
+              </div>
+
+              {/* Área Visual do QR Code com Efeito de Foco */}
+              <div className="relative p-4 rounded-3xl bg-zinc-50 dark:bg-black/40 border-2 border-dashed border-[#FF650F]/40 flex flex-col items-center justify-center my-2 group">
+                {wppStatus?.status === "CONNECTED" ? (
+                  <div className="w-64 h-64 flex flex-col items-center justify-center text-center p-4">
+                    <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center mb-3">
+                      <CheckCircle2 className="w-10 h-10" />
+                    </div>
+                    <h4 className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                      WhatsApp Pareado com Sucesso!
+                    </h4>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-[200px]">
+                      Seu número está pronto para disparos automáticos e notificações.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDisconnect}
+                      className="mt-4 rounded-xl text-xs h-8 text-red-500 border-red-500/30"
+                    >
+                      Trocar Aparelho / Reconectar
+                    </Button>
+                  </div>
+                ) : wppStatus?.qrCode ? (
+                  <div className="relative">
+                    <img
+                      src={wppStatus.qrCode}
+                      alt="WhatsApp QR Code de Pareamento"
+                      className="w-64 h-64 rounded-2xl shadow-md border border-black/10 dark:border-white/10 bg-white p-2"
+                    />
+                    <div className="absolute inset-0 rounded-2xl border-2 border-[#FF650F] pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                ) : (
+                  <div className="w-64 h-64 flex flex-col items-center justify-center text-center text-zinc-400">
+                    <RefreshCw className="w-8 h-8 animate-spin mb-2 text-[#FF650F]" />
+                    <span className="text-xs">Gerando QR Code...</span>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-3 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                O QR Code é atualizado dinamicamente a cada sessão
+              </p>
+
+              <div className="w-full mt-4 pt-4 border-t border-black/[0.06] dark:border-white/[0.06] flex items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshWhatsappStatus}
+                  className="rounded-xl text-xs h-8"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                  Atualizar QR Code
+                </Button>
+              </div>
+            </div>
+
+            {/* Bloco 2: Instruções Resumidas & Simulador de Envio (7 colunas) */}
+            <div className="lg:col-span-7 space-y-6">
+              {/* Instruções Resumidas Passo a Passo */}
+              <div className="p-6 rounded-3xl bg-white dark:bg-[#16171B] border border-black/[0.08] dark:border-white/[0.08] shadow-sm">
+                <div className="flex items-center gap-2 pb-3 mb-4 border-b border-black/[0.06] dark:border-white/[0.06]">
+                  <HelpCircle className="w-4 h-4 text-[#FF650F]" />
+                  <h3 className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider font-mono">
+                    Instruções Rápidas de Pareamento
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04] flex items-start gap-3">
+                    <span className="w-6 h-6 rounded-full bg-[#FF650F] text-white text-xs font-bold flex items-center justify-center shrink-0">
+                      1
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold text-zinc-900 dark:text-white">Abra o WhatsApp</h4>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                        No celular da empresa, abra o app oficial (padrão ou Business).
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04] flex items-start gap-3">
+                    <span className="w-6 h-6 rounded-full bg-[#FF650F] text-white text-xs font-bold flex items-center justify-center shrink-0">
+                      2
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold text-zinc-900 dark:text-white">Aparelhos Conectados</h4>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                        Acesse ⋮ Mais Opções (Android) ou Ajustes (iPhone) &gt; Aparelhos Conectados.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04] flex items-start gap-3">
+                    <span className="w-6 h-6 rounded-full bg-[#FF650F] text-white text-xs font-bold flex items-center justify-center shrink-0">
+                      3
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold text-zinc-900 dark:text-white">Escanear QR Code</h4>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                        Toque em "Conectar um Aparelho" e aponte a câmera para o QR Code ao lado.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04] flex items-start gap-3">
+                    <span className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center shrink-0">
+                      4
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold text-zinc-900 dark:text-white">Disparos Prontos</h4>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                        O status mudará para Conectado e todas as rotinas enviarão mensagens reais.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ferramenta de Teste Imediato de Disparo */}
+              <div className="p-6 rounded-3xl bg-white dark:bg-[#16171B] border border-black/[0.08] dark:border-white/[0.08] shadow-sm">
+                <div className="flex items-center justify-between pb-3 mb-4 border-b border-black/[0.06] dark:border-white/[0.06]">
+                  <div className="flex items-center gap-2">
+                    <Send className="w-4 h-4 text-[#FF650F]" />
+                    <h3 className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider font-mono">
+                      Testar Envio Imediato no WhatsApp
+                    </h3>
+                  </div>
+                  <span className="text-[10px] text-zinc-400 font-mono">Validação em Tempo Real</span>
+                </div>
+
+                <form onSubmit={handleSendTestMessage} className="space-y-3.5">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Número de Destino (com DDD):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 41999998888 ou 5541999998888"
+                      value={testPhone}
+                      onChange={(e) => setTestPhone(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Mensagem de Teste:
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={testMessage}
+                      onChange={(e) => setTestMessage(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F] resize-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      Dica: teste enviando para o seu próprio WhatsApp pessoal.
+                    </span>
+
+                    <Button
+                      type="submit"
+                      disabled={isSendingTest}
+                      className="bg-[#FF650F] hover:bg-[#E55507] text-white font-bold text-xs rounded-xl h-9 px-4 flex items-center gap-1.5"
+                    >
+                      {isSendingTest ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                      Disparar Mensagem de Teste
+                    </Button>
+                  </div>
+                </form>
+
+                {/* Retorno do Teste */}
+                {testFeedback && (
+                  <div
+                    className={`mt-4 p-3 rounded-xl border text-xs font-medium flex items-center gap-2 animate-in fade-in ${
+                      testFeedback.type === "success"
+                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                        : "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400"
+                    }`}
+                  >
+                    {testFeedback.type === "success" ? (
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                    )}
+                    <span>{testFeedback.text}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Parâmetros Avançados do Gateway */}
+              <div className="p-6 rounded-3xl bg-white dark:bg-[#16171B] border border-black/[0.08] dark:border-white/[0.08] shadow-sm">
+                <h3 className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider font-mono mb-4 pb-2 border-b border-black/[0.06] dark:border-white/[0.06]">
+                  Configurações Técnicas do Gateway
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+                      Provedor de WhatsApp
+                    </label>
+                    <select
+                      value={settings.whatsapp.provider}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          whatsapp: { ...settings.whatsapp, provider: e.target.value },
+                        })
+                      }
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none"
+                    >
+                      <option value="wacli">WACLI (Daemon HTTP / CLI)</option>
+                      <option value="evolution">Evolution API</option>
+                      <option value="z-api">Z-API Gateway</option>
+                      <option value="custom_http">Microserviço HTTP Próprio</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+                      URL da API / Daemon Local
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.whatsapp.apiUrl}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          whatsapp: { ...settings.whatsapp, apiUrl: e.target.value },
+                        })
+                      }
+                      placeholder="http://localhost:3001"
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+                      Identificador da Sessão
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.whatsapp.sessionName}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          whatsapp: { ...settings.whatsapp, sessionName: e.target.value },
+                        })
+                      }
+                      placeholder="glessios-wpp"
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+                      Chave de API / Token (Opcional)
+                    </label>
+                    <input
+                      type="password"
+                      value={settings.whatsapp.apiKey || ""}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          whatsapp: { ...settings.whatsapp, apiKey: e.target.value },
+                        })
+                      }
+                      placeholder="Deixe em branco se não aplicável"
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Conteúdo da Aba: PORTAL DO CLIENTE */}
+      {activeTab === "PORTAL" && (
+        <div className="space-y-6">
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#16171B] border border-black/[0.08] dark:border-white/[0.08] shadow-sm">
+            <h3 className="text-base font-extrabold text-zinc-900 dark:text-white mb-1">
+              Portal do Cliente (Icthus) — Acesso & Credenciais
+            </h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6">
+              Defina as regras automáticas de boas-vindas e acesso quando a chave for ligada na Ficha 360° do CRM
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Senha Inicial Padrão:
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={settings.portal.defaultPassword}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          portal: { ...settings.portal, defaultPassword: e.target.value },
+                        })
+                      }
+                      className="flex-1 px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white font-mono font-bold"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(settings.portal.defaultPassword, "pwd")}
+                      className="rounded-xl h-10 px-3 text-xs"
+                    >
+                      {copiedText === "pwd" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  <span className="text-[11px] text-zinc-400 mt-1 block">
+                    Senha atribuída aos novos usuários quando a chave é ativada.
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    URL de Acesso ao Portal:
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.portal.portalUrl}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        portal: { ...settings.portal, portalUrl: e.target.value },
+                      })
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white"
+                  />
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#FF650F]/5 border border-[#FF650F]/20">
+                  <div className="flex items-center gap-2 text-[#FF650F] text-xs font-bold mb-1">
+                    <Info className="w-4 h-4" />
+                    Como funciona o envio automático:
+                  </div>
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                    Sempre que a chave <strong>"Acesso ao Portal do Cliente (Icthus)"</strong> for ligada na ficha do contato, o sistema cria o usuário com o e-mail cadastrado e dispara a mensagem personalizada via WhatsApp com o link e a senha inicial.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Modelo da Mensagem de WhatsApp (Boas-Vindas):
+                </label>
+                <textarea
+                  rows={8}
+                  value={settings.portal.welcomeMessageTemplate}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      portal: { ...settings.portal, welcomeMessageTemplate: e.target.value },
+                    })
+                  }
+                  className="w-full p-3.5 rounded-2xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F] font-sans resize-none"
+                />
+                <span className="text-[11px] text-zinc-400 mt-1 block">
+                  Tags disponíveis: <code>{"{nome}"}</code>, <code>{"{email}"}</code>, <code>{"{senha}"}</code>, <code>{"{url}"}</code>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Conteúdo da Aba: DADOS DA EMPRESA */}
+      {activeTab === "COMPANY" && (
+        <div className="space-y-6">
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#16171B] border border-black/[0.08] dark:border-white/[0.08] shadow-sm">
+            <h3 className="text-base font-extrabold text-zinc-900 dark:text-white mb-1">
+              Identificação & Comunicação Oficial da Icthus
+            </h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6">
+              Estes dados são exibidos nos rodapés de propostas comerciais em PDF, faturas e mensagens automáticas
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Nome Fantasia:
+                </label>
+                <input
+                  type="text"
+                  value={settings.company.tradeName}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      company: { ...settings.company, tradeName: e.target.value },
+                    })
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Razão Social:
+                </label>
+                <input
+                  type="text"
+                  value={settings.company.legalName}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      company: { ...settings.company, legalName: e.target.value },
+                    })
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  CNPJ:
+                </label>
+                <input
+                  type="text"
+                  value={settings.company.cnpj}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      company: { ...settings.company, cnpj: e.target.value },
+                    })
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  E-mail Oficial:
+                </label>
+                <input
+                  type="email"
+                  value={settings.company.email}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      company: { ...settings.company, email: e.target.value },
+                    })
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  WhatsApp Oficial de Atendimento:
+                </label>
+                <input
+                  type="text"
+                  value={settings.company.whatsapp}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      company: { ...settings.company, whatsapp: e.target.value },
+                    })
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Endereço da Fábrica / Escritório:
+                </label>
+                <input
+                  type="text"
+                  value={settings.company.address}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      company: { ...settings.company, address: e.target.value },
+                    })
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Conteúdo da Aba: GATILHOS DE PRODUÇÃO */}
+      {activeTab === "PRODUCTION" && (
+        <div className="space-y-6">
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#16171B] border border-black/[0.08] dark:border-white/[0.08] shadow-sm">
+            <h3 className="text-base font-extrabold text-zinc-900 dark:text-white mb-1">
+              Automações & Gatilhos no WhatsApp
+            </h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6">
+              Marque quais eventos da esteira fabril disparam mensagens automáticas para os clientes
+            </p>
+
+            <div className="space-y-4">
+              <label className="flex items-center gap-3 p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04] cursor-pointer hover:border-[#FF650F]/40 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={settings.production.notifyOnNewProof}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      production: { ...settings.production, notifyOnNewProof: e.target.checked },
+                    })
+                  }
+                  className="w-4 h-4 text-[#FF650F] rounded focus:ring-0"
+                />
+                <div>
+                  <span className="text-xs font-bold text-zinc-900 dark:text-white block">
+                    Disparo de Prova de Arte Digital (Aprovação 1-clique)
+                  </span>
+                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    Envia mensagem com o link seguro do portal para o cliente aprovar ou solicitar ajustes do layout 3D.
+                  </span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-3 p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04] cursor-pointer hover:border-[#FF650F]/40 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={settings.production.notifyOnStageChange}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      production: { ...settings.production, notifyOnStageChange: e.target.checked },
+                    })
+                  }
+                  className="w-4 h-4 text-[#FF650F] rounded focus:ring-0"
+                />
+                <div>
+                  <span className="text-xs font-bold text-zinc-900 dark:text-white block">
+                    Avanço de Fases da Esteira (Router CNC, Impressão UV, Montagem)
+                  </span>
+                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    Notifica o cliente quando a ordem avança entre as 8 fases de fabricação.
+                  </span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-3 p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04] cursor-pointer hover:border-[#FF650F]/40 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={settings.whatsapp.autoSendPixInvoice}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      whatsapp: { ...settings.whatsapp, autoSendPixInvoice: e.target.checked },
+                    })
+                  }
+                  className="w-4 h-4 text-[#FF650F] rounded focus:ring-0"
+                />
+                <div>
+                  <span className="text-xs font-bold text-zinc-900 dark:text-white block">
+                    Emissão de Fatura com PIX Copia e Cola
+                  </span>
+                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    Dispara o código Copia e Cola do PIX assim que uma fatura de produção for emitida.
+                  </span>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Conteúdo da Aba: SERVIDOR & VPS */}
+      {activeTab === "SERVER" && (
+        <div className="space-y-6">
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#16171B] border border-black/[0.08] dark:border-white/[0.08] shadow-sm">
+            <h3 className="text-base font-extrabold text-zinc-900 dark:text-white mb-1">
+              Ambiente de Hospedagem & Rotinas Automáticas
+            </h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6">
+              Informações do servidor Hostinger VPS e rotinas em background
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
+                <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block mb-1">
+                  Servidor VPS (Produção)
+                </span>
+                <span className="text-sm font-extrabold text-zinc-900 dark:text-white font-mono">
+                  {settings.server.vpsHost || "72.62.141.188"}
+                </span>
+                <p className="text-[11px] text-zinc-500 mt-1">
+                  Porta de Aplicação: <code>3005</code> • Contêineres Docker isolados
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
+                <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block mb-1">
+                  Rotinas Automáticas (Cron)
+                </span>
+                <span className="text-sm font-extrabold text-emerald-500 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Ativo & Agendado
+                </span>
+                <p className="text-[11px] text-zinc-500 mt-1">
+                  Geração autônoma de artigos do Blog via IA (NVIDIA NIM) e lembretes de medição
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
