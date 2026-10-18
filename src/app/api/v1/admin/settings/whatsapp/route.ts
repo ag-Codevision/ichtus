@@ -68,12 +68,16 @@ export async function GET() {
       });
     }
 
+    const displayEndpoint = process.env.NODE_ENV === "production"
+      ? "Gateway Oficial de Produção (Icthus WACLI Service)"
+      : (apiUrl.includes("localhost") ? "Ambiente de Desenvolvimento (WACLI Service)" : apiUrl);
+
     return NextResponse.json({
       success: true,
       status: finalStatus,
       isDaemonOnline,
       sessionName,
-      apiUrl,
+      apiUrl: displayEndpoint,
       mode,
       connectedNumber: finalStatus === "CONNECTED" ? connectedNumber : null,
       qrCode: qrCodeBase64,

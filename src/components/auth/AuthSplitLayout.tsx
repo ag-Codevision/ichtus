@@ -145,51 +145,27 @@ export function AuthSplitLayout({
           }}
         />
 
-        {/* Topo do Showcase: Badge de Status do Sistema */}
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.06] border border-white/10 backdrop-blur-md text-white text-xs font-semibold">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Sistema Ativo & Operacional</span>
-          </div>
-
-          <div className="text-xs uppercase tracking-widest text-zinc-400 font-bold">
-            {variant === "admin" ? "ICTHUS Core ERP" : "Portal do Cliente Glessios"}
-          </div>
-        </div>
-
-        {/* Centro do Showcase: Destaque Protagonista do Ícone 3D e Logo da Marca */}
+        {/* Centro do Showcase: Destaque Protagonista do Logo da Marca */}
         <div className="relative z-10 my-auto flex flex-col items-center text-center max-w-xl mx-auto py-8">
-          {/* Container do Ícone 3D com Glow */}
+          {/* Container do Logo com Glow */}
           <div className="relative group cursor-default">
-            {/* Glow de fundo atrás do ícone */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#FF650F]/40 to-[#FF781B]/10 blur-2xl scale-125 transition-transform duration-700 group-hover:scale-150" />
+            {/* Glow de fundo atrás do logo */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#FF650F]/35 to-[#FF781B]/10 blur-3xl scale-125 transition-transform duration-700 group-hover:scale-150" />
 
-            <div className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 backdrop-blur-xl shadow-2xl shadow-orange-950/40">
+            <div className="relative px-8 py-7 sm:px-12 sm:py-9 rounded-3xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 backdrop-blur-xl shadow-2xl shadow-orange-950/40">
               <Image
-                src="/icone-3d.png"
-                alt="Emblema Glessios Soluções & Design"
-                width={260}
-                height={150}
+                src="/logo-web.png"
+                alt="ICTHUS Soluções & Design"
+                width={380}
+                height={85}
                 priority
-                className="w-48 sm:w-56 xl:w-64 h-auto object-contain drop-shadow-[0_20px_35px_rgba(255,101,15,0.35)] transition-transform duration-500 hover:scale-105"
+                className="w-64 sm:w-72 xl:w-80 h-auto object-contain brightness-110 drop-shadow-[0_15px_30px_rgba(255,101,15,0.3)] transition-transform duration-500 hover:scale-105"
               />
             </div>
           </div>
 
-          {/* Logo Tipográfico com Acabamento Cromado */}
-          <div className="mt-8 mb-4">
-            <Image
-              src="/logo-web.png"
-              alt="ICTHUS Soluções & Design"
-              width={260}
-              height={58}
-              priority
-              className="h-10 sm:h-11 w-auto object-contain mx-auto brightness-110 drop-shadow-md"
-            />
-          </div>
-
           {/* Mensagem Editorial de Marca */}
-          <h2 className="text-xl sm:text-2xl xl:text-3xl font-extrabold text-white tracking-tight leading-snug mt-2">
+          <h2 className="text-xl sm:text-2xl xl:text-3xl font-extrabold text-white tracking-tight leading-snug mt-8 sm:mt-10">
             {showcaseHeadline}
           </h2>
           <p className="mt-3 text-xs sm:text-sm text-zinc-300 font-normal leading-relaxed max-w-md">

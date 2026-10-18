@@ -13,7 +13,6 @@ import {
   Building,
   KeyRound,
   Layers,
-  Server,
   ShieldCheck,
   Check,
   Copy,
@@ -31,7 +30,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-type TabKey = "WHATSAPP" | "PORTAL" | "COMPANY" | "PRODUCTION" | "SERVER";
+type TabKey = "WHATSAPP" | "PORTAL" | "COMPANY" | "PRODUCTION";
 
 export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("WHATSAPP");
@@ -356,18 +355,6 @@ export default function AdminSettingsPage() {
           <Layers className="w-4 h-4" />
           <span>Gatilhos de Produção</span>
         </button>
-
-        <button
-          onClick={() => setActiveTab("SERVER")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-            activeTab === "SERVER"
-              ? "bg-white dark:bg-[#1E1F24] text-[#FF650F] shadow-sm border border-black/5 dark:border-white/10"
-              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-          }`}
-        >
-          <Server className="w-4 h-4" />
-          <span>Servidor & VPS</span>
-        </button>
       </div>
 
       {/* Conteúdo da Aba: WHATSAPP */}
@@ -408,10 +395,10 @@ export default function AdminSettingsPage() {
                     <code className="text-[#FF650F] font-mono font-bold bg-[#FF650F]/10 px-1.5 py-0.5 rounded">
                       {wppStatus?.sessionName || "glessios-wpp"}
                     </code>{" "}
-                    • Endpoint:{" "}
-                    <code className="font-mono text-zinc-600 dark:text-zinc-400">
-                      {wppStatus?.apiUrl || "http://localhost:3001"}
-                    </code>
+                    • Gateway:{" "}
+                    <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                      Produção (Icthus WACLI Service)
+                    </span>
                     {wppStatus?.connectedNumber && (
                       <span className="ml-2 font-bold text-emerald-600 dark:text-emerald-400">
                         • Número: {wppStatus.connectedNumber}
@@ -669,90 +656,6 @@ export default function AdminSettingsPage() {
                     <span>{testFeedback.text}</span>
                   </div>
                 )}
-              </div>
-
-              {/* Parâmetros Avançados do Gateway */}
-              <div className="p-6 rounded-3xl bg-white dark:bg-[#16171B] border border-black/[0.08] dark:border-white/[0.08] shadow-sm">
-                <h3 className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider font-mono mb-4 pb-2 border-b border-black/[0.06] dark:border-white/[0.06]">
-                  Configurações Técnicas do Gateway
-                </h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
-                      Provedor de WhatsApp
-                    </label>
-                    <select
-                      value={settings.whatsapp.provider}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          whatsapp: { ...settings.whatsapp, provider: e.target.value },
-                        })
-                      }
-                      className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                    >
-                      <option value="wacli">WACLI (Daemon HTTP / CLI)</option>
-                      <option value="evolution">Evolution API</option>
-                      <option value="z-api">Z-API Gateway</option>
-                      <option value="custom_http">Microserviço HTTP Próprio</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
-                      URL da API / Daemon Local
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.whatsapp.apiUrl}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          whatsapp: { ...settings.whatsapp, apiUrl: e.target.value },
-                        })
-                      }
-                      placeholder="http://localhost:3001"
-                      className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
-                      Identificador da Sessão
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.whatsapp.sessionName}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          whatsapp: { ...settings.whatsapp, sessionName: e.target.value },
-                        })
-                      }
-                      placeholder="glessios-wpp"
-                      className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
-                      Chave de API / Token (Opcional)
-                    </label>
-                    <input
-                      type="password"
-                      value={settings.whatsapp.apiKey || ""}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          whatsapp: { ...settings.whatsapp, apiKey: e.target.value },
-                        })
-                      }
-                      placeholder="Deixe em branco se não aplicável"
-                      className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                    />
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -1049,47 +952,6 @@ export default function AdminSettingsPage() {
                   </span>
                 </div>
               </label>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Conteúdo da Aba: SERVIDOR & VPS */}
-      {activeTab === "SERVER" && (
-        <div className="space-y-6">
-          <div className="p-6 rounded-3xl bg-white dark:bg-[#16171B] border border-black/[0.08] dark:border-white/[0.08] shadow-sm">
-            <h3 className="text-base font-extrabold text-zinc-900 dark:text-white mb-1">
-              Ambiente de Hospedagem & Rotinas Automáticas
-            </h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6">
-              Informações do servidor Hostinger VPS e rotinas em background
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
-                <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block mb-1">
-                  Servidor VPS (Produção)
-                </span>
-                <span className="text-sm font-extrabold text-zinc-900 dark:text-white font-mono">
-                  {settings.server.vpsHost || "72.62.141.188"}
-                </span>
-                <p className="text-[11px] text-zinc-500 mt-1">
-                  Porta de Aplicação: <code>3005</code> • Contêineres Docker isolados
-                </p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
-                <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block mb-1">
-                  Rotinas Automáticas (Cron)
-                </span>
-                <span className="text-sm font-extrabold text-emerald-500 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Ativo & Agendado
-                </span>
-                <p className="text-[11px] text-zinc-500 mt-1">
-                  Geração autônoma de artigos do Blog via IA (NVIDIA NIM) e lembretes de medição
-                </p>
-              </div>
             </div>
           </div>
         </div>
