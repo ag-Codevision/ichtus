@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Play,
-  Maximize2,
   X,
   ChevronLeft,
   ChevronRight,
@@ -15,17 +14,81 @@ import {
   Film,
   ZoomIn,
 } from "lucide-react";
-import type { ProjectDetailItem } from "@/lib/portfolio-data";
+import type { ProjectDetailItem, ProjectVideo } from "@/lib/portfolio-data";
+import { M3ScrollReveal, M3ScrollStagger, M3ScrollItem } from "@/components/ui/scroll-reveal";
 
 interface ProjectMediaShowcaseProps {
   project: ProjectDetailItem;
+}
+
+/**
+ * Componente de Imagem Otimizada com Skeleton Shimmer e Transição de Opacidade
+ */
+function OptimizedPhotoCard({
+  img,
+  index,
+  projectTitle,
+  onClick,
+}: {
+  img: { url: string; caption: string; category?: string };
+  index: number;
+  projectTitle: string;
+  onClick: () => void;
+}) {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  return (
+    <div
+      onClick={onClick}
+      className="group relative h-64 sm:h-72 lg:h-80 rounded-2xl overflow-hidden bg-zinc-100 border border-zinc-200/90 cursor-pointer shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300"
+    >
+      {/* Skeleton de Carregamento Instantâneo */}
+      {!isLoaded && (
+        <div className="absolute inset-0 bg-gradient-to-r from-zinc-200 via-zinc-100 to-zinc-200 animate-pulse" />
+      )}
+
+      <Image
+        src={img.url}
+        alt={img.caption || projectTitle}
+        fill
+        loading={index < 3 ? "eager" : "lazy"}
+        decoding="async"
+        quality={70}
+        onLoad={() => setIsLoaded(true)}
+        className={`object-cover transition-all duration-500 group-hover:scale-105 ${
+          isLoaded ? "opacity-100" : "opacity-0"
+        }`}
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+      />
+
+      {/* Overlay Escuro e Detalhes ao passar o mouse */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-5">
+        <div className="flex justify-end">
+          <span className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+            <ZoomIn className="w-5 h-5" />
+          </span>
+        </div>
+        <div>
+          {img.category && (
+            <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-orange-400 bg-black/70 px-2 py-0.5 rounded backdrop-blur-sm mb-1.5">
+              {img.category}
+            </span>
+          )}
+          <p className="text-white text-xs sm:text-sm font-medium line-clamp-2 leading-snug">
+            {img.caption}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
   const [activeTab, setActiveTab] = useState<"photos" | "videos">("photos");
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>("Todas");
-  const [selectedVideo, setSelectedVideo] = useState(
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<ProjectVideo | null>(
     project.videos && project.videos.length > 0 ? project.videos[0] : null
   );
 
@@ -59,8 +122,11 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
 
   return (
     <section className="space-y-12">
-      {/* Seletor de Abas de Mídia: Fotos & Vídeos */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 pb-6">
+      {/* Seletor de Abas de Mídia: Fotos & Vídeos com M3ScrollReveal */}
+      <M3ScrollReveal
+        variant="fadeUp"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 pb-6"
+      >
         <div>
           <Badge variant="orange-light" className="mb-2">
             <Sparkles className="w-3.5 h-3.5 text-[#FF650F]" />
@@ -84,12 +150,15 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
             }`}
           >
             <Camera className="w-4 h-4" />
-            Fotos em Alta Resolução ({project.galleryImages.length})
+            Fotos da Obra ({project.galleryImages.length})
           </button>
 
           {project.videos && project.videos.length > 0 && (
             <button
-              onClick={() => setActiveTab("videos")}
+              onClick={() => {
+                setActiveTab("videos");
+                setIsVideoPlaying(false);
+              }}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 activeTab === "videos"
                   ? "bg-[#FF650F] text-white shadow-sm"
@@ -101,10 +170,10 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
             </button>
           )}
         </div>
-      </div>
+      </M3ScrollReveal>
 
       {/* ========================================================
-          ABA 1: GALERIA DE FOTOS
+          ABA 1: GALERIA DE FOTOS COM STAGGER MOTION
           ======================================================== */}
       {activeTab === "photos" && (
         <div className="space-y-8 animate-in fade-in duration-300">
@@ -127,68 +196,64 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
             </div>
           )}
 
-          {/* Grid de Fotos com Aspect Ratios Elegantes */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Grid de Fotos com M3ScrollStagger e M3ScrollItem */}
+          <M3ScrollStagger className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPhotos.map((img, idx) => {
               const originalIndex = project.galleryImages.findIndex((g) => g.url === img.url);
               return (
-                <div
-                  key={idx}
-                  onClick={() => setSelectedPhotoIdx(originalIndex !== -1 ? originalIndex : idx)}
-                  className="group relative h-72 sm:h-80 rounded-2xl overflow-hidden bg-zinc-100 border border-zinc-200/90 cursor-pointer shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-                >
-                  <Image
-                    src={img.url}
-                    alt={img.caption || project.title}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                <M3ScrollItem key={idx}>
+                  <OptimizedPhotoCard
+                    img={img}
+                    index={idx}
+                    projectTitle={project.title}
+                    onClick={() => setSelectedPhotoIdx(originalIndex !== -1 ? originalIndex : idx)}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-5">
-                    <div className="flex justify-end">
-                      <span className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                        <ZoomIn className="w-5 h-5" />
-                      </span>
-                    </div>
-                    <div>
-                      {img.category && (
-                        <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-orange-400 bg-black/60 px-2 py-0.5 rounded backdrop-blur-sm mb-1.5">
-                          {img.category}
-                        </span>
-                      )}
-                      <p className="text-white text-xs sm:text-sm font-medium line-clamp-2 leading-snug">
-                        {img.caption}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                </M3ScrollItem>
               );
             })}
-          </div>
+          </M3ScrollStagger>
         </div>
       )}
 
       {/* ========================================================
-          ABA 2: GALERIA E SHOWCASE DE VÍDEOS
+          ABA 2: GALERIA E SHOWCASE DE VÍDEOS OTIMIZADO
           ======================================================== */}
       {activeTab === "videos" && project.videos && project.videos.length > 0 && (
         <div className="space-y-8 animate-in fade-in duration-300">
           {selectedVideo && (
             <div className="relative rounded-3xl overflow-hidden bg-black border border-zinc-800 shadow-2xl">
               <div className="aspect-video w-full bg-black relative flex items-center justify-center">
-                <video
-                  key={selectedVideo.videoUrl}
-                  controls
-                  autoPlay
-                  playsInline
-                  loop
-                  muted
-                  poster={selectedVideo.thumbnailUrl}
-                  className="w-full h-full object-cover"
-                >
-                  <source src={selectedVideo.videoUrl} type="video/mp4" />
-                  Seu navegador não suporta a tag de vídeo HTML5.
-                </video>
+                {!isVideoPlaying ? (
+                  <div className="relative w-full h-full cursor-pointer group" onClick={() => setIsVideoPlaying(true)}>
+                    <Image
+                      src={selectedVideo.thumbnailUrl}
+                      alt={selectedVideo.title}
+                      fill
+                      quality={75}
+                      className="object-cover opacity-80 group-hover:opacity-95 transition-opacity"
+                    />
+                    <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-4">
+                      <div className="w-20 h-20 rounded-full bg-[#FF650F] text-white flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                        <Play className="w-8 h-8 fill-white translate-x-0.5" />
+                      </div>
+                      <span className="text-white text-sm font-semibold tracking-wide drop-shadow-md">
+                        Clique para Assistir ao Vídeo
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <video
+                    key={selectedVideo.videoUrl}
+                    controls
+                    autoPlay
+                    playsInline
+                    preload="auto"
+                    className="w-full h-full object-cover"
+                  >
+                    <source src={selectedVideo.videoUrl} type="video/mp4" />
+                    Seu navegador não suporta a tag de vídeo HTML5.
+                  </video>
+                )}
               </div>
 
               {/* Informações do Vídeo Atual */}
@@ -211,7 +276,10 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
               {project.videos.map((vid) => (
                 <div
                   key={vid.id}
-                  onClick={() => setSelectedVideo(vid)}
+                  onClick={() => {
+                    setSelectedVideo(vid);
+                    setIsVideoPlaying(false);
+                  }}
                   className={`p-4 rounded-2xl border transition-all cursor-pointer flex gap-4 items-center ${
                     selectedVideo?.id === vid.id
                       ? "bg-orange-50 border-[#FF650F] text-zinc-900"
@@ -219,9 +287,9 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
                   }`}
                 >
                   <div className="relative w-20 h-14 rounded-lg overflow-hidden bg-black shrink-0">
-                    <Image src={vid.thumbnailUrl} alt={vid.title} fill className="object-cover" />
+                    <Image src={vid.thumbnailUrl} alt={vid.title} fill quality={60} className="object-cover" />
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white">
-                      <Play className="w-4 h-4" />
+                      <Play className="w-4 h-4 fill-white" />
                     </div>
                   </div>
                   <div>
@@ -274,6 +342,7 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
                 src={project.galleryImages[selectedPhotoIdx].url}
                 alt={project.galleryImages[selectedPhotoIdx].caption || project.title}
                 fill
+                quality={85}
                 className="object-contain"
                 sizes="100vw"
                 priority

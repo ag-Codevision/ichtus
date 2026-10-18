@@ -19,7 +19,6 @@ import {
   Ruler,
   ShieldCheck,
   CheckCircle2,
-  Share2,
   MessageCircle,
   Layers,
   ChevronRight,
@@ -31,6 +30,7 @@ import {
   type ProjectDetailItem,
 } from "@/lib/portfolio-data";
 import { ProjectMediaShowcase } from "@/components/portfolio/project-gallery-view";
+import { M3ScrollReveal, M3ScrollStagger, M3ScrollItem } from "@/components/ui/scroll-reveal";
 
 export const dynamic = "force-dynamic";
 
@@ -94,27 +94,29 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
 
       <main className="flex-grow pt-20">
         {/* ====================================================
-            1. HERO DE CAPA CINEMATOGRÁFICO
+            1. HERO DE CAPA CINEMATOGRÁFICO COM COREOGRAFIA DE ENTRADA
             ==================================================== */}
-        <section className="relative w-full min-h-[520px] sm:min-h-[580px] lg:min-h-[640px] flex items-end justify-center overflow-hidden bg-black text-white pb-16 sm:pb-20">
-          {/* Imagem de Capa em Full Width */}
+        <section className="relative w-full min-h-[500px] sm:min-h-[560px] lg:min-h-[620px] flex items-end justify-center overflow-hidden bg-[#0A0B0D] text-white pb-16 sm:pb-20">
+          {/* Imagem de Capa Otimizada com Carregamento Rápido */}
           <div className="absolute inset-0 z-0">
             <Image
               src={project.coverImage || project.featuredImage}
               alt={project.title}
               fill
               priority
-              className="object-cover object-center scale-105 animate-in fade-in zoom-in-95 duration-1000 opacity-65"
-              sizes="100vw"
+              quality={75}
+              decoding="async"
+              className="object-cover object-center scale-105 animate-hero-atmosphere opacity-60"
+              sizes="(max-width: 1280px) 100vw, 1280px"
             />
             {/* Gradientes de Fusão e Profundidade */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0E0F11] via-[#0E0F11]/60 to-black/40" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0E0F11] via-[#0E0F11]/65 to-black/45" />
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-500/15 via-transparent to-transparent pointer-events-none" />
           </div>
 
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-            {/* Navegação Breadcrumb Superior */}
-            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-300 mb-6">
+            {/* Navegação Breadcrumb Superior com animação de entrada */}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-300 mb-6 animate-hero-badge">
               <Link
                 href="/"
                 className="hover:text-[#FF650F] transition-colors flex items-center gap-1 font-medium"
@@ -135,7 +137,7 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
             </div>
 
             {/* Badges de Categoria e Metadados */}
-            <div className="flex flex-wrap items-center gap-2.5 mb-4">
+            <div className="flex flex-wrap items-center gap-2.5 mb-4 animate-hero-badge">
               <Badge variant="orange" className="font-bold py-1 px-3.5 text-xs shadow-md">
                 <Sparkles className="w-3.5 h-3.5" />
                 {project.category}
@@ -150,17 +152,20 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
               </Badge>
             </div>
 
-            {/* Título Imponente e Subtítulo */}
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-[1.15] max-w-5xl">
-              {project.title}
-            </h1>
+            {/* Título Imponente com Efeito Reveal Mask */}
+            <div className="overflow-hidden py-1">
+              <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-[1.15] max-w-5xl animate-hero-headline-1">
+                {project.title}
+              </h1>
+            </div>
 
-            <p className="text-base sm:text-xl text-zinc-300 font-normal max-w-3xl mt-4 leading-relaxed">
+            {/* Subtítulo com Elevação Suave */}
+            <p className="text-base sm:text-xl text-zinc-300 font-normal max-w-3xl mt-4 leading-relaxed animate-hero-supporting">
               {project.subtitle}
             </p>
 
-            {/* Barra de Ações Rápidas no Hero */}
-            <div className="pt-8 flex flex-wrap items-center gap-4">
+            {/* Barra de Ações Rápidas no Hero com Animação */}
+            <div className="pt-8 flex flex-wrap items-center gap-4 animate-hero-cta">
               <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
                 <Button variant="primary" size="lg" className="gap-2.5 font-bold shadow-xl">
                   <MessageCircle className="w-5 h-5 fill-white/20" />
@@ -180,62 +185,70 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
         </section>
 
         {/* ====================================================
-            2. GRID DE MÉTRICAS & INDICADORES DA OBRA
+            2. GRID DE MÉTRICAS & INDICADORES COM M3 SCROLL STAGGER
             ==================================================== */}
         <section className="relative -mt-10 z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 sm:p-6 bg-white rounded-3xl border border-zinc-200/90 shadow-xl">
-            <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#FF650F] flex items-center justify-center shrink-0">
-                <Building className="w-5 h-5" />
+          <M3ScrollStagger className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 sm:p-6 bg-white rounded-3xl border border-zinc-200/90 shadow-xl">
+            <M3ScrollItem>
+              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-start gap-3.5 h-full">
+                <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#FF650F] flex items-center justify-center shrink-0">
+                  <Building className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold block">
+                    Cliente & Segmento
+                  </span>
+                  <p className="text-sm font-bold text-zinc-900 mt-0.5 leading-snug">{project.clientName}</p>
+                  <span className="text-xs text-zinc-500 block truncate">{project.clientSegment}</span>
+                </div>
               </div>
-              <div>
-                <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold block">
-                  Cliente & Segmento
-                </span>
-                <p className="text-sm font-bold text-zinc-900 mt-0.5 leading-snug">{project.clientName}</p>
-                <span className="text-xs text-zinc-500 block truncate">{project.clientSegment}</span>
-              </div>
-            </div>
+            </M3ScrollItem>
 
-            <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#FF650F] flex items-center justify-center shrink-0">
-                <Clock className="w-5 h-5" />
+            <M3ScrollItem>
+              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-start gap-3.5 h-full">
+                <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#FF650F] flex items-center justify-center shrink-0">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold block">
+                    Prazo de Execução
+                  </span>
+                  <p className="text-sm font-bold text-zinc-900 mt-0.5">{project.executionTime}</p>
+                  <span className="text-xs text-zinc-500 block">Fábrica & Montagem</span>
+                </div>
               </div>
-              <div>
-                <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold block">
-                  Prazo de Execução
-                </span>
-                <p className="text-sm font-bold text-zinc-900 mt-0.5">{project.executionTime}</p>
-                <span className="text-xs text-zinc-500 block">Fábrica & Montagem</span>
-              </div>
-            </div>
+            </M3ScrollItem>
 
-            <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#FF650F] flex items-center justify-center shrink-0">
-                <Ruler className="w-5 h-5" />
+            <M3ScrollItem>
+              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-start gap-3.5 h-full">
+                <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#FF650F] flex items-center justify-center shrink-0">
+                  <Ruler className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold block">
+                    Área & Proporções
+                  </span>
+                  <p className="text-sm font-bold text-zinc-900 mt-0.5 leading-snug">{project.dimensions}</p>
+                  <span className="text-xs text-zinc-500 block">Precisão Milimétrica</span>
+                </div>
               </div>
-              <div>
-                <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold block">
-                  Área & Proporções
-                </span>
-                <p className="text-sm font-bold text-zinc-900 mt-0.5 leading-snug">{project.dimensions}</p>
-                <span className="text-xs text-zinc-500 block">Precisão Milimétrica</span>
-              </div>
-            </div>
+            </M3ScrollItem>
 
-            <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#FF650F] flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-5 h-5" />
+            <M3ScrollItem>
+              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-start gap-3.5 h-full">
+                <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#FF650F] flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold block">
+                    Garantia e Laudo
+                  </span>
+                  <p className="text-sm font-bold text-zinc-900 mt-0.5 leading-snug">{project.warranty}</p>
+                  <span className="text-xs text-zinc-500 block">Com ART e NR-35</span>
+                </div>
               </div>
-              <div>
-                <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold block">
-                  Garantia e Laudo
-                </span>
-                <p className="text-sm font-bold text-zinc-900 mt-0.5 leading-snug">{project.warranty}</p>
-                <span className="text-xs text-zinc-500 block">Com ART e NR-35</span>
-              </div>
-            </div>
-          </div>
+            </M3ScrollItem>
+          </M3ScrollStagger>
         </section>
 
         {/* ====================================================
@@ -243,43 +256,47 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
             ==================================================== */}
         <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-            {/* Coluna Esquerda: Descrição & Desafio/Solução */}
+            {/* Coluna Esquerda: Descrição & Desafio/Solução com M3ScrollReveal */}
             <div className="lg:col-span-7 space-y-10">
-              <div>
-                <Badge variant="orange-light" className="mb-3">
+              <M3ScrollReveal variant="fadeUp" className="space-y-3">
+                <Badge variant="orange-light" className="mb-2">
                   <Layers className="w-3.5 h-3.5 text-[#FF650F]" />
                   Visão Geral do Projeto
                 </Badge>
                 <h2 className="text-3xl font-extrabold text-zinc-900 tracking-tight">
                   Engenharia e Design a Serviço da Marca
                 </h2>
-                <div className="mt-6 space-y-4 text-base text-zinc-700 leading-relaxed">
+                <div className="mt-4 space-y-4 text-base text-zinc-700 leading-relaxed">
                   <p>{project.description}</p>
                 </div>
-              </div>
+              </M3ScrollReveal>
 
-              {/* Box O Desafio vs A Solução */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="p-6 rounded-3xl bg-white border border-zinc-200/90 shadow-sm space-y-3">
-                  <span className="text-xs font-mono uppercase tracking-wider text-red-600 font-bold block">
-                    01. O Desafio do Cliente
-                  </span>
-                  <h3 className="text-lg font-bold text-zinc-900">Necessidade Inicial</h3>
-                  <p className="text-sm text-zinc-600 leading-relaxed">{project.challenge}</p>
-                </div>
+              {/* Box O Desafio vs A Solução com M3ScrollStagger */}
+              <M3ScrollStagger className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <M3ScrollItem>
+                  <div className="p-6 rounded-3xl bg-white border border-zinc-200/90 shadow-sm space-y-3 h-full">
+                    <span className="text-xs font-mono uppercase tracking-wider text-red-600 font-bold block">
+                      01. O Desafio do Cliente
+                    </span>
+                    <h3 className="text-lg font-bold text-zinc-900">Necessidade Inicial</h3>
+                    <p className="text-sm text-zinc-600 leading-relaxed">{project.challenge}</p>
+                  </div>
+                </M3ScrollItem>
 
-                <div className="p-6 rounded-3xl bg-white border border-orange-200/90 shadow-sm space-y-3 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
-                  <span className="text-xs font-mono uppercase tracking-wider text-[#FF650F] font-bold block">
-                    02. A Solução Glessios
-                  </span>
-                  <h3 className="text-lg font-bold text-zinc-900">Engenharia Visual</h3>
-                  <p className="text-sm text-zinc-600 leading-relaxed">{project.solution}</p>
-                </div>
-              </div>
+                <M3ScrollItem>
+                  <div className="p-6 rounded-3xl bg-white border border-orange-200/90 shadow-sm space-y-3 relative overflow-hidden h-full">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
+                    <span className="text-xs font-mono uppercase tracking-wider text-[#FF650F] font-bold block">
+                      02. A Solução Glessios
+                    </span>
+                    <h3 className="text-lg font-bold text-zinc-900">Engenharia Visual</h3>
+                    <p className="text-sm text-zinc-600 leading-relaxed">{project.solution}</p>
+                  </div>
+                </M3ScrollItem>
+              </M3ScrollStagger>
 
               {/* Resultados e Benefícios Atingidos */}
-              <div className="p-8 rounded-3xl bg-zinc-900 text-white shadow-xl space-y-4">
+              <M3ScrollReveal variant="scaleUp" className="p-8 rounded-3xl bg-zinc-900 text-white shadow-xl space-y-4">
                 <span className="text-xs font-mono uppercase tracking-wider text-[#FF650F] font-bold block">
                   03. Resultados Aferidos
                 </span>
@@ -292,13 +309,13 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
                     </div>
                   ))}
                 </div>
-              </div>
+              </M3ScrollReveal>
             </div>
 
             {/* Coluna Direita: Materiais & Ficha Técnica */}
             <div className="lg:col-span-5 space-y-8 lg:sticky lg:top-28">
-              {/* Card de Materiais Nobres Utilizados */}
-              <div className="p-8 rounded-3xl bg-white border border-zinc-200/90 shadow-md space-y-6">
+              {/* Card de Materiais Nobres Utilizados com M3ScrollReveal */}
+              <M3ScrollReveal variant="fadeIn" delay={0.1} className="p-8 rounded-3xl bg-white border border-zinc-200/90 shadow-md space-y-6">
                 <div>
                   <h3 className="text-xl font-extrabold text-zinc-900">
                     Materiais & Matérias-Primas Nobres
@@ -344,11 +361,11 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
                     </Button>
                   </a>
                 </div>
-              </div>
+              </M3ScrollReveal>
 
               {/* Depoimento do Cliente se houver */}
               {project.testimonial && (
-                <div className="p-8 rounded-3xl bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-200/80 shadow-sm space-y-4">
+                <M3ScrollReveal variant="scaleUp" delay={0.2} className="p-8 rounded-3xl bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-200/80 shadow-sm space-y-4">
                   <div className="flex items-center gap-1 text-amber-500">
                     {[...Array(project.testimonial.rating)].map((_, i) => (
                       <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
@@ -363,7 +380,7 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
                       {project.testimonial.role} • {project.testimonial.company}
                     </p>
                   </div>
-                </div>
+                </M3ScrollReveal>
               )}
             </div>
           </div>
@@ -379,11 +396,11 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
         </section>
 
         {/* ====================================================
-            5. OUTROS PROJETOS REALIZADOS (NAVEGAÇÃO)
+            5. OUTROS PROJETOS REALIZADOS COM M3 SCROLL STAGGER
             ==================================================== */}
         {relatedProjects.length > 0 && (
           <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">
+            <M3ScrollReveal variant="fadeUp" className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">
               <div>
                 <Badge variant="orange-light" className="mb-2">
                   <Sparkles className="w-3.5 h-3.5 text-[#FF650F]" />
@@ -400,54 +417,59 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
                 Ver todos os projetos
                 <ArrowRight className="w-4 h-4" />
               </Link>
-            </div>
+            </M3ScrollReveal>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <M3ScrollStagger className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {relatedProjects.map((rel) => (
-                <Link key={rel.id} href={`/portfolio/${rel.slug}`} className="block group">
-                  <div className="rounded-2xl overflow-hidden bg-white border border-zinc-200/90 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full">
-                    <div className="relative h-56 w-full bg-zinc-100 overflow-hidden">
-                      <Image
-                        src={rel.featuredImage}
-                        alt={rel.title}
-                        fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                      />
-                      <div className="absolute top-3 left-3 flex gap-2">
-                        <Badge variant="graphite" className="bg-[#121316]/85 backdrop-blur-md text-white text-[10px]">
-                          {rel.category}
-                        </Badge>
+                <M3ScrollItem key={rel.id} className="h-full">
+                  <Link href={`/portfolio/${rel.slug}`} className="block group h-full">
+                    <div className="rounded-2xl overflow-hidden bg-white border border-zinc-200/90 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full">
+                      <div className="relative h-56 w-full bg-zinc-100 overflow-hidden">
+                        <Image
+                          src={rel.featuredImage}
+                          alt={rel.title}
+                          fill
+                          loading="lazy"
+                          decoding="async"
+                          quality={65}
+                          className="object-cover transition-transform duration-700 group-hover:scale-105"
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                        />
+                        <div className="absolute top-3 left-3 flex gap-2">
+                          <Badge variant="graphite" className="bg-[#121316]/85 backdrop-blur-md text-white text-[10px]">
+                            {rel.category}
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
-                    <div className="p-6 flex flex-col flex-grow justify-between space-y-3">
-                      <div>
-                        <span className="text-[11px] font-mono text-[#FF650F] uppercase font-semibold">
-                          {rel.clientName}
+                      <div className="p-6 flex flex-col flex-grow justify-between space-y-3">
+                        <div>
+                          <span className="text-[11px] font-mono text-[#FF650F] uppercase font-semibold">
+                            {rel.clientName}
+                          </span>
+                          <h3 className="text-base font-bold text-zinc-900 group-hover:text-[#FF650F] transition-colors mt-1 line-clamp-2">
+                            {rel.title}
+                          </h3>
+                        </div>
+                        <span className="text-xs font-bold text-[#FF650F] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                          Conhecer Obra
+                          <ChevronRight className="w-3.5 h-3.5" />
                         </span>
-                        <h3 className="text-base font-bold text-zinc-900 group-hover:text-[#FF650F] transition-colors mt-1 line-clamp-2">
-                          {rel.title}
-                        </h3>
                       </div>
-                      <span className="text-xs font-bold text-[#FF650F] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                        Conhecer Obra
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </span>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </M3ScrollItem>
               ))}
-            </div>
+            </M3ScrollStagger>
           </section>
         )}
 
         {/* ====================================================
-            6. CTA MEMORÁVEL PARA CONVERSÃO DE NOVOS CLIENTES
+            6. CTA MEMORÁVEL PARA CONVERSÃO COM M3SCROLLREVEAL
             ==================================================== */}
         <section className="py-24 bg-[#0E0F11] text-white relative overflow-hidden">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-orange-500/10 blur-[140px] rounded-full pointer-events-none" />
 
-          <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
+          <M3ScrollReveal variant="fadeUp" className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
             <Badge variant="orange" className="py-1.5 px-4 font-semibold text-xs tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
               SEU PROJETO É O PRÓXIMO
@@ -476,7 +498,7 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
                 </Button>
               </Link>
             </div>
-          </div>
+          </M3ScrollReveal>
         </section>
       </main>
 
