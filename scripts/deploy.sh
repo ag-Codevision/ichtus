@@ -33,7 +33,11 @@ if [ ! -f .env ]; then
     fi
 fi
 
-# 3. Build das Imagens e Inicialização dos Containers Isolados
+# 3. Limpeza Preventiva de Disco e Build das Imagens
+echo "🧹 Executando limpeza preventiva de cache do Docker..."
+docker builder prune -af --keep-storage 2GB 2>/dev/null || true
+docker image prune -f 2>/dev/null || true
+
 echo "📦 Construindo containers de produção com isolamento de recursos..."
 $DOCKER_COMPOSE -f docker-compose.prod.yml build
 
