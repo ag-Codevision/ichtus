@@ -23,6 +23,15 @@ export async function GET(request: Request) {
     const transactions = await prisma.financialTransaction.findMany({
       where: whereClause,
       include: {
+        customer: {
+          select: {
+            id: true,
+            tradeName: true,
+            companyName: true,
+            fullName: true,
+            type: true,
+          },
+        },
         invoice: {
           select: {
             code: true,
@@ -76,6 +85,7 @@ export async function POST(request: Request) {
       description,
       amount,
       entryDate,
+      customerId,
       bankAccount = "Conta Corrente Principal",
       receiptUrl,
     } = body;
@@ -94,8 +104,12 @@ export async function POST(request: Request) {
         description: description.trim(),
         amount: Number(amount),
         entryDate: entryDate ? new Date(entryDate) : new Date(),
+        customerId: customerId || null,
         bankAccount: bankAccount.trim(),
         receiptUrl: receiptUrl?.trim() || null,
+      },
+      include: {
+        customer: true,
       },
     });
 

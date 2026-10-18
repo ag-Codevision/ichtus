@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Lock, Mail, ShieldCheck, Sparkles, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, ArrowRight, Lock, Mail, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export default function PortalLoginPage() {
@@ -43,45 +43,26 @@ export default function PortalLoginPage() {
     }
   };
 
-  const handleDemoLogin = async () => {
-    setEmail("renata@conceptbatel.com.br");
-    setPassword("Glessios@2026");
-    setIsLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const res = await fetch("/api/v1/portal/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "renata@conceptbatel.com.br", password: "Glessios@2026" }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        router.push("/portal/dashboard");
-      } else {
-        setErrorMsg(data.error || "Falha no acesso de demonstração.");
-      }
-    } catch (err) {
-      setErrorMsg("Erro ao conectar com a API.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#FDF9F6] dark:bg-[#0E0F12] text-zinc-900 dark:text-white px-4 sm:px-6 lg:px-8 py-6 transition-colors duration-300">
       <div className="max-w-7xl mx-auto w-full flex items-center justify-between py-4">
-        <Link href="/" className="flex items-center gap-3 py-1 group" aria-label="Glessios - Soluções & Design">
-          <div className="p-1.5 px-3 rounded-2xl bg-zinc-900/90 dark:bg-white/[0.04] border border-zinc-800/80 dark:border-white/[0.08] transition-all shadow-sm">
-            <Image
-              src="/logo-web.png"
-              alt="Glessios - Soluções & Design"
-              width={180}
-              height={40}
-              className="h-9 w-auto object-contain group-hover:scale-105 transition-transform"
-            />
-          </div>
+        <Link href="/" className="inline-flex items-center py-1 group" aria-label="Glessios - Soluções & Design">
+          <Image
+            src="/logo-horizontal-escuro.png"
+            alt="Glessios - Soluções & Design"
+            width={180}
+            height={40}
+            priority
+            className="h-9 w-auto object-contain group-hover:scale-105 transition-transform dark:hidden"
+          />
+          <Image
+            src="/logo-web.png"
+            alt="Glessios - Soluções & Design"
+            width={180}
+            height={40}
+            priority
+            className="h-9 w-auto object-contain group-hover:scale-105 transition-transform hidden dark:block"
+          />
         </Link>
         <div className="flex items-center gap-3">
           <ThemeToggle />
@@ -169,18 +150,6 @@ export default function PortalLoginPage() {
                 Entrar no Portal
                 <ArrowRight className="w-4 h-4" />
               </Button>
-
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleDemoLogin}
-                  disabled={isLoading}
-                  className="w-full py-2.5 px-3 bg-black/[0.03] dark:bg-white/[0.04] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 border border-black/[0.06] dark:border-white/[0.08] rounded-full text-xs font-semibold transition-colors flex items-center justify-center gap-2"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-glessios-orange" />
-                  Acessar com Conta Demo (Loja Concept Batel)
-                </button>
-              </div>
             </form>
           </CardContent>
 

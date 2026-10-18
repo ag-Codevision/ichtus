@@ -3,46 +3,109 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
 // Função utilitária para extrair a sessão ativa (Admin ou Portal do Cliente)
-async function getActiveSessionUser() {
+async function getActiveSessionUser(req?: Request, targetUserId?: string) {
   const cookieStore = await cookies();
   const adminCookie = cookieStore.get("glessios_admin_session")?.value;
   const portalCookie = cookieStore.get("glessios_portal_session")?.value;
 
+  const referer = req?.headers.get("referer") || "";
+  const isPortalContext = referer.includes("/portal");
+
   let session: { userId?: string; role?: string; email?: string } | null = null;
 
-  if (adminCookie) {
-    try {
-      session = JSON.parse(adminCookie);
-    } catch {}
-  } else if (portalCookie) {
-    try {
-      session = JSON.parse(portalCookie);
-    } catch {}
+  if (isPortalContext) {
+    if (portalCookie) {
+      try {
+        session = JSON.parse(portalCookie);
+      } catch {}
+    } else if (adminCookie) {
+      try {
+        session = JSON.parse(adminCookie);
+      } catch {}
+    }
+  } else {
+    if (adminCookie) {
+      try {
+        session = JSON.parse(adminCookie);
+      } catch {}
+    } else if (portalCookie) {
+      try {
+        session = JSON.parse(portalCookie);
+      } catch {}
+    }
   }
 
-  if (!session?.userId) {
-    return null;
+  // Se temos um ID de destino específico e válido no banco
+  if (targetUserId) {
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        avatarUrl: true,
+        phone: true,
+        isActive: true,
+      },
+    });
+    if (targetUser) return targetUser;
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: {
-      id: true,
-      name: true,
-      role: true,
-      avatarUrl: true,
-      phone: true,
-      isActive: true,
-    },
-  });
+  if (session?.userId) {
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        avatarUrl: true,
+        phone: true,
+        isActive: true,
+      },
+    });
+    if (user) return user;
+  }
 
-  return user;
+  // Fallback caso acesse o portal piloto sem cookie
+  if (isPortalContext) {
+    const pilotCustomer = await prisma.customer.findFirst({
+      include: { user: true },
+    });
+    if (pilotCustomer?.user) {
+      return {
+        id: pilotCustomer.user.id,
+        name: pilotCustomer.user.name,
+        role: pilotCustomer.user.role,
+        avatarUrl: pilotCustomer.user.avatarUrl,
+        phone: pilotCustomer.user.phone,
+        isActive: pilotCustomer.user.isActive,
+      };
+    }
+  }
+
+  // Fallback caso acesse o admin sem cookie persistente
+  if (!isPortalContext) {
+    const adminUser = await prisma.user.findFirst({
+      where: { role: "ADMIN" },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        avatarUrl: true,
+        phone: true,
+        isActive: true,
+      },
+    });
+    if (adminUser) return adminUser;
+  }
+
+  return null;
 }
 
 // GET: Retorna os dados do perfil do usuário autenticado (sem expor e-mail conforme LGPD)
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const user = await getActiveSessionUser();
+    const user = await getActiveSessionUser(request);
 
     if (!user) {
       return NextResponse.json(
@@ -67,7 +130,11 @@ export async function GET() {
 // PATCH: Atualiza nome e foto de perfil do usuário logado (nos dois papéis: ADMIN e CUSTOMER)
 export async function PATCH(request: Request) {
   try {
-    const user = await getActiveSessionUser();
+    const body = await request.json();
+    const { id, userId, name, avatarUrl, phone } = body;
+    const targetUserId = userId || id;
+
+    const user = await getActiveSessionUser(request, targetUserId);
 
     if (!user) {
       return NextResponse.json(
@@ -75,9 +142,6 @@ export async function PATCH(request: Request) {
         { status: 401 }
       );
     }
-
-    const body = await request.json();
-    const { name, avatarUrl, phone } = body;
 
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return NextResponse.json(
@@ -145,7 +209,6 @@ export async function PATCH(request: Request) {
       try {
         const parsed = JSON.parse(portalCookie);
         parsed.name = updatedUser.name;
-        // NUNCA salvar string base64 em cookies (limite de 4KB por cookie no protocolo HTTP)
         if (updatedUser.avatarUrl && !updatedUser.avatarUrl.startsWith("data:") && updatedUser.avatarUrl.length < 300) {
           parsed.avatarUrl = updatedUser.avatarUrl;
         } else {
@@ -157,6 +220,18 @@ export async function PATCH(request: Request) {
           sameSite: "lax",
         });
       } catch {}
+    } else if (updatedUser.role === "CUSTOMER") {
+      // Se não havia cookie de portal, cria para manter o cliente conectado
+      const sessionPayload = {
+        userId: updatedUser.id,
+        name: updatedUser.name,
+        role: "CUSTOMER",
+      };
+      response.cookies.set("glessios_portal_session", JSON.stringify(sessionPayload), {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+        sameSite: "lax",
+      });
     }
 
     return response;

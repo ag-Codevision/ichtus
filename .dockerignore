@@ -1,0 +1,39 @@
+# Git e metadados
+.git
+.gitignore
+.gitattributes
+
+# Dependências locais e caches de compilação
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.next
+out
+build
+dist
+.turbo
+
+# Documentações e arquivos de design pesados da raiz
+docs
+*.md
+*.pdf
+logo original.png
+logo horizontal original.png
+Icon.png
+icone 3d.png
+Icon_web.png
+logo horizontal web.png
+logo horizontal escuro.png
+logo.png
+
+# Ambientes e arquivos locais
+.env*.local
+.env
+.agents
+.vscode
+.idea
+*.log
+*.tmp
+scripts

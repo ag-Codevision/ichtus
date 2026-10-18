@@ -3,6 +3,12 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SegmentedButton } from "@/components/ui/segmented-button";
+import {
+  M3StaggerContainer,
+  M3StaggerItem,
+  M3TabPanel,
+} from "@/components/ui/m3-motion";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   DollarSign,
@@ -110,14 +116,28 @@ export default function FinanceiroAdminPage() {
   const [submittingInvoice, setSubmittingInvoice] = useState(false);
 
   const [newTxModalOpen, setNewTxModalOpen] = useState(false);
+  const [entitiesList, setEntitiesList] = useState<any[]>([]);
   const [newTxForm, setNewTxForm] = useState({
     type: "EXPENSE",
     category: "Fornecedores de Insumos",
     description: "",
     amount: "",
+    customerId: "",
     bankAccount: "Conta Corrente Principal",
   });
   const [submittingTx, setSubmittingTx] = useState(false);
+
+  const fetchEntities = async () => {
+    try {
+      const res = await fetch("/api/v1/crm/contacts/search?limit=60");
+      const data = await res.json();
+      if (data.success) {
+        setEntitiesList(data.data || []);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar entidades para financeiro:", err);
+    }
+  };
 
   // Busca dados de Faturas
   const fetchInvoices = async () => {
@@ -176,7 +196,7 @@ export default function FinanceiroAdminPage() {
   useEffect(() => {
     const loadAll = async () => {
       setLoading(true);
-      await Promise.all([fetchInvoices(), fetchTransactions(), fetchDre(), fetchServiceOrders()]);
+      await Promise.all([fetchInvoices(), fetchTransactions(), fetchDre(), fetchServiceOrders(), fetchEntities()]);
       setLoading(false);
     };
     loadAll();
@@ -269,6 +289,7 @@ export default function FinanceiroAdminPage() {
           category: "Fornecedores de Insumos",
           description: "",
           amount: "",
+          customerId: "",
           bankAccount: "Conta Corrente Principal",
         });
         await Promise.all([fetchTransactions(), fetchDre()]);
@@ -319,118 +340,117 @@ export default function FinanceiroAdminPage() {
         </div>
       </div>
 
-      {/* 4 Cards de Métricas Financeiras - M3 Expressive KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-              Faturamento Realizado
-            </span>
-            <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-              {formatCurrency(invoiceKpis.totalPaid)}
+      {/* 4 Cards de Métricas Financeiras - M3 Expressive KPI Grid com Entrada Escalonada */}
+      <M3StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <M3StaggerItem>
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between h-full">
+            <div>
+              <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                Faturamento Realizado
+              </span>
+              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                {formatCurrency(invoiceKpis.totalPaid)}
+              </div>
+              <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
+                Faturas liquidadas
+              </span>
             </div>
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
-              Faturas liquidadas
-            </span>
+            <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-        </div>
+        </M3StaggerItem>
 
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-              A Receber (Pendente)
-            </span>
-            <div className="text-2xl font-black text-zinc-900 dark:text-white mt-1">
-              {formatCurrency(invoiceKpis.totalPending)}
+        <M3StaggerItem>
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between h-full">
+            <div>
+              <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                A Receber (Pendente)
+              </span>
+              <div className="text-2xl font-black text-zinc-900 dark:text-white mt-1">
+                {formatCurrency(invoiceKpis.totalPending)}
+              </div>
+              <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
+                Faturas em aberto das OSs
+              </span>
             </div>
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
-              Faturas em aberto das OSs
-            </span>
+            <div className="w-11 h-11 rounded-2xl bg-orange-500/10 flex items-center justify-center text-glessios-orange shrink-0">
+              <Clock className="w-5 h-5" />
+            </div>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-orange-500/10 flex items-center justify-center text-glessios-orange">
-            <Clock className="w-5 h-5" />
-          </div>
-        </div>
+        </M3StaggerItem>
 
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-              Contas em Atraso
-            </span>
-            <div className="text-2xl font-black text-red-600 dark:text-red-400 mt-1">
-              {formatCurrency(invoiceKpis.totalOverdue)}
+        <M3StaggerItem>
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between h-full">
+            <div>
+              <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                Contas em Atraso
+              </span>
+              <div className="text-2xl font-black text-red-600 dark:text-red-400 mt-1">
+                {formatCurrency(invoiceKpis.totalOverdue)}
+              </div>
+              <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
+                Vencimento expirado
+              </span>
             </div>
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
-              Vencimento expirado
-            </span>
+            <div className="w-11 h-11 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
+              <AlertCircle className="w-5 h-5" />
+            </div>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-600 dark:text-red-400">
-            <AlertCircle className="w-5 h-5" />
-          </div>
-        </div>
+        </M3StaggerItem>
 
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-              Resultado Líquido Fabril
-            </span>
-            <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">
-              {formatCurrency(dre?.netOperatingResult || txKpis.netBalance)}
+        <M3StaggerItem>
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between h-full">
+            <div>
+              <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                Resultado Líquido Fabril
+              </span>
+              <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">
+                {formatCurrency(dre?.netOperatingResult || txKpis.netBalance)}
+              </div>
+              <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
+                Margem operacional apurada
+              </span>
             </div>
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
-              Margem operacional apurada
-            </span>
+            <div className="w-11 h-11 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+              <TrendingUp className="w-5 h-5" />
+            </div>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
-            <TrendingUp className="w-5 h-5" />
-          </div>
-        </div>
+        </M3StaggerItem>
+      </M3StaggerContainer>
+
+      {/* Abas de Navegação - M3 Segmented Buttons com Indicador Elástico */}
+      <div className="w-fit">
+        <SegmentedButton<"INVOICES" | "TRANSACTIONS" | "DRE">
+          value={activeTab}
+          onChange={setActiveTab}
+          layoutId="finance-view-tabs"
+          options={[
+            {
+              value: "INVOICES",
+              label: "Faturas & Cobranças",
+              icon: <Receipt className="w-4 h-4" />,
+              count: invoices.length,
+            },
+            {
+              value: "TRANSACTIONS",
+              label: "Extrato & Fluxo",
+              icon: <DollarSign className="w-4 h-4" />,
+              count: transactions.length,
+            },
+            {
+              value: "DRE",
+              label: "DRE Gerencial Fabril",
+              icon: <FileSpreadsheet className="w-4 h-4" />,
+            },
+          ]}
+        />
       </div>
 
-      {/* Abas de Navegação - M3 Segmented Buttons */}
-      <div className="flex items-center gap-1.5 p-1.5 rounded-full bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] w-fit">
-        <button
-          onClick={() => setActiveTab("INVOICES")}
-          className={`px-4 py-2 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
-            activeTab === "INVOICES"
-              ? "bg-white dark:bg-[#252730] text-zinc-900 dark:text-white shadow-sm font-bold"
-              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-          }`}
-        >
-          <Receipt className="w-4 h-4" />
-          Faturas & Cobranças ({invoices.length})
-        </button>
-
-        <button
-          onClick={() => setActiveTab("TRANSACTIONS")}
-          className={`px-4 py-2 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
-            activeTab === "TRANSACTIONS"
-              ? "bg-white dark:bg-[#252730] text-zinc-900 dark:text-white shadow-sm font-bold"
-              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-          }`}
-        >
-          <DollarSign className="w-4 h-4" />
-          Extrato & Fluxo ({transactions.length})
-        </button>
-
-        <button
-          onClick={() => setActiveTab("DRE")}
-          className={`px-4 py-2 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
-            activeTab === "DRE"
-              ? "bg-white dark:bg-[#252730] text-zinc-900 dark:text-white shadow-sm font-bold"
-              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-          }`}
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          DRE Gerencial Fabril
-        </button>
-      </div>
-
-      {/* Conteúdo da Aba 1: Faturas & Cobranças */}
-      {activeTab === "INVOICES" && (
+      {/* Conteúdo das Abas com Transição Fluida M3 Expressive */}
+      <M3TabPanel activeKey={activeTab}>
+        {/* Conteúdo da Aba 1: Faturas & Cobranças */}
+        {activeTab === "INVOICES" && (
         <div className="bg-white dark:bg-[#18191E] rounded-3xl border border-black/[0.06] dark:border-white/[0.08] overflow-hidden shadow-m3-1">
           {loading ? (
             <div className="py-24 text-center text-zinc-500 dark:text-zinc-400 text-xs flex items-center justify-center">
@@ -488,7 +508,7 @@ export default function FinanceiroAdminPage() {
                             {inv.customer.tradeName || inv.customer.companyName || inv.customer.user.name}
                           </span>
                           <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                            {inv.customer.user.phone || inv.customer.user.email}
+                            {inv.customer.user.phone || "Cliente Cadastrado"}
                           </span>
                         </div>
                       </td>
@@ -733,11 +753,18 @@ export default function FinanceiroAdminPage() {
           </div>
         </div>
       )}
+    </M3TabPanel>
 
       {/* Modal Interativo de Cobrança PIX - M3 Expressive Dialog */}
       {pixModalOpen && selectedInvoiceForPix && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl relative text-center">
+        <div
+          className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setPixModalOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl relative text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setPixModalOpen(false)}
               className="absolute right-4 top-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
@@ -823,8 +850,14 @@ export default function FinanceiroAdminPage() {
 
       {/* Modal de Emissão de Nova Fatura - M3 Expressive Dialog */}
       {newInvoiceModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl relative space-y-4">
+        <div
+          className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setNewInvoiceModalOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl relative space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setNewInvoiceModalOpen(false)}
               className="absolute right-4 top-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
@@ -938,8 +971,14 @@ export default function FinanceiroAdminPage() {
 
       {/* Modal de Lançamento Avulso (Despesa ou Receita) - M3 Expressive Dialog */}
       {newTxModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl relative space-y-4">
+        <div
+          className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setNewTxModalOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl relative space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setNewTxModalOpen(false)}
               className="absolute right-4 top-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
@@ -1014,6 +1053,30 @@ export default function FinanceiroAdminPage() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
+                  Entidade Vinculada (Cliente / Fornecedor / Prestador)
+                </label>
+                <select
+                  value={newTxForm.customerId}
+                  onChange={(e) => setNewTxForm({ ...newTxForm, customerId: e.target.value })}
+                  className="w-full bg-black/[0.03] dark:bg-white/[0.05] border border-black/10 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:border-glessios-orange focus:outline-none transition-all"
+                >
+                  <option value="" className="bg-white dark:bg-[#1A1B20] text-zinc-900 dark:text-white">
+                    -- Não vincular a entidade específica --
+                  </option>
+                  {entitiesList.map((ent) => (
+                    <option
+                      key={ent.id}
+                      value={ent.id}
+                      className="bg-white dark:bg-[#1A1B20] text-zinc-900 dark:text-white"
+                    >
+                      {ent.displayName} ({ent.type === "SUPPLIER" ? "Fornecedor" : ent.type === "SERVICE_PROVIDER" ? "Prestador" : "Cliente"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
                   Descrição do Lançamento *
                 </label>
                 <input
@@ -1075,6 +1138,18 @@ export default function FinanceiroAdminPage() {
           </div>
         </div>
       )}
+
+      {/* Botão Flutuante (FAB) de Nova Fatura no Mobile — Alinhado perfeitamente com o Menu Hamburger */}
+      <div className="fixed bottom-[90px] right-6 z-40 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setNewInvoiceModalOpen(true)}
+          aria-label="Emitir Nova Fatura"
+          className="w-14 h-14 rounded-full flex items-center justify-center text-white bg-gradient-to-tr from-[#FF650F] to-[#FFA05E] shadow-[0_6px_20px_rgba(255,101,15,0.4)] active:scale-95 transition-all duration-200 border-2 border-white/20 focus:outline-none"
+        >
+          <Plus className="w-6 h-6 stroke-[2.5]" />
+        </button>
+      </div>
     </div>
   );
 }

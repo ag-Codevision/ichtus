@@ -65,7 +65,7 @@ export async function PATCH(request: Request, context: RouteParams) {
           invoiceId: invoice.id,
           type: FinancialTransactionType.INCOME,
           category: "Vendas e Serviços",
-          description: `Recebimento Fatura ${invoice.code} - ${invoice.customer.tradeName || invoice.customer.user.name}`,
+          description: `Recebimento Fatura ${invoice.code} - ${invoice.customer.tradeName || invoice.customer.user?.name || "Cliente"}`,
           amount: invoice.amount,
           entryDate: now,
           bankAccount,
@@ -76,10 +76,11 @@ export async function PATCH(request: Request, context: RouteParams) {
     });
 
     // Dispara recibo de pagamento via WhatsApp (WACLI) se houver telefone
-    const clientPhone = invoice.customer.user.phone;
+    const clientPhone = invoice.customer.user?.phone;
     if (clientPhone) {
       const valorFormatado = formatCurrency(Number(invoice.amount));
-      const message = `✅ *Comprovante de Pagamento — Glessios*\n\nOlá, *${invoice.customer.user.name}*!\nConfirmamos o recebimento de *${valorFormatado}* referente à Fatura *${invoice.code}* (${invoice.serviceOrder.title}).\n\nSua Ordem de Serviço continua avançando a todo vapor em nossa fábrica!\nObrigado pela confiança.`;
+      const clientName = invoice.customer.user?.name || invoice.customer.tradeName || "Cliente";
+      const message = `✅ *Comprovante de Pagamento — Glessios*\n\nOlá, *${clientName}*!\nConfirmamos o recebimento de *${valorFormatado}* referente à Fatura *${invoice.code}* (${invoice.serviceOrder.title}).\n\nSua Ordem de Serviço continua avançando a todo vapor em nossa fábrica!\nObrigado pela confiança.`;
       
       // Envia assincronamente sem bloquear a resposta da API
       wacli.sendMessage({ to: clientPhone, message }).catch((err) => {

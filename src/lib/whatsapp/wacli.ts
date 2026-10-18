@@ -44,7 +44,7 @@ export async function sendWhatsAppMessage({
   // 1. Tentar envio via serviço HTTP do WACLI (se rodando como daemon local)
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const timeoutId = setTimeout(() => controller.abort(), 1500);
 
     const response = await fetch(`${wacliApiUrl}/api/send`, {
       method: "POST",
@@ -79,7 +79,7 @@ export async function sendWhatsAppMessage({
     const mediaFlag = mediaUrl ? ` --media "${mediaUrl}"` : "";
     const cmd = `${wacliPath} send --session "${session}" --to "${targetNumber}" --text "${safeMsg}"${mediaFlag}`;
 
-    const { stdout, stderr } = await execAsync(cmd, { timeout: 8000 });
+    const { stdout, stderr } = await execAsync(cmd, { timeout: 2500 });
     if (!stderr || stderr.trim().length === 0 || stdout.includes("success")) {
       return {
         success: true,

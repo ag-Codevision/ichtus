@@ -18,6 +18,18 @@ export async function GET(req: NextRequest) {
             assignedTo: {
               select: { id: true, name: true, email: true },
             },
+            customer: {
+              select: {
+                id: true,
+                tradeName: true,
+                companyName: true,
+                fullName: true,
+                type: true,
+                whatsapp: true,
+                email: true,
+                city: true,
+              },
+            },
           },
         },
       },
@@ -48,6 +60,7 @@ export async function POST(req: NextRequest) {
       contactName,
       contactPhone,
       contactEmail,
+      customerId,
       source = LeadSource.WEBSITE_FORM,
       estimatedValue,
       priority = PriorityLevel.MEDIUM,
@@ -89,12 +102,16 @@ export async function POST(req: NextRequest) {
         contactName,
         contactPhone,
         contactEmail: contactEmail || null,
+        customerId: customerId || null,
         source,
         estimatedValue: estimatedValue ? Number(estimatedValue) : null,
         priority,
         notes: notes || null,
         columnId: targetColumnId,
         orderInColumn: leadsInCol,
+      },
+      include: {
+        customer: true,
       },
     });
 

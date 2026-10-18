@@ -3,12 +3,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTheme } from "@/components/theme/ThemeProvider";
 import {
   ExternalLink,
   LogOut,
-  Sun,
-  Moon,
   User,
   ShieldCheck,
   ChevronDown,
@@ -22,7 +19,6 @@ import { EditProfileModal, UserProfileData } from "@/components/profile/EditProf
 
 export function AdminUserMenu() {
   const router = useRouter();
-  const { theme, toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -79,7 +75,6 @@ export function AdminUserMenu() {
     router.push("/glessios/login");
   };
 
-  const isDark = theme === "dark";
 
   const getInitials = (n: string) => {
     const parts = (n || "Admin").trim().split(" ");
@@ -170,52 +165,17 @@ export function AdminUserMenu() {
                 </span>
               </button>
 
-              {/* Alternar Modo Claro / Modo Escuro */}
-              <button
-                onClick={() => {
-                  toggleTheme();
-                }}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
-              >
-                <div className="flex items-center gap-2.5">
-                  {isDark ? (
-                    <Sun className="w-4 h-4 text-amber-500" />
-                  ) : (
-                    <Moon className="w-4 h-4 text-glessios-orange" />
-                  )}
-                  <span>{isDark ? "Modo Claro" : "Modo Escuro"}</span>
-                </div>
-                <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 bg-black/[0.04] dark:bg-white/[0.05] px-2 py-0.5 rounded-full">
-                  {isDark ? "Dark" : "Light"}
-                </span>
-              </button>
-
-              {/* Ver Site Público */}
+              {/* Voltar ao Site */}
               <Link
                 href="/"
-                target="_blank"
                 onClick={() => setIsOpen(false)}
                 className="w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
               >
                 <div className="flex items-center gap-2.5">
                   <ExternalLink className="w-4 h-4 text-blue-500" />
-                  <span>Ver Site Público</span>
+                  <span>Voltar ao Site</span>
                 </div>
-                <span className="text-[10px] text-zinc-400">Nova aba</span>
-              </Link>
-
-              {/* Portal do Cliente (Visão do Contratante) */}
-              <Link
-                href="/portal/dashboard"
-                target="_blank"
-                onClick={() => setIsOpen(false)}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
-              >
-                <div className="flex items-center gap-2.5">
-                  <User className="w-4 h-4 text-purple-500" />
-                  <span>Visão do Cliente</span>
-                </div>
-                <span className="text-[10px] text-zinc-400">Portal</span>
+                <span className="text-[10px] text-zinc-400">Início</span>
               </Link>
 
               {/* Proposta Comercial Piloto */}

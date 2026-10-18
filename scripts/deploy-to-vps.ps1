@@ -75,7 +75,8 @@ try {
     }
     Write-Host "✅ Conexão SSH bem-sucedida!" -ForegroundColor Green
 } catch {
-    Write-Error "❌ Não foi possível conectar na VPS ($vpsHost:$vpsPort): $_"
+    $targetEndpoint = "$vpsHost`:$vpsPort"
+    Write-Error "❌ Não foi possível conectar na VPS ($targetEndpoint): $_"
     exit 1
 }
 
@@ -102,8 +103,8 @@ try {
 }
 
 # 6. Enviar pacote para a VPS
-Write-Host "📤 Enviando pacote para $vpsHost:$vpsDeployPath..." -ForegroundColor Cyan
-& scp @scpArgs $tempArchive "$vpsUser@$vpsHost`:$vpsDeployPath/deploy.tar.gz"
+Write-Host "📤 Enviando pacote para $($vpsHost):$vpsDeployPath..." -ForegroundColor Cyan
+& scp @scpArgs $tempArchive "$vpsUser@${vpsHost}:$vpsDeployPath/deploy.tar.gz"
 Remove-Item $tempArchive -Force -ErrorAction SilentlyContinue
 
 # 7. Criar arquivo .env de produção na VPS
@@ -133,7 +134,7 @@ CRON_SECRET=$($envVars["CRON_SECRET"])
 
 $tempProdEnv = Join-Path $env:TEMP "glessios-prod-env.tmp"
 Set-Content -Path $tempProdEnv -Value $prodEnvContent -Encoding UTF8
-& scp @scpArgs $tempProdEnv "$vpsUser@$vpsHost`:$vpsDeployPath/.env"
+& scp @scpArgs $tempProdEnv "$vpsUser@${vpsHost}:$vpsDeployPath/.env"
 Remove-Item $tempProdEnv -Force -ErrorAction SilentlyContinue
 
 # 8. Descompactar e iniciar deploy na VPS

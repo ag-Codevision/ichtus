@@ -1,3 +1,4 @@
+import dynamic from "next/dynamic";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { HeroSculpture } from "@/components/home/hero-sculpture";
@@ -7,15 +8,29 @@ import { MagneticButton } from "@/components/ui/magnetic-button";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { SolutionsIntroSection } from "@/components/home/solutions-intro-section";
 import { AboutMissionSection } from "@/components/home/about-mission-section";
-import { PortfolioGallery } from "@/components/home/portfolio-gallery";
 import { ActionAreasSection } from "@/components/home/action-areas-section";
 import { MainServicesSection } from "@/components/home/main-services-section";
-import { TeamTestimonialsSection } from "@/components/home/team-testimonials-section";
-import { QuoteBookingForm } from "@/components/home/quote-booking-form";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
+
+// Dynamic imports para seções abaixo da dobra (Below the Fold) com SSR ativo
+// Otimiza o bundle inicial do JavaScript sem causar layout shift
+const PortfolioGallery = dynamic(
+  () => import("@/components/home/portfolio-gallery").then((mod) => mod.PortfolioGallery),
+  { ssr: true }
+);
+
+const TeamTestimonialsSection = dynamic(
+  () => import("@/components/home/team-testimonials-section").then((mod) => mod.TeamTestimonialsSection),
+  { ssr: true }
+);
+
+const QuoteBookingForm = dynamic(
+  () => import("@/components/home/quote-booking-form").then((mod) => mod.QuoteBookingForm),
+  { ssr: true }
+);
 
 export default function HomePage() {
   return (
@@ -27,17 +42,16 @@ export default function HomePage() {
             1. HERO SECTION (EXPERIÊNCIA CINEMATOGRÁFICA INTERATIVA)
             ==================================================== */}
         <HeroParallaxContainer className="overflow-hidden pt-12 pb-20 md:pt-16 md:pb-28 bg-[#121316] text-white border-b border-white/[0.08]">
-          {/* Vídeo Cinematográfico de Fundo */}
+          {/* Vídeo Cinematográfico de Fundo Otimizado (Preload sob demanda para não bloquear rede inicial) */}
           <video
             autoPlay
             loop
             muted
             playsInline
-            preload="auto"
+            preload="none"
             className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none z-0 opacity-50 animate-hero-atmosphere"
           >
             <source src="/videos/hero-background.mp4" type="video/mp4" />
-            <source src="https://videos.pexels.com/video-files/9618368/9618368-uhd_2732_1440_25fps.mp4" type="video/mp4" />
           </video>
 
           {/* Overlays de Fusão e Leitura */}
@@ -124,7 +138,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Coluna da Escultura Metálica Interativa com Parallax Suave */}
+              {/* Coluna da Escultura Metálica Interativa com Parallax Suave (60 FPS puros) */}
               <div
                 className="lg:col-span-5 flex items-center justify-center animate-hero-sculpture will-change-transform"
                 style={{
@@ -149,7 +163,7 @@ export default function HomePage() {
         <AboutMissionSection />
 
         {/* ====================================================
-            4. NOSSO PORTFOLIO
+            4. NOSSO PORTFOLIO (CARREGAMENTO DINÂMICO OTIMIZADO)
             ==================================================== */}
         <PortfolioGallery />
 
@@ -164,7 +178,7 @@ export default function HomePage() {
         <MainServicesSection />
 
         {/* ====================================================
-            7. NOSSA EQUIPE & DEPOIMENTOS
+            7. NOSSA EQUIPE & DEPOIMENTOS (CARREGAMENTO DINÂMICO OTIMIZADO)
             ==================================================== */}
         <TeamTestimonialsSection />
 

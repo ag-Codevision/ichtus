@@ -41,6 +41,8 @@ const TESTIMONIALS = [
   },
 ];
 
+import { M3ScrollReveal, M3ScrollStagger, M3ScrollItem } from "@/components/ui/scroll-reveal";
+
 export function TeamTestimonialsSection() {
   return (
     <div className="bg-[#121316] text-white">
@@ -49,8 +51,8 @@ export function TeamTestimonialsSection() {
           ==================================================== */}
       <section id="equipe" className="py-24 border-b border-white/[0.08] relative scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Cabeçalho com subtítulo abaixo do título */}
-          <div className="max-w-3xl mb-16 space-y-4">
+          {/* Cabeçalho com M3ScrollReveal */}
+          <M3ScrollReveal variant="fadeUp" className="max-w-3xl mb-16 space-y-4">
             <Badge variant="orange" className="font-semibold tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
               Liderança & Compromisso
@@ -61,9 +63,9 @@ export function TeamTestimonialsSection() {
             <p className="text-base text-zinc-400 max-w-2xl leading-relaxed pt-1">
               Profissionais dedicados a pensar nas soluções mais inteligentes e funcionais para o seu negócio.
             </p>
-          </div>
+          </M3ScrollReveal>
 
-          <div className="max-w-3xl mx-auto">
+          <M3ScrollReveal variant="scaleUp" className="max-w-3xl mx-auto">
             <div className="p-8 sm:p-12 rounded-3xl bg-[#18191D] border border-orange-500/30 relative shadow-2xl overflow-hidden group">
               <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/10 blur-[80px] pointer-events-none -z-10" />
 
@@ -111,7 +113,7 @@ export function TeamTestimonialsSection() {
                 </div>
               </div>
             </div>
-          </div>
+          </M3ScrollReveal>
         </div>
       </section>
 
@@ -120,8 +122,8 @@ export function TeamTestimonialsSection() {
           ==================================================== */}
       <section id="depoimentos" className="py-24 border-b border-white/[0.08] relative scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Cabeçalho com subtítulo abaixo do título */}
-          <div className="max-w-3xl mb-16 space-y-4">
+          {/* Cabeçalho com M3ScrollReveal */}
+          <M3ScrollReveal variant="fadeUp" className="max-w-3xl mb-16 space-y-4">
             <Badge variant="orange" className="font-semibold tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
               Depoimentos
@@ -132,44 +134,43 @@ export function TeamTestimonialsSection() {
             <p className="text-base text-zinc-400 max-w-2xl leading-relaxed pt-1">
               A confiança e o relacionamento que construímos com cada parceiro é o nosso maior patrimônio.
             </p>
-          </div>
+          </M3ScrollReveal>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <M3ScrollStagger className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {TESTIMONIALS.map((t, idx) => (
-              <div
-                key={idx}
-                className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] hover:border-orange-500/40 transition-all duration-300 flex flex-col justify-between group shadow-lg"
-              >
-                <div className="space-y-4">
-                  {/* Estrelas & Aspas */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-1 text-[#FF650F]">
-                      {[...Array(t.rating)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-[#FF650F]" />
-                      ))}
+              <M3ScrollItem key={idx} className="h-full">
+                <div className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] hover:border-orange-500/40 transition-all duration-300 flex flex-col justify-between group shadow-lg h-full">
+                  <div className="space-y-4">
+                    {/* Estrelas & Aspas */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-1 text-[#FF650F]">
+                        {[...Array(t.rating)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-[#FF650F]" />
+                        ))}
+                      </div>
+                      <Quote className="w-6 h-6 text-[#FF650F]/30" />
                     </div>
-                    <Quote className="w-6 h-6 text-[#FF650F]/30" />
-                  </div>
 
-                  <p className="text-sm text-zinc-300 leading-relaxed italic">
-                    &ldquo;{t.content}&rdquo;
-                  </p>
-                </div>
-
-                <div className="pt-6 mt-6 border-t border-white/[0.08] flex items-center justify-between">
-                  <div>
-                    <h4 className="font-bold text-white text-sm">{t.name}</h4>
-                    <p className="text-xs text-zinc-400">
-                      {t.role} • <span className="text-[#FF650F] font-medium">{t.company}</span>
+                    <p className="text-sm text-zinc-300 leading-relaxed italic">
+                      &ldquo;{t.content}&rdquo;
                     </p>
                   </div>
-                  <span className="text-[10px] font-mono text-zinc-500 px-2 py-1 rounded bg-white/5">
-                    {t.tag}
-                  </span>
+
+                  <div className="pt-6 mt-6 border-t border-white/[0.08] flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-white text-sm">{t.name}</h4>
+                      <p className="text-xs text-zinc-400">
+                        {t.role} • <span className="text-[#FF650F] font-medium">{t.company}</span>
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono text-zinc-500 px-2 py-1 rounded bg-white/5">
+                      {t.tag}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              </M3ScrollItem>
             ))}
-          </div>
+          </M3ScrollStagger>
         </div>
       </section>
     </div>

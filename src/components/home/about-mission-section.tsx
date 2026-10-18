@@ -15,6 +15,8 @@ import {
   FileCheck2,
 } from "lucide-react";
 
+import { M3ScrollReveal, M3ScrollStagger, M3ScrollItem } from "@/components/ui/scroll-reveal";
+
 export function AboutMissionSection() {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
@@ -29,7 +31,7 @@ export function AboutMissionSection() {
             BLOCO 1: SOBRE NÓS (Introdução e Pilares)
             ==================================================== */}
         <div className="mb-16">
-          <div className="max-w-3xl mb-12 space-y-4">
+          <M3ScrollReveal variant="fadeUp" className="max-w-3xl mb-12 space-y-4">
             <Badge variant="orange" className="font-semibold tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
               Quem Somos
@@ -40,11 +42,12 @@ export function AboutMissionSection() {
             <p className="text-base text-zinc-400 max-w-2xl leading-relaxed pt-1">
               Dedicados a construir soluções visuais e projetos sob medida que elevam a presença da sua marca com exclusividade, eficiência e pontualidade.
             </p>
-          </div>
+          </M3ScrollReveal>
 
-          {/* 3 Pilares do Sobre Nós */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-8 rounded-2xl bg-[#18191D] border border-white/[0.08] hover:border-[#FF650F]/50 transition-all duration-300 group">
+          {/* 3 Pilares do Sobre Nós com ScrollStagger */}
+          <M3ScrollStagger className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <M3ScrollItem className="h-full">
+              <div className="p-8 rounded-2xl bg-[#18191D] border border-white/[0.08] hover:border-[#FF650F]/50 transition-all duration-300 group h-full">
               <div className="w-12 h-12 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center mb-6 group-hover:border-[#FF650F]/60 transition-colors">
                 <Target className="w-6 h-6 text-[#FF650F]" />
               </div>
@@ -52,34 +55,39 @@ export function AboutMissionSection() {
               <p className="text-sm text-zinc-400 leading-relaxed">
                 Encontrar sempre as melhores soluções para cada cliente de forma a suprir e/ou superar suas expectativas.
               </p>
-            </div>
-
-            <div className="p-8 rounded-2xl bg-[#18191D] border border-white/[0.08] hover:border-[#FF650F]/50 transition-all duration-300 group">
-              <div className="w-12 h-12 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center mb-6 group-hover:border-[#FF650F]/60 transition-colors">
-                <Layers className="w-6 h-6 text-[#FF650F]" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-3">Tudo em um Só Lugar</h3>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                Oferecer o maior número de produtos possível para que o cliente possa encontrar tudo o que precisa em um só lugar e possa manter-se focado em suas atividades.
-              </p>
-            </div>
+            </M3ScrollItem>
 
-            <div className="p-8 rounded-2xl bg-[#18191D] border border-white/[0.08] hover:border-[#FF650F]/50 transition-all duration-300 group">
-              <div className="w-12 h-12 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center mb-6 group-hover:border-[#FF650F]/60 transition-colors">
-                <Clock className="w-6 h-6 text-[#FF650F]" />
+            <M3ScrollItem className="h-full">
+              <div className="p-8 rounded-2xl bg-[#18191D] border border-white/[0.08] hover:border-[#FF650F]/50 transition-all duration-300 group h-full">
+                <div className="w-12 h-12 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center mb-6 group-hover:border-[#FF650F]/60 transition-colors">
+                  <Layers className="w-6 h-6 text-[#FF650F]" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-3">Tudo em um Só Lugar</h3>
+                <p className="text-sm text-zinc-400 leading-relaxed">
+                  Oferecer o maior número de produtos possível para que o cliente possa encontrar tudo o que precisa em um só lugar e possa manter-se focado em suas atividades.
+                </p>
               </div>
-              <h3 className="text-lg font-bold text-white mb-3">Melhor Custo-Benefício</h3>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                Oferecer serviços de qualidade, com excelência, com melhor custo benefício e dentro do menor tempo possível.
-              </p>
-            </div>
-          </div>
+            </M3ScrollItem>
+
+            <M3ScrollItem className="h-full">
+              <div className="p-8 rounded-2xl bg-[#18191D] border border-white/[0.08] hover:border-[#FF650F]/50 transition-all duration-300 group h-full">
+                <div className="w-12 h-12 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center mb-6 group-hover:border-[#FF650F]/60 transition-colors">
+                  <Clock className="w-6 h-6 text-[#FF650F]" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-3">Melhor Custo-Benefício</h3>
+                <p className="text-sm text-zinc-400 leading-relaxed">
+                  Oferecer serviços de qualidade, com excelência, com melhor custo benefício e dentro do menor tempo possível.
+                </p>
+              </div>
+            </M3ScrollItem>
+          </M3ScrollStagger>
         </div>
 
         {/* ====================================================
             BLOCO 2: ESPAÇO PARA VÍDEO INSTITUCIONAL
             ==================================================== */}
-        <div className="my-16">
+        <M3ScrollReveal variant="fadeUp" className="my-16">
           <div className="relative rounded-3xl overflow-hidden border border-white/[0.08] bg-[#0E0F11] aspect-video max-h-[500px] w-full flex items-center justify-center shadow-2xl group">
             {isVideoPlaying ? (
               <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-black/95">
@@ -128,120 +136,126 @@ export function AboutMissionSection() {
               </>
             )}
           </div>
-        </div>
+        </M3ScrollReveal>
 
         {/* ====================================================
             BLOCO 3: MISSÃO, VISÃO E VALORES (GRID DE 3 COLUNAS)
             ==================================================== */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch mt-20">
+        <M3ScrollStagger className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch mt-20">
           {/* CARD MISSÃO */}
-          <div className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] flex flex-col justify-start space-y-4 hover:border-[#FF650F]/50 transition-colors shadow-xl">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#FF650F] flex items-center justify-center text-white shadow-md">
-                <Target className="w-5 h-5" />
+          <M3ScrollItem className="h-full">
+            <div className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] flex flex-col justify-start space-y-4 hover:border-[#FF650F]/50 transition-colors shadow-xl h-full">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#FF650F] flex items-center justify-center text-white shadow-md">
+                  <Target className="w-5 h-5" />
+                </div>
+                <h3 className="text-2xl font-extrabold text-white">Missão</h3>
               </div>
-              <h3 className="text-2xl font-extrabold text-white">Missão</h3>
+              <ul className="space-y-3 pt-2">
+                <li className="flex items-start gap-3 text-sm text-zinc-300 leading-relaxed">
+                  <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
+                  <span>
+                    Encontrar sempre as melhores soluções para cada cliente de forma a suprir e/ou superar suas expectativas.
+                  </span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-zinc-300 leading-relaxed">
+                  <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
+                  <span>
+                    Oferecer o maior número de produtos possível para que o cliente possa encontrar tudo o que precisa em um só lugar e possa manter-se focado em suas atividades.
+                  </span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-zinc-300 leading-relaxed">
+                  <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
+                  <span>
+                    Oferecer serviços de qualidade, com excelência, com melhor custo benefício e dentro do menor tempo possível.
+                  </span>
+                </li>
+              </ul>
             </div>
-            <ul className="space-y-3 pt-2">
-              <li className="flex items-start gap-3 text-sm text-zinc-300 leading-relaxed">
-                <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
-                <span>
-                  Encontrar sempre as melhores soluções para cada cliente de forma a suprir e/ou superar suas expectativas.
-                </span>
-              </li>
-              <li className="flex items-start gap-3 text-sm text-zinc-300 leading-relaxed">
-                <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
-                <span>
-                  Oferecer o maior número de produtos possível para que o cliente possa encontrar tudo o que precisa em um só lugar e possa manter-se focado em suas atividades.
-                </span>
-              </li>
-              <li className="flex items-start gap-3 text-sm text-zinc-300 leading-relaxed">
-                <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
-                <span>
-                  Oferecer serviços de qualidade, com excelência, com melhor custo benefício e dentro do menor tempo possível.
-                </span>
-              </li>
-            </ul>
-          </div>
+          </M3ScrollItem>
 
           {/* CARD VISÃO */}
-          <div className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] flex flex-col justify-start space-y-4 hover:border-[#FF650F]/50 transition-colors shadow-xl">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center text-[#FF650F]">
-                <Eye className="w-5 h-5" />
+          <M3ScrollItem className="h-full">
+            <div className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] flex flex-col justify-start space-y-4 hover:border-[#FF650F]/50 transition-colors shadow-xl h-full">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center text-[#FF650F]">
+                  <Eye className="w-5 h-5" />
+                </div>
+                <h3 className="text-2xl font-extrabold text-white">Visão</h3>
               </div>
-              <h3 className="text-2xl font-extrabold text-white">Visão</h3>
+              <ul className="space-y-3 pt-2">
+                <li className="flex items-start gap-3 text-sm text-zinc-300 leading-relaxed">
+                  <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
+                  <span>
+                    Tornar-se uma empresa referência em soluções Criativas, e nos relacionamentos interno e externo.
+                  </span>
+                </li>
+                <li className="flex items-start gap-3 text-sm text-zinc-300 leading-relaxed">
+                  <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
+                  <span>
+                    Proporcionar a melhor experiência aos clientes desde o momento de sua chegada e durante todo o processo produtivo e / ou criativo.
+                  </span>
+                </li>
+              </ul>
             </div>
-            <ul className="space-y-3 pt-2">
-              <li className="flex items-start gap-3 text-sm text-zinc-300 leading-relaxed">
-                <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
-                <span>
-                  Tornar-se uma empresa referência em soluções Criativas, e nos relacionamentos interno e externo.
-                </span>
-              </li>
-              <li className="flex items-start gap-3 text-sm text-zinc-300 leading-relaxed">
-                <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
-                <span>
-                  Proporcionar a melhor experiência aos clientes desde o momento de sua chegada e durante todo o processo produtivo e / ou criativo.
-                </span>
-              </li>
-            </ul>
-          </div>
+          </M3ScrollItem>
 
           {/* CARD VALORES */}
-          <div className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] flex flex-col justify-start space-y-6 hover:border-[#FF650F]/50 transition-colors shadow-xl">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center text-[#FF650F]">
-                <Award className="w-5 h-5" />
+          <M3ScrollItem className="h-full">
+            <div className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] flex flex-col justify-start space-y-6 hover:border-[#FF650F]/50 transition-colors shadow-xl h-full">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center text-[#FF650F]">
+                  <Award className="w-5 h-5" />
+                </div>
+                <h3 className="text-2xl font-extrabold text-white">Valores</h3>
               </div>
-              <h3 className="text-2xl font-extrabold text-white">Valores</h3>
+
+              <div className="space-y-3 pt-1">
+                <div className="p-3.5 rounded-2xl bg-[#121316] border border-white/[0.06]">
+                  <h4 className="text-xs font-extrabold text-[#FF650F] uppercase tracking-wider mb-1 flex items-center gap-2">
+                    <Award className="w-3.5 h-3.5 text-[#FF650F]" />
+                    QUALIDADE :
+                  </h4>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    Todos os produtos e serviços são feitos com máxima qualidade, desde matérias primas, até o acabamento manual.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-[#121316] border border-white/[0.06]">
+                  <h4 className="text-xs font-extrabold text-[#FF650F] uppercase tracking-wider mb-1 flex items-center gap-2">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#FF650F]" />
+                    CONFIANÇA :
+                  </h4>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    A confiança é a base de uma parceria sólida. Trabalhamos para que a confiança em nossos processos seja sempre crescente.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-[#121316] border border-white/[0.06]">
+                  <h4 className="text-xs font-extrabold text-[#FF650F] uppercase tracking-wider mb-1 flex items-center gap-2">
+                    <FileCheck2 className="w-3.5 h-3.5 text-[#FF650F]" />
+                    TRANSPARÊNCIA :
+                  </h4>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    Trabalhamos de forma transparente com prazos reais. A Verdade é um dos produtos que amamos entregar.
+                  </p>
+                </div>
+              </div>
             </div>
-
-            <div className="space-y-3 pt-1">
-              <div className="p-3.5 rounded-2xl bg-[#121316] border border-white/[0.06]">
-                <h4 className="text-xs font-extrabold text-[#FF650F] uppercase tracking-wider mb-1 flex items-center gap-2">
-                  <Award className="w-3.5 h-3.5 text-[#FF650F]" />
-                  QUALIDADE :
-                </h4>
-                <p className="text-xs text-zinc-400 leading-relaxed">
-                  Todos os produtos e serviços são feitos com máxima qualidade, desde matérias primas, até o acabamento manual.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#121316] border border-white/[0.06]">
-                <h4 className="text-xs font-extrabold text-[#FF650F] uppercase tracking-wider mb-1 flex items-center gap-2">
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#FF650F]" />
-                  CONFIANÇA :
-                </h4>
-                <p className="text-xs text-zinc-400 leading-relaxed">
-                  A confiança é a base de uma parceria sólida. Trabalhamos para que a confiança em nossos processos seja sempre crescente.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#121316] border border-white/[0.06]">
-                <h4 className="text-xs font-extrabold text-[#FF650F] uppercase tracking-wider mb-1 flex items-center gap-2">
-                  <FileCheck2 className="w-3.5 h-3.5 text-[#FF650F]" />
-                  TRANSPARÊNCIA :
-                </h4>
-                <p className="text-xs text-zinc-400 leading-relaxed">
-                  Trabalhamos de forma transparente com prazos reais. A Verdade é um dos produtos que amamos entregar.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+          </M3ScrollItem>
+        </M3ScrollStagger>
 
         {/* ====================================================
             BLOCO 4: FRASE ABAIXO DE MISSÃO, VISÃO E VALORES
             ==================================================== */}
-        <div className="mt-16 pt-12 border-t border-white/[0.08] text-center max-w-3xl mx-auto">
+        <M3ScrollReveal variant="fadeUp" className="mt-16 pt-12 border-t border-white/[0.08] text-center max-w-3xl mx-auto">
           <p className="text-lg sm:text-2xl font-serif italic text-white leading-relaxed">
             « Não existem clientes ou trabalhos pequenos, Cada cliente é único e especial, e as conexões que se estabelecem são imprevisíveis! »
           </p>
           <span className="block mt-4 text-sm font-bold text-[#FF650F] font-mono uppercase tracking-widest">
             — Glessios Gusso
           </span>
-        </div>
+        </M3ScrollReveal>
       </div>
     </section>
   );

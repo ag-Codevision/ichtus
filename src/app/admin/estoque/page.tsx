@@ -3,6 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  M3StaggerContainer,
+  M3StaggerItem,
+  M3TabPanel,
+} from "@/components/ui/m3-motion";
 import { formatCurrency } from "@/lib/utils";
 import {
   Package,
@@ -76,6 +81,7 @@ export default function EstoqueAdminPage() {
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Formulário de novo insumo
+  const [suppliersList, setSuppliersList] = useState<any[]>([]);
   const [newItemForm, setNewItemForm] = useState({
     sku: "",
     name: "",
@@ -85,9 +91,22 @@ export default function EstoqueAdminPage() {
     minQuantity: "",
     averageUnitCost: "",
     supplier: "",
+    supplierId: "",
     location: "",
   });
   const [submittingItem, setSubmittingItem] = useState(false);
+
+  const fetchSuppliers = async () => {
+    try {
+      const res = await fetch("/api/v1/crm/contacts/search?type=SUPPLIER");
+      const data = await res.json();
+      if (data.success) {
+        setSuppliersList(data.data || []);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar fornecedores do CRM:", err);
+    }
+  };
 
   // Carrega insumos do backend
   const fetchStock = async () => {
@@ -116,6 +135,7 @@ export default function EstoqueAdminPage() {
 
   useEffect(() => {
     fetchStock();
+    fetchSuppliers();
   }, [selectedCategory, lowStockOnly]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -191,6 +211,7 @@ export default function EstoqueAdminPage() {
           minQuantity: "",
           averageUnitCost: "",
           supplier: "",
+          supplierId: "",
           location: "",
         });
         fetchStock();
@@ -258,76 +279,84 @@ export default function EstoqueAdminPage() {
         </div>
       </div>
 
-      {/* 4 Cards de Métricas - M3 Expressive KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-              Valor Imobilizado
-            </span>
-            <div className="text-2xl font-black text-zinc-900 dark:text-white mt-1">
-              {formatCurrency(kpis.totalInventoryValue)}
+      {/* 4 Cards de Métricas - M3 Expressive KPI Grid com Entrada Escalonada */}
+      <M3StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <M3StaggerItem>
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between h-full">
+            <div>
+              <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                Valor Imobilizado
+              </span>
+              <div className="text-2xl font-black text-zinc-900 dark:text-white mt-1">
+                {formatCurrency(kpis.totalInventoryValue)}
+              </div>
+              <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
+                Custo médio em galpão
+              </span>
             </div>
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
-              Custo médio em galpão
-            </span>
+            <div className="w-11 h-11 rounded-2xl bg-orange-500/10 flex items-center justify-center text-glessios-orange shrink-0">
+              <TrendingUp className="w-5 h-5" />
+            </div>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-orange-500/10 flex items-center justify-center text-glessios-orange">
-            <TrendingUp className="w-5 h-5" />
-          </div>
-        </div>
+        </M3StaggerItem>
 
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-              Total de SKUs Ativos
-            </span>
-            <div className="text-2xl font-black text-zinc-900 dark:text-white mt-1">
-              {kpis.totalSkus} itens
+        <M3StaggerItem>
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between h-full">
+            <div>
+              <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                Total de SKUs Ativos
+              </span>
+              <div className="text-2xl font-black text-zinc-900 dark:text-white mt-1">
+                {kpis.totalSkus} itens
+              </div>
+              <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
+                {categories.length || 5} categorias fabris
+              </span>
             </div>
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
-              {categories.length || 5} categorias fabris
-            </span>
+            <div className="w-11 h-11 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+              <Boxes className="w-5 h-5" />
+            </div>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
-            <Boxes className="w-5 h-5" />
-          </div>
-        </div>
+        </M3StaggerItem>
 
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-              Alerta de Reposição
-            </span>
-            <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
-              {kpis.totalLowStock} insumos
+        <M3StaggerItem>
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between h-full">
+            <div>
+              <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                Alerta de Reposição
+              </span>
+              <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
+                {kpis.totalLowStock} insumos
+              </div>
+              <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
+                Saldo no limite mínimo
+              </span>
             </div>
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
-              Saldo no limite mínimo
-            </span>
+            <div className="w-11 h-11 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400">
-            <AlertTriangle className="w-5 h-5" />
-          </div>
-        </div>
+        </M3StaggerItem>
 
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-              Nível Crítico Fabril
-            </span>
-            <div className="text-2xl font-black text-red-600 dark:text-red-400 mt-1">
-              {kpis.totalCritical} insumos
+        <M3StaggerItem>
+          <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between h-full">
+            <div>
+              <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                Nível Crítico Fabril
+              </span>
+              <div className="text-2xl font-black text-red-600 dark:text-red-400 mt-1">
+                {kpis.totalCritical} insumos
+              </div>
+              <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
+                Abaixo de 50% de segurança
+              </span>
             </div>
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 block">
-              Abaixo de 50% de segurança
-            </span>
+            <div className="w-11 h-11 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
+              <Package className="w-5 h-5" />
+            </div>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-600 dark:text-red-400">
-            <Package className="w-5 h-5" />
-          </div>
-        </div>
-      </div>
+        </M3StaggerItem>
+      </M3StaggerContainer>
 
       {/* Filtros e Busca - M3 Filter Container */}
       <div className="bg-white dark:bg-[#18191E] p-4 rounded-3xl border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -383,8 +412,9 @@ export default function EstoqueAdminPage() {
         </div>
       </div>
 
-      {/* Tabela de Insumos - M3 Expressive Table */}
-      <div className="bg-white dark:bg-[#18191E] rounded-3xl border border-black/[0.06] dark:border-white/[0.08] overflow-hidden shadow-m3-1">
+      {/* Tabela de Insumos com Transição M3 Expressive */}
+      <M3TabPanel activeKey={selectedCategory}>
+        <div className="bg-white dark:bg-[#18191E] rounded-3xl border border-black/[0.06] dark:border-white/[0.08] overflow-hidden shadow-m3-1">
         {loading ? (
           <div className="py-24 text-center text-zinc-500 dark:text-zinc-400 text-xs flex items-center justify-center">
             <div className="w-5 h-5 border-2 border-glessios-orange border-t-transparent rounded-full animate-spin mr-3" />
@@ -524,11 +554,18 @@ export default function EstoqueAdminPage() {
           </div>
         )}
       </div>
+    </M3TabPanel>
 
       {/* Modal de Movimentação Rápida - M3 Expressive Dialog */}
       {movementModalOpen && selectedItemForMovement && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl relative space-y-4">
+        <div
+          className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setMovementModalOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl relative space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setMovementModalOpen(false)}
               className="absolute right-4 top-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
@@ -649,8 +686,14 @@ export default function EstoqueAdminPage() {
 
       {/* Modal de Cadastro de Novo Insumo - M3 Expressive Dialog */}
       {newItemModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl w-full max-w-lg p-6 sm:p-8 shadow-2xl relative space-y-4">
+        <div
+          className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setNewItemModalOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl relative space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setNewItemModalOpen(false)}
               className="absolute right-4 top-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
@@ -785,15 +828,34 @@ export default function EstoqueAdminPage() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
-                    Fornecedor
+                    Fornecedor (CRM)
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Alucomex"
-                    value={newItemForm.supplier}
-                    onChange={(e) => setNewItemForm({ ...newItemForm, supplier: e.target.value })}
-                    className="w-full bg-black/[0.03] dark:bg-white/[0.05] border border-black/10 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:border-glessios-orange focus:outline-none transition-all placeholder:text-zinc-400"
-                  />
+                  <select
+                    value={newItemForm.supplierId}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      const found = suppliersList.find((s) => s.id === selectedId);
+                      setNewItemForm({
+                        ...newItemForm,
+                        supplierId: selectedId,
+                        supplier: found ? found.displayName : newItemForm.supplier,
+                      });
+                    }}
+                    className="w-full bg-black/[0.03] dark:bg-white/[0.05] border border-black/10 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs text-zinc-900 dark:text-white focus:border-glessios-orange focus:outline-none transition-all"
+                  >
+                    <option value="" className="bg-white dark:bg-[#1A1B20] text-zinc-900 dark:text-white">
+                      -- Selecionar Fornecedor do CRM --
+                    </option>
+                    {suppliersList.map((sup) => (
+                      <option
+                        key={sup.id}
+                        value={sup.id}
+                        className="bg-white dark:bg-[#1A1B20] text-zinc-900 dark:text-white"
+                      >
+                        {sup.displayName} ({sup.city ? `${sup.city}/${sup.state}` : "CRM"})
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
@@ -833,8 +895,14 @@ export default function EstoqueAdminPage() {
 
       {/* Modal de Histórico de Movimentações - M3 Expressive Dialog */}
       {historyModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl w-full max-w-3xl p-6 sm:p-8 shadow-2xl relative max-h-[85vh] flex flex-col space-y-4">
+        <div
+          className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setHistoryModalOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl w-full max-w-3xl p-6 sm:p-8 shadow-2xl relative max-h-[85vh] flex flex-col space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setHistoryModalOpen(false)}
               className="absolute right-4 top-4 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
@@ -939,6 +1007,18 @@ export default function EstoqueAdminPage() {
           </div>
         </div>
       )}
+
+      {/* Botão Flutuante (FAB) de Novo Insumo no Mobile — Alinhado perfeitamente com o Menu Hamburger */}
+      <div className="fixed bottom-[90px] right-6 z-40 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setNewItemModalOpen(true)}
+          aria-label="Cadastrar Novo Insumo"
+          className="w-14 h-14 rounded-full flex items-center justify-center text-white bg-gradient-to-tr from-[#FF650F] to-[#FFA05E] shadow-[0_6px_20px_rgba(255,101,15,0.4)] active:scale-95 transition-all duration-200 border-2 border-white/20 focus:outline-none"
+        >
+          <Plus className="w-6 h-6 stroke-[2.5]" />
+        </button>
+      </div>
     </div>
   );
 }

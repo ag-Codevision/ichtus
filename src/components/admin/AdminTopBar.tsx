@@ -27,14 +27,14 @@ export function AdminTopBar({ onOpenMobileMenu }: AdminTopBarProps) {
   return (
     <header className="h-14 px-4 sm:px-6 lg:px-8 bg-[#FDF9F6]/90 dark:bg-[#0E0F12]/90 backdrop-blur-md border-b border-black/[0.06] dark:border-white/[0.06] flex items-center justify-between sticky top-0 z-30 shrink-0 transition-colors duration-200">
       <div className="flex items-center gap-3">
-        {/* Botão para abrir a Sidebar no Mobile */}
-        <button
-          onClick={onOpenMobileMenu}
-          className="lg:hidden p-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors"
-          aria-label="Abrir menu lateral"
-        >
-          <Menu className="w-5 h-5 text-glessios-orange" />
-        </button>
+        {/* Ícone de Aplicativo do Google no Mobile */}
+        <div className="lg:hidden w-8 h-8 rounded-xl bg-orange-gradient p-1 shadow-sm flex items-center justify-center shrink-0">
+          <img
+            src="/icon-web.png"
+            alt="Glessios"
+            className="w-full h-full object-contain"
+          />
+        </div>
 
         {/* Título da Página / Módulo */}
         <div className="flex items-center gap-2.5">
@@ -48,9 +48,9 @@ export function AdminTopBar({ onOpenMobileMenu }: AdminTopBarProps) {
         </div>
       </div>
 
-      {/* Canto Direito: Toggle de Tema M3 e Menu do Usuário */}
+      {/* Canto Direito: Alternador Claro/Escuro (Sol/Lua) e Menu com Avatar do Usuário */}
       <div className="flex items-center gap-2 sm:gap-3">
-        <ThemeToggle />
+        <ThemeToggle className="w-9 h-9 p-0 flex items-center justify-center rounded-2xl border-black/[0.08] dark:border-white/[0.08] bg-white dark:bg-[#1A1B20]" />
         <AdminUserMenu />
       </div>
     </header>

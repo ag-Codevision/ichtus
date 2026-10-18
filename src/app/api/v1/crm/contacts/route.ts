@@ -1,0 +1,238 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { CustomerType, PersonType, CustomerStatus } from "@prisma/client";
+
+/**
+ * GET /api/v1/crm/contacts
+ * Listagem paginada de contatos/entidades do CRM com filtros de tipo, pessoa, status e busca textual
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const typeParam = searchParams.get("type");
+    const personTypeParam = searchParams.get("personType");
+    const statusParam = searchParams.get("status");
+    const search = searchParams.get("search")?.trim() || "";
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "40", 10)));
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (typeParam && typeParam !== "ALL") {
+      where.type = typeParam as CustomerType;
+    }
+
+    if (personTypeParam && personTypeParam !== "ALL") {
+      where.personType = personTypeParam as PersonType;
+    }
+
+    if (statusParam && statusParam !== "ALL") {
+      where.status = statusParam as CustomerStatus;
+    }
+
+    if (search) {
+      where.OR = [
+        { tradeName: { contains: search, mode: "insensitive" } },
+        { companyName: { contains: search, mode: "insensitive" } },
+        { fullName: { contains: search, mode: "insensitive" } },
+        { documentNumber: { contains: search } },
+        { contactPerson: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { phone: { contains: search } },
+        { whatsapp: { contains: search } },
+        { city: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    const [contacts, totalCount, kpisData] = await Promise.all([
+      prisma.customer.findMany({
+        where,
+        orderBy: [
+          { status: "asc" },
+          { updatedAt: "desc" },
+        ],
+        skip,
+        take: limit,
+        include: {
+          _count: {
+            select: {
+              serviceOrders: true,
+              invoices: true,
+              leads: true,
+              stockItems: true,
+              appointments: true,
+            },
+          },
+        },
+      }),
+      prisma.customer.count({ where }),
+      prisma.customer.groupBy({
+        by: ["type"],
+        _count: { _all: true },
+      }),
+    ]);
+
+    const activeCount = await prisma.customer.count({
+      where: { status: CustomerStatus.ACTIVE },
+    });
+
+    const kpis = {
+      total: totalCount,
+      customers: kpisData.find((k) => k.type === CustomerType.CUSTOMER)?._count._all || 0,
+      serviceProviders: kpisData.find((k) => k.type === CustomerType.SERVICE_PROVIDER)?._count._all || 0,
+      suppliers: kpisData.find((k) => k.type === CustomerType.SUPPLIER)?._count._all || 0,
+      active: activeCount,
+    };
+
+    return NextResponse.json({
+      success: true,
+      contacts,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+      kpis,
+    });
+  } catch (error: any) {
+    console.error("Erro ao listar contatos do CRM:", error);
+    return NextResponse.json(
+      { success: false, error: "Falha ao buscar contatos do CRM." },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/v1/crm/contacts
+ * Cadastro de novo contato (Cliente, Fornecedor ou Prestador de Serviço)
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+
+    const {
+      type = "CUSTOMER",
+      personType = "PJ",
+      status = "ACTIVE",
+      companyName,
+      tradeName,
+      fullName,
+      documentNumber,
+      stateRegistration,
+      municipalRegistration,
+      rg,
+      contactPerson,
+      contactRole,
+      phone,
+      whatsapp,
+      email,
+      financialEmail,
+      zipCode,
+      street,
+      number,
+      complement,
+      neighborhood,
+      city,
+      state,
+      referencePoint,
+      creditLimit,
+      paymentTerms,
+      pixKeyType,
+      pixKey,
+      bankName,
+      bankAgency,
+      bankAccount,
+      notes,
+      tags = [],
+    } = body;
+
+    // Validação mínima de identificação
+    const displayName = personType === "PJ" ? (tradeName || companyName) : (fullName || contactPerson);
+    if (!displayName?.trim()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: personType === "PJ"
+            ? "O Nome Fantasia ou Razão Social é obrigatório para Pessoa Jurídica."
+            : "O Nome Completo é obrigatório para Pessoa Física.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Se houver documento, verifica unicidade no banco
+    const cleanedDoc = documentNumber?.replace(/\D/g, "");
+    if (cleanedDoc) {
+      const existing = await prisma.customer.findFirst({
+        where: {
+          documentNumber: {
+            in: [documentNumber, cleanedDoc],
+          },
+        },
+      });
+
+      if (existing) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Já existe um cadastro com o documento informado (${existing.tradeName || existing.fullName || existing.companyName}).`,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    const created = await prisma.customer.create({
+      data: {
+        type: type as CustomerType,
+        personType: personType as PersonType,
+        status: status as CustomerStatus,
+        companyName: companyName?.trim() || null,
+        tradeName: tradeName?.trim() || null,
+        fullName: fullName?.trim() || null,
+        documentNumber: documentNumber?.trim() || null,
+        stateRegistration: stateRegistration?.trim() || null,
+        municipalRegistration: municipalRegistration?.trim() || null,
+        rg: rg?.trim() || null,
+        contactPerson: contactPerson?.trim() || null,
+        contactRole: contactRole?.trim() || null,
+        phone: phone?.trim() || null,
+        whatsapp: whatsapp?.trim() || null,
+        email: email?.trim()?.toLowerCase() || null,
+        financialEmail: financialEmail?.trim()?.toLowerCase() || null,
+        zipCode: zipCode?.trim() || null,
+        street: street?.trim() || null,
+        number: number?.trim() || null,
+        complement: complement?.trim() || null,
+        neighborhood: neighborhood?.trim() || null,
+        city: city?.trim() || null,
+        state: state?.trim()?.toUpperCase() || null,
+        referencePoint: referencePoint?.trim() || null,
+        creditLimit: creditLimit ? parseFloat(creditLimit) : null,
+        paymentTerms: paymentTerms?.trim() || null,
+        pixKeyType: pixKeyType || null,
+        pixKey: pixKey?.trim() || null,
+        bankName: bankName?.trim() || null,
+        bankAgency: bankAgency?.trim() || null,
+        bankAccount: bankAccount?.trim() || null,
+        notes: notes?.trim() || null,
+        tags: Array.isArray(tags) ? tags : [],
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      contact: created,
+      message: "Contato registrado com sucesso no CRM!",
+    });
+  } catch (error: any) {
+    console.error("Erro ao criar contato no CRM:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Erro interno ao cadastrar contato." },
+      { status: 500 }
+    );
+  }
+}

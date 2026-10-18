@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Lock, Mail, ShieldCheck, Sparkles, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, ArrowRight, Lock, Mail, ShieldCheck, Eye, EyeOff, Sparkles } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export default function GlessiosLoginPage() {
@@ -43,47 +43,27 @@ export default function GlessiosLoginPage() {
     }
   };
 
-  const handleDemoAdminLogin = async () => {
-    setEmail("admin@glessios.com.br");
-    setPassword("Admin@Glessios2026!");
-    setIsLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const res = await fetch("/api/v1/admin/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "admin@glessios.com.br", password: "Admin@Glessios2026!" }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        router.push("/admin");
-      } else {
-        setErrorMsg(data.error || "Falha no acesso de demonstração.");
-      }
-    } catch {
-      setErrorMsg("Erro ao conectar com a API.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#FDF9F6] dark:bg-[#0E0F12] text-zinc-900 dark:text-white px-4 sm:px-6 lg:px-8 py-6 transition-colors duration-300">
       {/* Cabeçalho */}
       <div className="max-w-7xl mx-auto w-full flex items-center justify-between py-4">
-        <Link href="/" className="flex items-center gap-3 py-1 group" aria-label="ICTHUS - Soluções & Design">
-          <div className="p-1.5 px-3 rounded-2xl bg-zinc-900/90 dark:bg-white/[0.04] border border-zinc-800/80 dark:border-white/[0.08] transition-all shadow-sm">
-            <Image
-              src="/logo-web.png"
-              alt="ICTHUS - Soluções & Design"
-              width={180}
-              height={40}
-              className="h-9 w-auto object-contain group-hover:scale-105 transition-transform"
-              priority
-            />
-          </div>
+        <Link href="/" className="inline-flex items-center py-1 group" aria-label="ICTHUS - Soluções & Design">
+          <Image
+            src="/logo-horizontal-escuro.png"
+            alt="ICTHUS - Soluções & Design"
+            width={180}
+            height={40}
+            className="h-9 w-auto object-contain group-hover:scale-105 transition-transform dark:hidden"
+            priority
+          />
+          <Image
+            src="/logo-web.png"
+            alt="ICTHUS - Soluções & Design"
+            width={180}
+            height={40}
+            className="h-9 w-auto object-contain group-hover:scale-105 transition-transform hidden dark:block"
+            priority
+          />
         </Link>
         <div className="flex items-center gap-3">
           <ThemeToggle />
@@ -179,26 +159,6 @@ export default function GlessiosLoginPage() {
               >
                 {isLoading ? "Autenticando..." : "Entrar no Painel ERP"}
                 <ArrowRight className="w-4 h-4" />
-              </Button>
-
-              <div className="relative w-full text-center my-1">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-black/[0.06] dark:border-white/[0.06]" />
-                </div>
-                <span className="relative bg-white dark:bg-[#18191E] px-2 text-[10px] uppercase font-bold tracking-wider text-zinc-400 dark:text-zinc-500">
-                  Demonstração Rápida
-                </span>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleDemoAdminLogin}
-                disabled={isLoading}
-                className="w-full justify-center gap-2 text-xs border border-orange-500/20 hover:bg-orange-500/10 text-zinc-800 dark:text-zinc-200 font-semibold rounded-full transition-colors"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-glessios-orange" />
-                Entrar com Conta de Admin Demo (1 Clique)
               </Button>
 
               <div className="text-center mt-2">

@@ -2,6 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  M3StaggerContainer,
+  M3StaggerItem,
+  M3TabPanel,
+} from "@/components/ui/m3-motion";
 import { formatDateTime } from "@/lib/utils";
 import {
   Calendar,
@@ -14,6 +19,7 @@ import {
   Wrench,
   Truck,
   Building2,
+  AlertCircle,
 } from "lucide-react";
 
 interface Appointment {
@@ -45,6 +51,9 @@ export default function AgendamentosPage() {
 
   // Modal de novo agendamento
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: "",
     type: "TECHNICAL_VISIT_MEASUREMENT",
@@ -93,34 +102,53 @@ export default function AgendamentosPage() {
 
   const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    setFormError(null);
+
     try {
       const res = await fetch("/api/v1/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          durationMinutes: Number(form.durationMinutes),
+          durationMinutes: Number(form.durationMinutes) || 60,
         }),
       });
-      const data = await res.json();
-      if (data.success) {
-        setIsModalOpen(false);
-        setForm({
-          title: "",
-          type: "TECHNICAL_VISIT_MEASUREMENT",
-          scheduledAt: "",
-          durationMinutes: "60",
-          locationAddress: "",
-          assignedTeam: "Equipe de Campo 01",
-          notes: "",
-          notifyPhone: "",
-        });
-        fetchAppointments();
-      } else {
-        alert(data.error);
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok || !data?.success) {
+        const errorMsg =
+          data?.error ||
+          data?.details ||
+          `Falha de comunicação com o servidor (${res.status}).`;
+        throw new Error(errorMsg);
       }
-    } catch {
-      alert("Erro ao registrar agendamento.");
+
+      setIsModalOpen(false);
+      setForm({
+        title: "",
+        type: "TECHNICAL_VISIT_MEASUREMENT",
+        scheduledAt: "",
+        durationMinutes: "60",
+        locationAddress: "",
+        assignedTeam: "Equipe de Campo 01",
+        notes: "",
+        notifyPhone: "",
+      });
+
+      setSuccessToast("Compromisso técnico agendado com sucesso!");
+      setTimeout(() => setSuccessToast(null), 4000);
+
+      await fetchAppointments();
+    } catch (err: any) {
+      console.error("Falha ao registrar agendamento:", err);
+      setFormError(
+        err?.message ||
+          "Não foi possível salvar o agendamento. Por favor, revise as informações e tente novamente."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -163,6 +191,14 @@ export default function AgendamentosPage() {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col space-y-6 animate-in fade-in duration-300">
+      {/* Toast de Sucesso M3 Expressive */}
+      {successToast && (
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2.5 animate-in slide-in-from-top-2 duration-300">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{successToast}</span>
+        </div>
+      )}
+
       {/* Cabeçalho - M3 Expressive Card */}
       <div className="p-6 sm:p-7 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div className="space-y-1.5">
@@ -183,7 +219,10 @@ export default function AgendamentosPage() {
         <Button
           variant="primary"
           size="md"
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setFormError(null);
+            setIsModalOpen(true);
+          }}
           className="gap-2 text-xs font-bold rounded-full shadow-sm self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
@@ -228,31 +267,44 @@ export default function AgendamentosPage() {
         </div>
       </div>
 
-      {/* Lista de Agendamentos - M3 Expressive Cards Grid */}
-      {isLoading ? (
-        <div className="text-center py-24 text-xs text-zinc-500 dark:text-zinc-400 flex items-center justify-center">
-          <div className="w-5 h-5 border-2 border-glessios-orange border-t-transparent rounded-full animate-spin mr-3" />
-          Carregando agenda técnica...
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="p-16 text-center rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1">
-          <Calendar className="w-12 h-12 text-zinc-400 mx-auto mb-3 opacity-30" />
-          <h4 className="text-zinc-900 dark:text-white font-bold text-sm">Nenhum compromisso encontrado</h4>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Cadastre uma nova visita técnica ou filtre por outro status.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((app) => {
-            const cfg = typeConfig[app.type] || typeConfig.TECHNICAL_VISIT_MEASUREMENT;
-            const st = statusConfig[app.status] || statusConfig.SCHEDULED;
+      {/* Lista de Agendamentos com Transição M3 e Entrada Escalonada */}
+      <M3TabPanel activeKey={`${typeFilter}-${statusFilter}`}>
+        {isLoading ? (
+          <div className="text-center py-24 text-xs text-zinc-500 dark:text-zinc-400 flex items-center justify-center">
+            <div className="w-5 h-5 border-2 border-glessios-orange border-t-transparent rounded-full animate-spin mr-3" />
+            Carregando agenda técnica...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="p-16 text-center rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1">
+            <Calendar className="w-12 h-12 text-zinc-400 mx-auto mb-3 opacity-30" />
+            <h4 className="text-zinc-900 dark:text-white font-bold text-sm">Nenhum compromisso encontrado</h4>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 mb-4">
+              Cadastre uma nova visita técnica ou filtre por outro status.
+            </p>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setFormError(null);
+                setIsModalOpen(true);
+              }}
+              className="gap-2 text-xs font-bold rounded-full shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Novo Agendamento Técnico
+            </Button>
+          </div>
+        ) : (
+          <M3StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filtered.map((app) => {
+              const cfg = typeConfig[app.type] || typeConfig.TECHNICAL_VISIT_MEASUREMENT;
+              const st = statusConfig[app.status] || statusConfig.SCHEDULED;
 
-            return (
-              <div
-                key={app.id}
-                className="rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] p-6 flex flex-col justify-between space-y-4 shadow-m3-1 hover:shadow-m3-2 hover:border-orange-500/40 transition-all"
-              >
+              return (
+                <M3StaggerItem key={app.id}>
+                  <div
+                    className="rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] p-6 flex flex-col justify-between space-y-4 shadow-m3-1 hover:shadow-m3-2 hover:border-orange-500/40 transition-all h-full"
+                  >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className={`text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full border ${cfg.badge}`}>
@@ -335,15 +387,26 @@ export default function AgendamentosPage() {
                   )}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+            </M3StaggerItem>
+          );
+        })}
+          </M3StaggerContainer>
+        )}
+      </M3TabPanel>
 
       {/* Modal para Agendamento Técnico - M3 Expressive Dialog */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5">
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => {
+            setFormError(null);
+            setIsModalOpen(false);
+          }}
+        >
+          <div
+            className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-4 border-b border-black/10 dark:border-white/10">
               <h3 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-glessios-orange">
@@ -352,12 +415,23 @@ export default function AgendamentosPage() {
                 Novo Agendamento Técnico
               </h3>
               <button
-                onClick={() => setIsModalOpen(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                onClick={() => {
+                  setFormError(null);
+                  setIsModalOpen(false);
+                }}
+                disabled={isSubmitting}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {formError && (
+              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs font-semibold flex items-center gap-2.5 animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                <span>{formError}</span>
+              </div>
+            )}
 
             <form onSubmit={handleCreateAppointment} className="space-y-4">
               <div className="space-y-1.5">
@@ -461,12 +535,22 @@ export default function AgendamentosPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsModalOpen(false)}
+                  disabled={isSubmitting}
+                  onClick={() => {
+                    setFormError(null);
+                    setIsModalOpen(false);
+                  }}
                   className="border-black/10 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-xl"
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" variant="primary" className="rounded-xl">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isLoading={isSubmitting}
+                  disabled={isSubmitting}
+                  className="rounded-xl min-w-[180px]"
+                >
                   Confirmar Agendamento
                 </Button>
               </div>
@@ -474,6 +558,21 @@ export default function AgendamentosPage() {
           </div>
         </div>
       )}
+
+      {/* Botão Flutuante (FAB) de Novo Agendamento no Mobile — Alinhado perfeitamente com o Menu Hamburger */}
+      <div className="fixed bottom-[90px] right-6 z-40 lg:hidden">
+        <button
+          type="button"
+          onClick={() => {
+            setFormError(null);
+            setIsModalOpen(true);
+          }}
+          aria-label="Novo Agendamento Técnico"
+          className="w-14 h-14 rounded-full flex items-center justify-center text-white bg-gradient-to-tr from-[#FF650F] to-[#FFA05E] shadow-[0_6px_20px_rgba(255,101,15,0.4)] active:scale-95 transition-all duration-200 border-2 border-white/20 focus:outline-none"
+        >
+          <Plus className="w-6 h-6 stroke-[2.5]" />
+        </button>
+      </div>
     </div>
   );
 }

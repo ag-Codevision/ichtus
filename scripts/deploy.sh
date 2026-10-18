@@ -33,11 +33,11 @@ if [ ! -f .env ]; then
     fi
 fi
 
-# 3. Build das Imagens e Inicialização dos Containers
-echo "📦 Construindo containers de produção..."
-$DOCKER_COMPOSE -f docker-compose.prod.yml build --no-cache
+# 3. Build das Imagens e Inicialização dos Containers Isolados
+echo "📦 Construindo containers de produção com isolamento de recursos..."
+$DOCKER_COMPOSE -f docker-compose.prod.yml build
 
-echo "🔄 Subindo serviços (PostgreSQL, Next.js e Nginx)..."
+echo "🔄 Subindo serviços isolados (PostgreSQL e Next.js)..."
 $DOCKER_COMPOSE -f docker-compose.prod.yml up -d
 
 # 4. Aguarda a estabilização do banco de dados
@@ -46,12 +46,12 @@ sleep 5
 
 # 5. Execução de Migrações do Prisma
 echo "🗄️ Aplicando migrações do banco de dados Prisma..."
-$DOCKER_COMPOSE -f docker-compose.prod.yml exec -T app npx prisma db push --skip-generate
+$DOCKER_COMPOSE -f docker-compose.prod.yml exec -T app npx prisma db push
 
-# 6. Health Check do Endpoint
+# 6. Health Check do Endpoint (Porta 3005 do Glessios no Host)
 echo "🔍 Realizando Health Check da aplicação..."
-HEALTH_URL="http://localhost:3000/api/v1/health"
-MAX_RETRIES=10
+HEALTH_URL="http://localhost:3005/api/v1/health"
+MAX_RETRIES=12
 COUNT=0
 
 until curl -s -f "$HEALTH_URL" > /dev/null || [ $COUNT -eq $MAX_RETRIES ]; do
@@ -67,5 +67,14 @@ if [ $COUNT -eq $MAX_RETRIES ]; then
     exit 1
 fi
 
+# 7. Garantir integridade do Proxy Reverso Central do Host
+if command -v systemctl &> /dev/null; then
+    if ! systemctl is-active --quiet nginx; then
+        echo "⚠️ Nginx do host estava inativo. Reativando para preservar outros projetos..."
+        systemctl restart nginx || true
+    fi
+fi
+
 echo "✅ Deploy concluído com sucesso!"
-echo "🌐 Plataforma Glessios operacional em produção."
+echo "🌐 Plataforma Glessios operacional e isolada em produção."
+

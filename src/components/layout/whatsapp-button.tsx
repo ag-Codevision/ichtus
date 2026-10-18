@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { usePathname } from "next/navigation";
 
 interface WhatsAppButtonProps {
   phone?: string;
@@ -9,15 +10,39 @@ interface WhatsAppButtonProps {
 
 export function WhatsAppButton({
   phone = "5551981192976",
-  message = "Olá! Gostaria de um orçamento para comunicação visual e fachadas.",
+  message,
 }: WhatsAppButtonProps) {
+  const pathname = usePathname();
   const [isHovered, setIsHovered] = useState(false);
 
-  const encodedMessage = encodeURIComponent(message);
+  // Oculta o botão comercial de WhatsApp nas telas administrativas internas
+  if (pathname?.startsWith("/admin")) {
+    return null;
+  }
+
+  const isPortal = pathname?.startsWith("/portal");
+
+  // Mensagem e texto contextualizados: produção no portal, vendas/atendimento no site público
+  const defaultMessage = isPortal
+    ? "Olá equipe de produção da ICTHUS! Sou cliente do portal e gostaria de falar sobre o andamento do meu projeto/obra."
+    : "Olá! Gostaria de um orçamento para comunicação visual e fachadas.";
+
+  const finalMessage = message || defaultMessage;
+  const encodedMessage = encodeURIComponent(finalMessage);
   const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
 
+  const tooltipLabel = isPortal ? "Falar com a Produção" : "Fale conosco no WhatsApp";
+
+  // No portal, eleva no mobile para não sobrepor o menu inferior nem o botão hamburger
+  const positionClasses = isPortal
+    ? "fixed bottom-36 right-4 md:bottom-6 md:right-6 z-40 md:z-50"
+    : "fixed bottom-24 right-5 md:bottom-6 md:right-6 z-40 md:z-50";
+
   return (
-    <aside aria-label="Atendimento via WhatsApp" className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
+    <aside
+      aria-label={isPortal ? "Falar com a Produção via WhatsApp" : "Atendimento via WhatsApp"}
+      className={`${positionClasses} flex items-center gap-3 transition-all duration-300`}
+    >
       {/* Tooltip flutuante ao passar o mouse com suporte a Dark e Light Mode */}
       <span
         className={`pointer-events-none hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-xl border backdrop-blur-md transition-all duration-300 ${
@@ -31,7 +56,7 @@ export function WhatsAppButton({
             isHovered ? "bg-emerald-500 animate-pulse" : "bg-[#FF650F]"
           }`}
         />
-        Fale conosco no WhatsApp
+        {tooltipLabel}
       </span>
 
       {/* Botão Flutuante: Laranja por padrão -> Verde WhatsApp no Hover */}

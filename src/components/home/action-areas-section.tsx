@@ -60,13 +60,14 @@ const ACTION_AREAS = [
 ];
 
 import { SpotlightCard } from "@/components/ui/spotlight-card";
+import { M3ScrollReveal, M3ScrollStagger, M3ScrollItem } from "@/components/ui/scroll-reveal";
 
 export function ActionAreasSection() {
   return (
     <section id="atuacao" className="py-24 bg-[#121316] border-b border-white/[0.08] relative scroll-mt-20 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Cabeçalho com subtítulo abaixo do título */}
-        <div className="max-w-3xl mb-16 space-y-4">
+        {/* Cabeçalho com M3ScrollReveal */}
+        <M3ScrollReveal variant="fadeUp" className="max-w-3xl mb-16 space-y-4">
           <Badge variant="orange" className="font-semibold tracking-wider">
             <Sparkles className="w-3.5 h-3.5" />
             Áreas de atuação
@@ -77,50 +78,51 @@ export function ActionAreasSection() {
           <p className="text-base text-zinc-400 max-w-2xl leading-relaxed pt-1">
             Estrutura completa para atender às suas necessidades, desde a concepção de marca e web até a fabricação, logística e instalação final.
           </p>
-        </div>
+        </M3ScrollReveal>
 
-        {/* Grid com os 6 cards de áreas de atuação com Spotlight */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Grid com os 6 cards de áreas de atuação com M3ScrollStagger e M3ScrollItem */}
+        <M3ScrollStagger className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {ACTION_AREAS.map((area, idx) => {
             const Icon = area.icon;
             return (
-              <SpotlightCard
-                key={idx}
-                isDark={true}
-                className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] flex flex-col justify-between group hover:border-[#FF650F]/50 hover:shadow-xl transition-all duration-300 h-full"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="w-12 h-12 rounded-2xl bg-[#121316] border border-white/[0.08] flex items-center justify-center group-hover:bg-[#FF650F] transition-all duration-300">
-                      <Icon className="w-6 h-6 text-[#FF650F] group-hover:text-white transition-colors" />
+              <M3ScrollItem key={idx} className="h-full">
+                <SpotlightCard
+                  isDark={true}
+                  className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] flex flex-col justify-between group hover:border-[#FF650F]/50 hover:shadow-xl transition-all duration-300 h-full"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="w-12 h-12 rounded-2xl bg-[#121316] border border-white/[0.08] flex items-center justify-center group-hover:bg-[#FF650F] transition-all duration-300">
+                        <Icon className="w-6 h-6 text-[#FF650F] group-hover:text-white transition-colors" />
+                      </div>
+                      <span className="text-[11px] font-semibold tracking-wider text-[#FF650F] uppercase font-mono px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20">
+                        {area.tag}
+                      </span>
                     </div>
-                    <span className="text-[11px] font-semibold tracking-wider text-[#FF650F] uppercase font-mono px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20">
-                      {area.tag}
-                    </span>
+
+                    <h3 className="text-xl font-extrabold text-white mb-3 group-hover:text-[#FF650F] transition-colors">
+                      {area.title}
+                    </h3>
+
+                    <p className="text-sm text-zinc-400 leading-relaxed">
+                      {area.description}
+                    </p>
                   </div>
 
-                  <h3 className="text-xl font-extrabold text-white mb-3 group-hover:text-[#FF650F] transition-colors">
-                    {area.title}
-                  </h3>
-
-                  <p className="text-sm text-zinc-400 leading-relaxed">
-                    {area.description}
-                  </p>
-                </div>
-
-                <div className="pt-6 mt-6 border-t border-white/[0.08] flex items-center justify-between">
-                  <Link
-                    href="/#orcamento"
-                    className="text-xs font-bold text-zinc-300 group-hover:text-[#FF650F] flex items-center gap-1.5 transition-colors"
-                  >
-                    Consultar esta área
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                  </Link>
-                </div>
-              </SpotlightCard>
+                  <div className="pt-6 mt-6 border-t border-white/[0.08] flex items-center justify-between">
+                    <Link
+                      href="/#orcamento"
+                      className="text-xs font-bold text-zinc-300 group-hover:text-[#FF650F] flex items-center gap-1.5 transition-colors"
+                    >
+                      Consultar esta área
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    </Link>
+                  </div>
+                </SpotlightCard>
+              </M3ScrollItem>
             );
           })}
-        </div>
+        </M3ScrollStagger>
       </div>
     </section>
   );

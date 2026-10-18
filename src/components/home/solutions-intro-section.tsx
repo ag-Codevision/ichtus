@@ -42,6 +42,8 @@ const FOUR_PILLARS = [
   },
 ];
 
+import { M3ScrollReveal, M3ScrollStagger, M3ScrollItem } from "@/components/ui/scroll-reveal";
+
 export function SolutionsIntroSection() {
   return (
     <section id="solucoes" className="py-24 bg-[#F8F9FA] text-zinc-900 border-b border-zinc-200/90 relative scroll-mt-20 overflow-hidden">
@@ -49,8 +51,8 @@ export function SolutionsIntroSection() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-orange-500/5 blur-[150px] rounded-full pointer-events-none -z-10" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Cabeçalho Editorial com a copy aprovada */}
-        <div className="max-w-4xl mx-auto text-center space-y-6">
+        {/* Cabeçalho Editorial com M3ScrollReveal (Entrada e saída suaves por rolagem) */}
+        <M3ScrollReveal variant="fadeUp" className="max-w-4xl mx-auto text-center space-y-6">
           <Badge variant="orange-light" className="py-1.5 px-4 font-semibold tracking-wider">
             <Sparkles className="w-3.5 h-3.5 text-[#FF650F]" />
             NOSSO TRABALHO É PENSAR EM SOLUÇÕES, DEIXE-NOS TE AJUDAR
@@ -69,54 +71,54 @@ export function SolutionsIntroSection() {
             </p>
           </div>
 
-          {/* Botões de Ação */}
-          <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
-            <Link href="/#sobre">
-              <Button variant="secondary" size="lg" className="gap-2 text-base font-medium">
-                SAIBA MAIS
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </Link>
+          {/* Botão de Ação Centralizado */}
+          <div className="pt-6 flex items-center justify-center">
             <Link href="/#contato">
-              <Button variant="primary" size="lg" className="gap-2 text-base font-bold shadow-lg">
+              <Button
+                variant="primary"
+                size="lg"
+                className="gap-2 text-base font-bold shadow-lg px-10 py-3.5 hover:scale-105 transition-all duration-300"
+              >
                 COMEÇAR
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
           </div>
-        </div>
+        </M3ScrollReveal>
 
-        {/* Os 4 Pilares com Spotlight Interativo nos Cards Brancos */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-16">
+        {/* Os 4 Pilares com M3ScrollStagger e M3ScrollItem (Entrada/saída escalonada no scroll) */}
+        <M3ScrollStagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-16">
           {FOUR_PILLARS.map((p, idx) => {
             const Icon = p.icon;
             return (
-              <Link key={idx} href={p.targetHash} className="h-full">
-                <SpotlightCard
-                  isDark={false}
-                  className="p-8 rounded-3xl bg-white border border-zinc-200/90 flex flex-col justify-between group hover:border-[#FF650F]/50 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1 h-full"
-                >
-                  <div>
-                    <div className="w-14 h-14 rounded-2xl bg-orange-50 border border-orange-200/60 flex items-center justify-center text-[#FF650F] group-hover:bg-[#FF650F] group-hover:text-white transition-all mb-6 shadow-sm">
-                      <Icon className="w-7 h-7" />
+              <M3ScrollItem key={idx} className="h-full">
+                <Link href={p.targetHash} className="h-full block">
+                  <SpotlightCard
+                    isDark={false}
+                    className="p-8 rounded-3xl bg-white border border-zinc-200/90 flex flex-col justify-between group hover:border-[#FF650F]/50 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1 h-full"
+                  >
+                    <div>
+                      <div className="w-14 h-14 rounded-2xl bg-orange-50 border border-orange-200/60 flex items-center justify-center text-[#FF650F] group-hover:bg-[#FF650F] group-hover:text-white transition-all mb-6 shadow-sm">
+                        <Icon className="w-7 h-7" />
+                      </div>
+                      <h3 className="text-2xl font-extrabold text-zinc-900 mb-2 group-hover:text-[#FF650F] transition-colors">
+                        {p.title}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed">
+                        {p.description}
+                      </p>
                     </div>
-                    <h3 className="text-2xl font-extrabold text-zinc-900 mb-2 group-hover:text-[#FF650F] transition-colors">
-                      {p.title}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed">
-                      {p.description}
-                    </p>
-                  </div>
 
-                  <div className="pt-6 mt-6 border-t border-zinc-100 flex items-center justify-between text-xs font-bold text-[#FF650F] group-hover:translate-x-1 transition-transform">
-                    <span>Explorar</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </div>
-                </SpotlightCard>
-              </Link>
+                    <div className="pt-6 mt-6 border-t border-zinc-100 flex items-center justify-between text-xs font-bold text-[#FF650F] group-hover:translate-x-1 transition-transform">
+                      <span>Explorar</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </div>
+                  </SpotlightCard>
+                </Link>
+              </M3ScrollItem>
             );
           })}
-        </div>
+        </M3ScrollStagger>
       </div>
     </section>
   );

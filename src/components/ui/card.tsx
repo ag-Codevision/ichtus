@@ -2,24 +2,40 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: "elevated" | "filled" | "outlined";
   hoverEffect?: boolean;
   bordered?: boolean;
 }
 
 export function Card({
   className,
-  hoverEffect = true,
+  variant = "filled",
+  hoverEffect = false,
   bordered = true,
   children,
   ...props
 }: CardProps) {
+  const variantStyles = {
+    // M3 Expressive Filled (Container padrão de superfície tonal)
+    filled:
+      "bg-[#F6F1EC] dark:bg-[#141519] text-zinc-900 dark:text-zinc-100 border border-black/[0.05] dark:border-white/[0.06]",
+    
+    // M3 Expressive Elevated (Com sombra suave M3-1)
+    elevated:
+      "bg-white dark:bg-[#18191E] text-zinc-900 dark:text-zinc-100 shadow-m3-1 hover:shadow-m3-2 border border-black/[0.04] dark:border-white/[0.06]",
+
+    // M3 Expressive Outlined (Delimitação sutil)
+    outlined:
+      "bg-transparent text-zinc-900 dark:text-zinc-100 border border-black/10 dark:border-white/10",
+  };
+
   return (
     <div
       className={cn(
-        "rounded-2xl bg-white dark:bg-[#1B1B1D] p-6 transition-all duration-300",
-        bordered && "border border-zinc-200/90 dark:border-white/10",
+        "rounded-3xl p-6 transition-all duration-200",
+        variantStyles[variant],
         hoverEffect &&
-          "hover:border-orange-300/80 dark:hover:border-orange-500/40 hover:shadow-[0_12px_30px_-8px_rgba(0,0,0,0.08)] hover:-translate-y-1",
+          "hover:border-[#FF650F]/40 dark:hover:border-[#FF781B]/40 hover:scale-[1.008] cursor-pointer",
         className
       )}
       {...props}

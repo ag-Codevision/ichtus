@@ -16,6 +16,24 @@ enum UserRole {
   CUSTOMER
 }
 
+enum CustomerType {
+  CUSTOMER          // Cliente (comprador de fachadas, luminosos, impressões)
+  SERVICE_PROVIDER  // Prestador de Serviços (instaladores de campo, serralheiros, terceiros)
+  SUPPLIER          // Fornecedor de Matéria-Prima e Insumos (chapas ACM, lonas, LEDs, tintas)
+}
+
+enum PersonType {
+  PJ                // Pessoa Jurídica
+  PF                // Pessoa Física
+}
+
+enum CustomerStatus {
+  ACTIVE            // Ativo
+  INACTIVE          // Inativo
+  LEAD_PROSPECT     // Em Prospecção / Negociação
+  BLOCKED           // Bloqueado
+}
+
 enum LeadSource {
   WEBSITE_FORM
   WHATSAPP
@@ -133,25 +151,60 @@ model User {
 }
 
 model Customer {
-  id             String         @id @default(cuid())
-  userId         String         @unique
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  companyName    String?        // Razão Social
-  tradeName      String?        // Nome Fantasia
-  documentNumber String?        // CPF ou CNPJ
-  street         String?
-  number         String?
-  neighborhood   String?
-  city           String?
-  state          String?
-  zipCode        String?
-  notes          String?        @db.Text
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id                    String                 @id @default(cuid())
+  userId                String?                @unique
+  user                  User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type                  CustomerType           @default(CUSTOMER)
+  personType            PersonType             @default(PJ)
+  status                CustomerStatus         @default(ACTIVE)
 
-  serviceOrders  ServiceOrder[]
-  invoices       Invoice[]
-  appointments   Appointment[]
+  // Identificação PJ / PF
+  companyName           String?                // Razão Social
+  tradeName             String?                // Nome Fantasia / Nome Comercial
+  fullName              String?                // Nome Completo (se Pessoa Física)
+  documentNumber        String?                // CPF ou CNPJ
+  stateRegistration     String?                // Inscrição Estadual (IE)
+  municipalRegistration String?                // Inscrição Municipal (IM)
+  rg                    String?                // RG (para Pessoa Física)
+
+  // Contato e Comunicação
+  contactPerson         String?                // Nome do contato responsável
+  contactRole           String?                // Cargo (ex: Diretor de Compras)
+  phone                 String?                // Telefone Fixo
+  whatsapp              String?                // WhatsApp Comercial (5541999999999)
+  email                 String?                // E-mail Geral
+  financialEmail        String?                // E-mail Financeiro/NFe
+
+  // Endereço Completo
+  zipCode               String?                // CEP (00000-000)
+  street                String?                // Logradouro / Rua / Avenida
+  number                String?                // Número
+  complement            String?                // Complemento (Sala, Galpão, Bloco)
+  neighborhood          String?                // Bairro
+  city                  String?                // Cidade
+  state                 String?                // UF (PR, SP, etc.)
+  referencePoint        String?                // Ponto de Referência para equipes de campo
+
+  // Dados Comerciais e Financeiros (para pagamentos a prestadores/fornecedores e crédito de clientes)
+  creditLimit           Decimal?               @db.Decimal(12, 2)
+  paymentTerms          String?                // Ex: "50% entrada + 50% na instalação", "30 dias líquido"
+  pixKeyType            String?                // "CPF", "CNPJ", "EMAIL", "PHONE", "RANDOM"
+  pixKey                String?                // Chave PIX cadastrada
+  bankName              String?                // Nome do Banco (ex: Nubank, Itaú, BB)
+  bankAgency            String?                // Agência
+  bankAccount           String?                // Conta Corrente / Poupança
+
+  notes                 String?                @db.Text
+  tags                  String[]               @default([])
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  serviceOrders         ServiceOrder[]
+  invoices              Invoice[]
+  appointments          Appointment[]
+  leads                 Lead[]
+  stockItems            StockItem[]
+  financialTransactions FinancialTransaction[]
 
   @@map("customers")
 }
@@ -178,6 +231,8 @@ model Lead {
   id              String        @id @default(cuid())
   columnId        String
   column          KanbanColumn  @relation(fields: [columnId], references: [id])
+  customerId      String?
+  customer        Customer?     @relation(fields: [customerId], references: [id])
   title           String        // Ex: "Fachada Loja Tech - Letreiro Luminoso"
   contactName     String
   contactPhone    String
@@ -277,6 +332,8 @@ model StockItem {
   minQuantity     Decimal         @db.Decimal(12, 3) // Alerta de reposição
   averageUnitCost Decimal         @db.Decimal(12, 2)
   supplier        String?
+  supplierId      String?
+  supplierRel     Customer?       @relation(fields: [supplierId], references: [id])
   location        String?         // Galpão A, Prateleira 2
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
@@ -336,6 +393,8 @@ model FinancialTransaction {
   id          String                   @id @default(cuid())
   invoiceId   String?
   invoice     Invoice?                 @relation(fields: [invoiceId], references: [id])
+  customerId  String?
+  customer    Customer?                @relation(fields: [customerId], references: [id])
   type        FinancialTransactionType
   category    String                   // "Vendas", "Fornecedores", "Salários", "Energia"
   description String

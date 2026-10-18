@@ -176,7 +176,6 @@ export default function PropostaComercialPage() {
               Responsável: <span className="font-semibold text-zinc-800">{order.customer.user.name}</span>
             </p>
             <p className="text-zinc-600">Telefone: {order.customer.user.phone || "Não informado"}</p>
-            <p className="text-zinc-600">E-mail: {order.customer.user.email}</p>
             {(order.customer.street || order.customer.city) && (
               <p className="text-zinc-600 mt-1">
                 Endereço: {order.customer.street ? `${order.customer.street}, ${order.customer.number || "S/N"}` : ""}

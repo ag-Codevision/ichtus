@@ -76,22 +76,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const parsedScheduledAt = new Date(scheduledAt);
+    if (isNaN(parsedScheduledAt.getTime())) {
+      return NextResponse.json(
+        { success: false, error: "A data e horário informados são inválidos." },
+        { status: 400 }
+      );
+    }
+
     const appointment = await prisma.appointment.create({
       data: {
-        title,
+        title: title.trim(),
         type,
         status,
-        scheduledAt: new Date(scheduledAt),
+        scheduledAt: parsedScheduledAt,
         durationMinutes: Number(durationMinutes) || 60,
-        locationAddress: locationAddress || null,
-        assignedTeam: assignedTeam || "Equipe de Campo 01",
-        notes: notes || null,
+        locationAddress: locationAddress?.trim() || null,
+        assignedTeam: assignedTeam?.trim() || "Equipe de Campo 01",
+        notes: notes?.trim() || null,
         customerId: customerId || null,
         serviceOrderId: serviceOrderId || null,
       },
     });
 
-    // Se fornecido telefone para notificação via WACLI (WhatsApp)
+    // Se fornecido telefone para notificação via WACLI (WhatsApp), despacha em background sem travar o response da API
     if (notifyPhone) {
       try {
         const typeLabels: Record<string, string> = {
@@ -103,12 +111,16 @@ export async function POST(req: NextRequest) {
         const label = typeLabels[type] || "Atendimento Técnico";
 
         const msg = `📅 *Agendamento Confirmado — Glessios*\n\nSeu compromisso de *${label}* está confirmado para:\n🗓️ *Data e Hora:* ${formatDateTime(appointment.scheduledAt)}\n📍 *Local:* ${locationAddress || "A combinar"}\n👥 *Equipe:* ${appointment.assignedTeam}\n\nQualquer necessidade de reagendamento, nos avise por este canal!`;
-        await sendWhatsAppMessage({
+        
+        // Disparo assíncrono não-bloqueante
+        sendWhatsAppMessage({
           to: notifyPhone,
           message: msg,
+        }).catch((err) => {
+          console.warn("[Appointments] Falha no disparo do WhatsApp em background:", err);
         });
       } catch (err) {
-        console.warn("[Appointments] Falha no disparo do WhatsApp:", err);
+        console.warn("[Appointments] Falha ao preparar mensagem de WhatsApp:", err);
       }
     }
 

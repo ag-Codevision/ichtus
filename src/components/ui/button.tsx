@@ -5,7 +5,19 @@ import { cn } from "@/lib/utils";
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "outline" | "ghost" | "ivory" | "dark-secondary" | "outline-dark";
+  variant?:
+    | "primary"
+    | "secondary"
+    | "outline"
+    | "ghost"
+    | "ivory"
+    | "dark-secondary"
+    | "outline-dark"
+    | "filled"
+    | "tonal"
+    | "outlined"
+    | "text"
+    | "elevated";
   size?: "sm" | "md" | "lg" | "icon";
   isLoading?: boolean;
 }
@@ -24,43 +36,49 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      "inline-flex items-center justify-center font-medium rounded-xl transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glessios-orange disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98]";
+      "relative inline-flex items-center justify-center font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-offset-2 focus-visible:ring-[#FF650F] disabled:opacity-40 disabled:pointer-events-none active:scale-[0.985] select-none";
 
     const sizeStyles = {
-      sm: "h-9 px-4 text-xs tracking-wide",
-      md: "h-11 px-6 text-sm tracking-wide",
-      lg: "h-14 px-8 text-base font-semibold tracking-tight",
-      icon: "h-11 w-11 p-0",
+      sm: "h-9 px-4 text-xs font-semibold rounded-full gap-1.5",
+      md: "h-11 px-5 text-sm font-semibold rounded-full gap-2",
+      lg: "h-14 px-7 text-base font-bold rounded-full gap-2.5",
+      icon: "h-11 w-11 p-0 rounded-full",
     };
 
     const variantStyles = {
-      // Laranja vibrante com alta legibilidade e acabamento limpo
+      // M3 Expressive Filled (Primary Action)
       primary:
-        "bg-[#FF650F] hover:bg-[#EA580C] text-white shadow-sm hover:shadow-md transition-all font-semibold active:scale-[0.99] btn-shine-effect",
-      
-      // Superfície neutra suave (para seções claras)
+        "bg-[#FF650F] hover:bg-[#EA580C] text-white shadow-m3-1 hover:shadow-m3-2 active:bg-[#C2410C]",
+      filled:
+        "bg-[#FF650F] hover:bg-[#EA580C] text-white shadow-m3-1 hover:shadow-m3-2 active:bg-[#C2410C]",
+
+      // M3 Expressive Tonal (Secondary Container)
+      tonal:
+        "bg-orange-100/70 hover:bg-orange-100 text-orange-950 dark:bg-orange-500/15 dark:hover:bg-orange-500/25 dark:text-orange-200",
       secondary:
-        "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 border border-zinc-200/80 transition-all font-medium",
-      
-      // Superfície grafite para seções escuras
+        "bg-black/[0.04] hover:bg-black/[0.08] dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-zinc-900 dark:text-white border border-black/[0.06] dark:border-white/[0.08]",
       "dark-secondary":
-        "bg-white/[0.08] text-white hover:bg-white/[0.14] border border-white/15 hover:border-white/30 backdrop-blur-sm transition-all font-medium",
+        "bg-white/[0.08] text-white hover:bg-white/[0.14] border border-white/15 hover:border-white/30 backdrop-blur-sm",
 
-      // Outline refinado claro
+      // M3 Expressive Outlined
+      outlined:
+        "bg-transparent text-zinc-800 dark:text-zinc-200 hover:text-[#FF650F] dark:hover:text-[#FF781B] border border-black/15 dark:border-white/15 hover:border-[#FF650F] dark:hover:border-[#FF781B] hover:bg-orange-500/[0.06]",
       outline:
-        "bg-transparent text-zinc-700 hover:text-[#FF650F] border border-zinc-300 hover:border-[#FF650F] hover:bg-orange-50/40 transition-all font-medium",
-      
-      // Outline refinado para seções escuras
+        "bg-transparent text-zinc-700 hover:text-[#FF650F] border border-zinc-300 hover:border-[#FF650F] hover:bg-orange-50/40",
       "outline-dark":
-        "bg-transparent text-zinc-200 hover:text-white border border-white/20 hover:border-white/40 hover:bg-white/[0.06] transition-all font-medium",
+        "bg-transparent text-zinc-200 hover:text-white border border-white/20 hover:border-white/40 hover:bg-white/[0.06]",
 
-      // Ghost sem fundo
+      // M3 Expressive Text (Ghost)
+      text:
+        "bg-transparent text-zinc-700 hover:text-zinc-950 hover:bg-black/[0.05] dark:text-zinc-300 dark:hover:text-white dark:hover:bg-white/[0.08]",
       ghost:
-        "bg-transparent text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-all",
-      
-      // Variante corporativa sóbria
+        "bg-transparent text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-white/[0.08]",
+
+      // M3 Expressive Elevated
+      elevated:
+        "bg-white dark:bg-[#1C1D22] text-zinc-900 dark:text-white shadow-m3-1 hover:shadow-m3-2 border border-black/[0.04] dark:border-white/[0.06]",
       ivory:
-        "bg-zinc-900 text-white hover:bg-zinc-800 shadow-sm transition-all font-semibold",
+        "bg-zinc-900 text-white hover:bg-zinc-800 shadow-sm",
     };
 
     return (

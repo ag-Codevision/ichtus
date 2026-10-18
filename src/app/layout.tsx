@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { WhatsAppButton } from "@/components/layout/whatsapp-button";
+import { MobileAppMenu } from "@/components/layout/mobile-app-menu";
 
 export const metadata: Metadata = {
   title: "ICTHUS Soluções e Design | Comunicação Visual & Fachadas Premium",
@@ -71,6 +72,7 @@ export default function RootLayout({
         <ThemeProvider>
           {children}
           <WhatsAppButton />
+          <MobileAppMenu />
         </ThemeProvider>
       </body>
     </html>

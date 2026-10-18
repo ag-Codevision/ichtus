@@ -5,12 +5,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User } from "lucide-react";
+import { User } from "lucide-react";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const pathname = usePathname();
 
   React.useEffect(() => {
@@ -43,7 +42,6 @@ export function Navbar() {
   }, [pathname]);
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, hash: string) => {
-    setMobileMenuOpen(false);
     if (pathname === "/") {
       e.preventDefault();
       const element = document.querySelector(hash);
@@ -130,24 +128,19 @@ export function Navbar() {
 
         {/* Ações */}
         <div className="hidden lg:flex items-center gap-3">
-          <Link href="/portal/login">
-            <Button variant="ghost" size="sm" className="gap-2 text-zinc-300 hover:text-white">
-              <User className="w-4 h-4 text-[#FF650F]" />
-              Portal do Cliente
+          <Link href="/portal/login" className="group">
+            <Button
+              variant="outline-dark"
+              size="sm"
+              className="gap-2 rounded-full px-4 text-xs font-semibold text-zinc-200 border-white/15 bg-white/[0.04] hover:bg-[#FF650F]/15 hover:border-[#FF650F]/50 hover:text-white transition-all duration-200 shadow-sm"
+            >
+              <User className="w-3.5 h-3.5 text-[#FF650F] transition-transform duration-200 group-hover:scale-110" />
+              <span>Portal do Cliente</span>
             </Button>
           </Link>
         </div>
 
-        {/* Menu mobile */}
-        <div className="flex items-center gap-2 md:hidden">
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="text-white hover:text-[#FF650F] p-2"
-            aria-label="Abrir menu"
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
+
       </div>
 
       {/* Barra de Progresso de Scroll Cinematográfica Ultrafina */}
@@ -156,68 +149,6 @@ export function Navbar() {
         style={{ width: `${scrollProgress}%`, opacity: scrollProgress > 0.5 ? 1 : 0 }}
       />
 
-      {/* Drawer Mobile */}
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-[#121316]/98 backdrop-blur-xl border-b border-white/[0.08] px-6 py-6 flex flex-col gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
-          <Link
-            href="/#solucoes"
-            onClick={(e) => handleNavClick(e, "#solucoes")}
-            className="text-base font-medium text-white py-2"
-          >
-            Soluções
-          </Link>
-          <Link
-            href="/#sobre"
-            onClick={(e) => handleNavClick(e, "#sobre")}
-            className="text-base font-medium text-white py-2"
-          >
-            Sobre Nós
-          </Link>
-          <Link
-            href="/#portfolio"
-            onClick={(e) => handleNavClick(e, "#portfolio")}
-            className="text-base font-medium text-white py-2"
-          >
-            Portfólio
-          </Link>
-          <Link
-            href="/#atuacao"
-            onClick={(e) => handleNavClick(e, "#atuacao")}
-            className="text-base font-medium text-white py-2"
-          >
-            Áreas de Atuação
-          </Link>
-          <Link
-            href="/#servicos"
-            onClick={(e) => handleNavClick(e, "#servicos")}
-            className="text-base font-medium text-white py-2"
-          >
-            Serviços
-          </Link>
-          <Link
-            href="/#contato"
-            onClick={(e) => handleNavClick(e, "#contato")}
-            className="text-base font-medium text-white py-2"
-          >
-            Contato
-          </Link>
-          <Link
-            href="/blog"
-            onClick={() => setMobileMenuOpen(false)}
-            className="text-base font-medium text-white py-2 flex items-center justify-between"
-          >
-            Blog
-          </Link>
-
-          <div className="pt-4 border-t border-white/[0.08] flex flex-col gap-3">
-            <Link href="/portal/login" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="dark-secondary" className="w-full justify-center">
-                Portal do Cliente
-              </Button>
-            </Link>
-          </div>
-        </div>
-      )}
     </header>
   );
 }

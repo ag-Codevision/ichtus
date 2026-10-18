@@ -28,8 +28,8 @@ export function AdminShell({ children }: AdminShellProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDF9F6] dark:bg-[#0E0F12] text-[#1E1B19] dark:text-[#F5EFEB] flex transition-colors duration-200">
-      {/* Sidebar Retrátil Fixa */}
+    <div className="min-h-screen bg-[#FDF9F6] dark:bg-[#0E0F12] text-[#1E1B19] dark:text-[#F5EFEB] flex transition-colors duration-200 relative">
+      {/* Sidebar Retrátil Fixa para Desktop (lg+) */}
       <AdminSidebar
         isCollapsed={isCollapsed}
         setIsCollapsed={handleToggleCollapse}
@@ -37,17 +37,19 @@ export function AdminShell({ children }: AdminShellProps) {
         setIsMobileOpen={setIsMobileOpen}
       />
 
-      {/* Conteúdo Principal com compensação da largura da Sidebar */}
+
+
+      {/* Conteúdo Principal com compensação da largura da Sidebar e respiro ergonômico no mobile */}
       <div
         className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ${
-          isCollapsed ? "lg:pl-16" : "lg:pl-60"
+          isCollapsed ? "lg:pl-20" : "lg:pl-64"
         }`}
       >
-        {/* Barra Superior com Título e Submenu do Avatar */}
+        {/* Barra Superior com Título e Ações Rápidas */}
         <AdminTopBar onOpenMobileMenu={() => setIsMobileOpen(true)} />
 
-        {/* Área de Conteúdo da Página */}
-        <div className="flex-1 flex flex-col">{children}</div>
+        {/* Área de Conteúdo da Página com respiro de segurança inferior para o FAB móvel */}
+        <div className="flex-1 flex flex-col pb-24 lg:pb-0">{children}</div>
       </div>
     </div>
   );

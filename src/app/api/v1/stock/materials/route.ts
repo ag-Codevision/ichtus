@@ -27,6 +27,15 @@ export async function GET(request: Request) {
     const items = await prisma.stockItem.findMany({
       where: whereClause,
       include: {
+        supplierRel: {
+          select: {
+            id: true,
+            tradeName: true,
+            companyName: true,
+            phone: true,
+            whatsapp: true,
+          },
+        },
         _count: {
           select: { movements: true },
         },
@@ -107,6 +116,7 @@ export async function POST(request: Request) {
       minQuantity,
       averageUnitCost,
       supplier,
+      supplierId,
       location,
     } = body;
 
@@ -129,6 +139,14 @@ export async function POST(request: Request) {
       );
     }
 
+    let resolvedSupplierName = supplier?.trim() || null;
+    if (supplierId && !resolvedSupplierName) {
+      const sup = await prisma.customer.findUnique({ where: { id: supplierId } });
+      if (sup) {
+        resolvedSupplierName = sup.tradeName || sup.companyName || sup.fullName;
+      }
+    }
+
     const newItem = await prisma.stockItem.create({
       data: {
         sku: sku.trim().toUpperCase(),
@@ -138,8 +156,12 @@ export async function POST(request: Request) {
         currentQuantity: Number(currentQuantity) || 0,
         minQuantity: Number(minQuantity) || 0,
         averageUnitCost: Number(averageUnitCost) || 0,
-        supplier: supplier?.trim() || null,
+        supplier: resolvedSupplierName,
+        supplierId: supplierId || null,
         location: location?.trim() || null,
+      },
+      include: {
+        supplierRel: true,
       },
     });
 

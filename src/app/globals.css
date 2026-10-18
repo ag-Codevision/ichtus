@@ -2,71 +2,208 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+:root,
+[data-theme="light"] {
+  color-scheme: light;
   --font-manrope: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  
-  /* M3 Expressive Light Mode Surfaces */
-  --m3-surface: #FDF9F6;
-  --m3-surface-container-lowest: #FFFFFF;
-  --m3-surface-container-low: #F6F1EC;
-  --m3-surface-container: #EFE8E2;
-  --m3-surface-container-high: #E8E1DA;
-  --m3-surface-container-highest: #E1DAD3;
-  
-  --m3-primary: #FF650F;
+
+  /* ============================================================
+     M3 EXPRESSIVE — COLOR ROLES (LIGHT THEME)
+     Gerado a partir da Brand Key Laranja (#FF650F) e Superfícies Warm Ivory
+     ============================================================ */
+  --md-sys-color-primary: #FF650F;
+  --md-sys-color-on-primary: #FFFFFF;
+  --md-sys-color-primary-container: #FFE5D9;
+  --md-sys-color-on-primary-container: #491700;
+
+  --md-sys-color-secondary: #745749;
+  --md-sys-color-on-secondary: #FFFFFF;
+  --md-sys-color-secondary-container: #FFDCCB;
+  --md-sys-color-on-secondary-container: #2B160B;
+
+  --md-sys-color-tertiary: #655E32;
+  --md-sys-color-on-tertiary: #FFFFFF;
+  --md-sys-color-tertiary-container: #EDE3AA;
+  --md-sys-color-on-tertiary-container: #1F1B00;
+
+  --md-sys-color-error: #BA1A1A;
+  --md-sys-color-on-error: #FFFFFF;
+  --md-sys-color-error-container: #FFDAD6;
+  --md-sys-color-on-error-container: #410002;
+
+  --md-sys-color-surface: #FDF9F6;
+  --md-sys-color-on-surface: #1E1B19;
+  --md-sys-color-on-surface-variant: #59514A;
+  --md-sys-color-surface-dim: #E3D9D2;
+  --md-sys-color-surface-bright: #FDF9F6;
+
+  --md-sys-color-surface-container-lowest: #FFFFFF;
+  --md-sys-color-surface-container-low: #F6F1EC;
+  --md-sys-color-surface-container: #EFE8E2;
+  --md-sys-color-surface-container-high: #E8E1DA;
+  --md-sys-color-surface-container-highest: #E1DAD3;
+
+  --md-sys-color-outline: rgba(0, 0, 0, 0.12);
+  --md-sys-color-outline-variant: rgba(0, 0, 0, 0.06);
+  --md-sys-color-inverse-surface: #34302D;
+  --md-sys-color-inverse-on-surface: #F8EFE9;
+  --md-sys-color-inverse-primary: #FFB592;
+  --md-sys-color-scrim: #000000;
+
+  /* Aliases para compatibilidade contínua com código existente */
+  --m3-surface: var(--md-sys-color-surface);
+  --m3-surface-container-lowest: var(--md-sys-color-surface-container-lowest);
+  --m3-surface-container-low: var(--md-sys-color-surface-container-low);
+  --m3-surface-container: var(--md-sys-color-surface-container);
+  --m3-surface-container-high: var(--md-sys-color-surface-container-high);
+  --m3-surface-container-highest: var(--md-sys-color-surface-container-highest);
+  --m3-primary: var(--md-sys-color-primary);
   --m3-primary-hover: #E45508;
-  --m3-primary-container: #FFE5D9;
-  --m3-on-primary-container: #491700;
-  
-  --m3-on-surface: #1E1B19;
-  --m3-on-surface-variant: #59514A;
-  --m3-outline: rgba(0, 0, 0, 0.08);
+  --m3-primary-container: var(--md-sys-color-primary-container);
+  --m3-on-primary-container: var(--md-sys-color-on-primary-container);
+  --m3-on-surface: var(--md-sys-color-on-surface);
+  --m3-on-surface-variant: var(--md-sys-color-on-surface-variant);
+  --m3-outline: var(--md-sys-color-outline-variant);
   --m3-outline-focus: rgba(255, 101, 15, 0.4);
-  
-  --bg-main: var(--m3-surface);
-  --bg-surface: var(--m3-surface-container-lowest);
-  --bg-card: var(--m3-surface-container-lowest);
+
+  --bg-main: var(--md-sys-color-surface);
+  --bg-surface: var(--md-sys-color-surface-container-lowest);
+  --bg-card: var(--md-sys-color-surface-container-lowest);
   --color-orange: #FF650F;
   --color-orange-hover: #EA580C;
-  --text-heading: #1E1B19;
-  --text-body: #59514A;
+  --text-heading: var(--md-sys-color-on-surface);
+  --text-body: var(--md-sys-color-on-surface-variant);
   --text-muted: #7E756F;
-  --border-subtle: rgba(0, 0, 0, 0.08);
-  --border-card: rgba(0, 0, 0, 0.06);
+  --border-subtle: var(--md-sys-color-outline-variant);
+  --border-card: var(--md-sys-color-outline-variant);
 }
 
 /* Modo escuro M3 Expressive */
 html.dark,
+[data-theme="dark"],
 :root[data-theme="dark"] {
-  /* M3 Expressive Dark Mode Surfaces */
-  --m3-surface: #0E0F12;
-  --m3-surface-container-lowest: #08090A;
-  --m3-surface-container-low: #141519;
-  --m3-surface-container: #1C1D22;
-  --m3-surface-container-high: #24262D;
-  --m3-surface-container-highest: #2E3039;
-  
+  color-scheme: dark;
+
+  /* ============================================================
+     M3 EXPRESSIVE — COLOR ROLES (DARK THEME)
+     Superfícies profundas (#0E0F12) e primária luminosa
+     ============================================================ */
+  --md-sys-color-primary: #FFB592;
+  --md-sys-color-on-primary: #5A1C00;
+  --md-sys-color-primary-container: #7F2B00;
+  --md-sys-color-on-primary-container: #FFDBC9;
+
+  --md-sys-color-secondary: #E6BEAC;
+  --md-sys-color-on-secondary: #422A1E;
+  --md-sys-color-secondary-container: #5B4033;
+  --md-sys-color-on-secondary-container: #FFDCCB;
+
+  --md-sys-color-tertiary: #D0C790;
+  --md-sys-color-on-tertiary: #363107;
+  --md-sys-color-tertiary-container: #4D471C;
+  --md-sys-color-on-tertiary-container: #EDE3AA;
+
+  --md-sys-color-error: #FFB4AB;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000A;
+  --md-sys-color-on-error-container: #FFDAD6;
+
+  --md-sys-color-surface: #0E0F12;
+  --md-sys-color-on-surface: #F5EFEB;
+  --md-sys-color-on-surface-variant: #C9BFB8;
+  --md-sys-color-surface-dim: #0E0F12;
+  --md-sys-color-surface-bright: #38393F;
+
+  --md-sys-color-surface-container-lowest: #08090A;
+  --md-sys-color-surface-container-low: #141519;
+  --md-sys-color-surface-container: #1C1D22;
+  --md-sys-color-surface-container-high: #24262D;
+  --md-sys-color-surface-container-highest: #2E3039;
+
+  --md-sys-color-outline: rgba(255, 255, 255, 0.12);
+  --md-sys-color-outline-variant: rgba(255, 255, 255, 0.08);
+  --md-sys-color-inverse-surface: #F5EFEB;
+  --md-sys-color-inverse-on-surface: #1E1B19;
+  --md-sys-color-inverse-primary: #FF650F;
+  --md-sys-color-scrim: #000000;
+
+  /* Aliases para compatibilidade contínua com código existente */
+  --m3-surface: var(--md-sys-color-surface);
+  --m3-surface-container-lowest: var(--md-sys-color-surface-container-lowest);
+  --m3-surface-container-low: var(--md-sys-color-surface-container-low);
+  --m3-surface-container: var(--md-sys-color-surface-container);
+  --m3-surface-container-high: var(--md-sys-color-surface-container-high);
+  --m3-surface-container-highest: var(--md-sys-color-surface-container-highest);
   --m3-primary: #FF650F;
   --m3-primary-hover: #FF781B;
-  --m3-primary-container: rgba(255, 101, 15, 0.16);
+  --m3-primary-container: rgba(255, 101, 15, 0.18);
   --m3-on-primary-container: #FFDBC9;
-  
-  --m3-on-surface: #F5EFEB;
-  --m3-on-surface-variant: #C9BFB8;
-  --m3-outline: rgba(255, 255, 255, 0.08);
+  --m3-on-surface: var(--md-sys-color-on-surface);
+  --m3-on-surface-variant: var(--md-sys-color-on-surface-variant);
+  --m3-outline: var(--md-sys-color-outline-variant);
   --m3-outline-focus: rgba(255, 101, 15, 0.5);
-  
-  --bg-main: var(--m3-surface);
-  --bg-surface: var(--m3-surface-container-low);
-  --bg-card: var(--m3-surface-container);
+
+  --bg-main: var(--md-sys-color-surface);
+  --bg-surface: var(--md-sys-color-surface-container-low);
+  --bg-card: var(--md-sys-color-surface-container);
   --color-orange: #FF650F;
   --color-orange-hover: #FF781B;
   --text-heading: #FFFFFF;
-  --text-body: #C9BFB8;
+  --text-body: var(--md-sys-color-on-surface-variant);
   --text-muted: #8E8681;
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-card: rgba(255, 255, 255, 0.1);
+  --border-subtle: var(--md-sys-color-outline-variant);
+  --border-card: rgba(255, 255, 255, 0.08);
+}
+
+:root {
+  /* ============================================================
+     M3 EXPRESSIVE — SHAPE SCALE TOKENS
+     ============================================================ */
+  --md-sys-shape-corner-none: 0px;
+  --md-sys-shape-corner-extra-small: 4px;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-large-increased: 20px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-extra-large-increased: 32px;
+  --md-sys-shape-corner-extra-extra-large: 48px;
+  --md-sys-shape-corner-full: 9999px;
+
+  /* ============================================================
+     M3 EXPRESSIVE — STATE LAYER OPACITIES
+     ============================================================ */
+  --app-state-hover-opacity: 0.08;
+  --app-state-focus-opacity: 0.10;
+  --app-state-pressed-opacity: 0.10;
+  --app-state-dragged-opacity: 0.16;
+
+  /* ============================================================
+     M3 EXPRESSIVE — SPACING SCALE (PARÂMETRO OPERACIONAL)
+     ============================================================ */
+  --app-space-1: 4px;
+  --app-space-2: 8px;
+  --app-space-3: 12px;
+  --app-space-4: 16px;
+  --app-space-5: 20px;
+  --app-space-6: 24px;
+  --app-space-8: 32px;
+  --app-space-10: 40px;
+  --app-space-12: 48px;
+  --app-space-16: 64px;
+
+  /* ============================================================
+     M3 EXPRESSIVE — MOTION FALLBACKS & SOMBRAS WEB
+     ============================================================ */
+  --app-motion-fast: 150ms;
+  --app-motion-default: 230ms;
+  --app-motion-slow: 360ms;
+  --app-motion-effects-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  --app-shadow-1: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --app-shadow-2: 0 4px 16px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+  --app-shadow-3: 0 12px 32px -4px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
 }
 
 * {
@@ -321,6 +458,87 @@ body {
   animation: laserProgressScan 2.8s ease-in-out infinite;
 }
 
+/* Efeito Ondulação Material Design 3 (Ripple Effect em Botões e Controles) */
+@keyframes m3Ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+.m3-ripple-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.m3-ripple-wave {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  background-color: currentColor;
+  animation: m3Ripple 600ms cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+/* Efeito de Onda/Ripple Tonal na Transição de Páginas M3 Expressive */
+@keyframes m3PageRippleWave {
+  0% {
+    transform: scale(0.1);
+    opacity: 0.32;
+  }
+  40% {
+    opacity: 0.22;
+  }
+  100% {
+    transform: scale(4.2);
+    opacity: 0;
+  }
+}
+
+.m3-page-ripple-overlay {
+  position: absolute;
+  top: 10px;
+  left: 20px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 101, 15, 0.28) 0%, rgba(255, 101, 15, 0.08) 45%, transparent 70%);
+  animation: m3PageRippleWave 550ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  z-index: 25;
+}
+
+/* Efeito Ripple Circular para o Menu Mobile no Canto Inferior Direito (Google App Style) */
+@keyframes m3MenuRevealPulse {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(3.5);
+    opacity: 0;
+  }
+}
+
+.m3-menu-fab-wave {
+  position: absolute;
+  right: -10px;
+  bottom: -10px;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 101, 15, 0.45) 0%, rgba(255, 101, 15, 0.15) 50%, transparent 70%);
+  animation: m3MenuRevealPulse 600ms cubic-bezier(0.2, 0, 0, 1) forwards;
+  z-index: 55;
+}
+
 /* Respeito estrito a Acessibilidade (prefers-reduced-motion) */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -332,4 +550,14 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Utilitário para ocultar barras de rolagem nativas mantendo funcionalidade */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
 

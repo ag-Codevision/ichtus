@@ -89,12 +89,14 @@ const SERVICES = [
   },
 ];
 
+import { M3ScrollReveal, M3ScrollStagger, M3ScrollItem } from "@/components/ui/scroll-reveal";
+
 export function MainServicesSection() {
   return (
     <section id="servicos" className="py-24 bg-[#F8F9FA] border-b border-zinc-200/90 relative scroll-mt-20 text-zinc-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Cabeçalho com subtítulo abaixo do título */}
-        <div className="max-w-3xl mb-16 space-y-4">
+        {/* Cabeçalho com M3ScrollReveal */}
+        <M3ScrollReveal variant="fadeUp" className="max-w-3xl mb-16 space-y-4">
           <Badge variant="orange-light" className="font-semibold tracking-wider">
             <Sparkles className="w-3.5 h-3.5" />
             Principais Serviços
@@ -105,86 +107,87 @@ export function MainServicesSection() {
           <p className="text-base text-zinc-600 max-w-2xl leading-relaxed pt-1">
             Desde a criação da marca do zero até a produção fabril, consultoria estratégica e aprimoramento da experiência do cliente.
           </p>
-        </div>
+        </M3ScrollReveal>
 
-        {/* Grid de Serviços em 2 colunas lado a lado */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Grid de Serviços em 2 colunas com M3ScrollStagger e M3ScrollItem */}
+        <M3ScrollStagger className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {SERVICES.map((srv) => {
             const Icon = srv.icon;
 
             return (
-              <SpotlightCard
-                key={srv.id}
-                isDark={false}
-                className="p-8 sm:p-10 rounded-3xl bg-white border border-zinc-200/90 hover:border-orange-500/40 transition-all duration-300 relative overflow-hidden group shadow-sm hover:shadow-md flex flex-col justify-between h-full"
-              >
-                <div className="space-y-6">
-                  {/* Topo: Ícone + Categoria + Destaque */}
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-200/60 flex items-center justify-center text-[#FF650F] group-hover:bg-[#FF650F] group-hover:text-white transition-all shadow-sm">
-                        <Icon className="w-6 h-6" />
+              <M3ScrollItem key={srv.id} className="h-full">
+                <SpotlightCard
+                  isDark={false}
+                  className="p-8 sm:p-10 rounded-3xl bg-white border border-zinc-200/90 hover:border-orange-500/40 transition-all duration-300 relative overflow-hidden group shadow-sm hover:shadow-md flex flex-col justify-between h-full"
+                >
+                  <div className="space-y-6">
+                    {/* Topo: Ícone + Categoria + Destaque */}
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-200/60 flex items-center justify-center text-[#FF650F] group-hover:bg-[#FF650F] group-hover:text-white transition-all shadow-sm">
+                          <Icon className="w-6 h-6" />
+                        </div>
+                        <Badge variant="orange-light" className="font-mono text-xs uppercase tracking-wider font-bold">
+                          {srv.category}
+                        </Badge>
                       </div>
-                      <Badge variant="orange-light" className="font-mono text-xs uppercase tracking-wider font-bold">
-                        {srv.category}
-                      </Badge>
+
+                      {srv.highlight && (
+                        <span className="text-xs font-semibold text-[#FF650F] bg-orange-50 border border-orange-200/60 rounded-xl px-3 py-1.5 hidden sm:inline-block">
+                          ★ {srv.highlight}
+                        </span>
+                      )}
                     </div>
 
-                    {srv.highlight && (
-                      <span className="text-xs font-semibold text-[#FF650F] bg-orange-50 border border-orange-200/60 rounded-xl px-3 py-1.5 hidden sm:inline-block">
-                        ★ {srv.highlight}
-                      </span>
-                    )}
+                    {/* Título */}
+                    <div>
+                      <h3 className="text-xl sm:text-2xl font-extrabold text-zinc-900 leading-tight">
+                        {srv.title}
+                      </h3>
+                      {srv.highlight && (
+                        <span className="text-xs font-semibold text-[#FF650F] bg-orange-50 border border-orange-200/60 rounded-xl px-2.5 py-1 mt-2 inline-block sm:hidden">
+                          ★ {srv.highlight}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Parágrafos descritivos */}
+                    <div className="space-y-2.5">
+                      {srv.paragraphs.map((p, pIdx) => (
+                        <p key={pIdx} className="text-sm text-zinc-600 leading-relaxed">
+                          {p}
+                        </p>
+                      ))}
+                    </div>
+
+                    {/* Lista de destaques */}
+                    <div className="space-y-2 pt-4 border-t border-zinc-100">
+                      {srv.features.map((feat, fIdx) => (
+                        <div key={fIdx} className="flex items-center gap-2 text-xs text-zinc-700">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>{feat}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
-                  {/* Título */}
-                  <div>
-                    <h3 className="text-xl sm:text-2xl font-extrabold text-zinc-900 leading-tight">
-                      {srv.title}
-                    </h3>
-                    {srv.highlight && (
-                      <span className="text-xs font-semibold text-[#FF650F] bg-orange-50 border border-orange-200/60 rounded-xl px-2.5 py-1 mt-2 inline-block sm:hidden">
-                        ★ {srv.highlight}
-                      </span>
-                    )}
+                  {/* Botão de Ação no Rodapé do Card */}
+                  <div className="pt-6 mt-6 border-t border-zinc-100 flex items-center justify-between">
+                    <span className="text-xs text-zinc-400 font-medium">
+                      Atendimento especializado
+                    </span>
+                    <Link href="/#contato">
+                      <Button variant="secondary" size="sm" className="gap-2 group-hover:border-[#FF650F]/50 group-hover:text-[#FF650F]">
+                        Solicitar {srv.category}
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </Link>
                   </div>
-
-                  {/* Parágrafos descritivos */}
-                  <div className="space-y-2.5">
-                    {srv.paragraphs.map((p, pIdx) => (
-                      <p key={pIdx} className="text-sm text-zinc-600 leading-relaxed">
-                        {p}
-                      </p>
-                    ))}
-                  </div>
-
-                  {/* Lista de destaques */}
-                  <div className="space-y-2 pt-4 border-t border-zinc-100">
-                    {srv.features.map((feat, fIdx) => (
-                      <div key={fIdx} className="flex items-center gap-2 text-xs text-zinc-700">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>{feat}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Botão de Ação no Rodapé do Card */}
-                <div className="pt-6 mt-6 border-t border-zinc-100 flex items-center justify-between">
-                  <span className="text-xs text-zinc-400 font-medium">
-                    Atendimento especializado
-                  </span>
-                  <Link href="/#contato">
-                    <Button variant="secondary" size="sm" className="gap-2 group-hover:border-[#FF650F]/50 group-hover:text-[#FF650F]">
-                      Solicitar {srv.category}
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </Link>
-                </div>
-              </SpotlightCard>
+                </SpotlightCard>
+              </M3ScrollItem>
             );
           })}
-        </div>
+        </M3ScrollStagger>
       </div>
     </section>
   );

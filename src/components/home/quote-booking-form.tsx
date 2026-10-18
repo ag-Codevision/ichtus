@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
+import { M3ScrollReveal } from "@/components/ui/scroll-reveal";
 import {
   ArrowRight,
   CheckCircle2,
@@ -72,8 +73,8 @@ export function QuoteBookingForm() {
 
   return (
     <div id="contato" className="scroll-mt-24 text-white">
-      {/* Título da Seção */}
-      <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
+      {/* Título da Seção com M3ScrollReveal */}
+      <M3ScrollReveal variant="fadeUp" className="text-center max-w-2xl mx-auto mb-16 space-y-4">
         <Badge variant="orange" className="font-semibold tracking-wider">
           <Sparkles className="w-3.5 h-3.5" />
           Fale Conosco
@@ -84,11 +85,11 @@ export function QuoteBookingForm() {
         <p className="text-sm sm:text-base text-zinc-400">
           Nosso trabalho é pensar em soluções, deixe-nos te ajudar. Retornamos com rapidez e atenção dedicada.
         </p>
-      </div>
+      </M3ScrollReveal>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Painel da Esquerda: Dados de Contato Direto */}
-        <div className="lg:col-span-5 space-y-6">
+        <M3ScrollReveal variant="fadeUp" delay={0.05} className="lg:col-span-5 space-y-6">
           <SpotlightCard
             isDark={true}
             className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] space-y-6 shadow-xl"
@@ -183,10 +184,10 @@ export function QuoteBookingForm() {
               </a>
             </div>
           </SpotlightCard>
-        </div>
+        </M3ScrollReveal>
 
         {/* Painel da Direita: Formulário */}
-        <div className="lg:col-span-7">
+        <M3ScrollReveal variant="fadeUp" delay={0.1} className="lg:col-span-7">
           <SpotlightCard
             isDark={true}
             className="rounded-3xl bg-[#18191D] border border-white/[0.08] p-8 sm:p-10 shadow-2xl relative overflow-hidden"
@@ -395,7 +396,7 @@ export function QuoteBookingForm() {
               </form>
             )}
           </SpotlightCard>
-        </div>
+        </M3ScrollReveal>
       </div>
     </div>
   );

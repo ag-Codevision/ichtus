@@ -4,6 +4,11 @@ import React, { useState, useEffect } from "react";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  M3StaggerContainer,
+  M3StaggerItem,
+  M3TabPanel,
+} from "@/components/ui/m3-motion";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   Layers,
@@ -253,32 +258,33 @@ export default function ProducaoPage() {
         />
       </div>
 
-      {/* Lista de Ordens de Serviço */}
-      {isLoading ? (
-        <div className="text-center py-20 text-xs text-zinc-500 dark:text-zinc-400">
-          Carregando esteira fabril...
-        </div>
-      ) : filteredOrders.length === 0 ? (
-        <div className="p-12 text-center rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.06] shadow-m3-1">
-          <Layers className="w-10 h-10 text-glessios-orange mx-auto mb-3 opacity-60" />
-          <h4 className="text-zinc-900 dark:text-white font-bold text-sm">Nenhuma Ordem de Serviço nesta etapa</h4>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Converta oportunidades do CRM ou crie uma OS para acompanhar a produção.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredOrders.map((order) => {
-            const currentStageIdx = STAGES.findIndex((s) => s.id === order.currentStage);
-            const stageInfo = STAGES[currentStageIdx] || STAGES[0];
-            const progressPct = Math.round(((currentStageIdx + 1) / STAGES.length) * 100);
-            const latestProof = order.artworkProofs[0];
+      {/* Lista de Ordens de Serviço com Transição M3 e Entrada Escalonada */}
+      <M3TabPanel activeKey={selectedStage}>
+        {isLoading ? (
+          <div className="text-center py-20 text-xs text-zinc-500 dark:text-zinc-400">
+            Carregando esteira fabril...
+          </div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="p-12 text-center rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.06] shadow-m3-1">
+            <Layers className="w-10 h-10 text-glessios-orange mx-auto mb-3 opacity-60" />
+            <h4 className="text-zinc-900 dark:text-white font-bold text-sm">Nenhuma Ordem de Serviço nesta etapa</h4>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+              Converta oportunidades do CRM ou crie uma OS para acompanhar a produção.
+            </p>
+          </div>
+        ) : (
+          <M3StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {filteredOrders.map((order) => {
+              const currentStageIdx = STAGES.findIndex((s) => s.id === order.currentStage);
+              const stageInfo = STAGES[currentStageIdx] || STAGES[0];
+              const progressPct = Math.round(((currentStageIdx + 1) / STAGES.length) * 100);
+              const latestProof = order.artworkProofs[0];
 
-            return (
-              <div
-                key={order.id}
-                className="rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.06] shadow-m3-1 hover:shadow-m3-2 p-6 flex flex-col justify-between space-y-5 transition-all duration-200"
-              >
+              return (
+                <M3StaggerItem key={order.id}>
+                  <div
+                    className="rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.06] shadow-m3-1 hover:shadow-m3-2 p-6 flex flex-col justify-between space-y-5 transition-all duration-200 h-full"
+                  >
                   <div className="space-y-4">
                     {/* Código & Prioridade */}
                     <div className="flex items-center justify-between">
@@ -411,15 +417,23 @@ export default function ProducaoPage() {
                     )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              </M3StaggerItem>
+            );
+          })}
+        </M3StaggerContainer>
+      )}
+    </M3TabPanel>
 
       {/* Modal para Upload/Cadastro de Prova Digital de Arte - Padrão M3 Expressive Dialog */}
       {uploadModalOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setUploadModalOrder(null)}
+        >
+          <div
+            className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-[#1A1B20] border border-black/10 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-4 border-b border-black/10 dark:border-white/10">
               <div>
                 <h3 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">

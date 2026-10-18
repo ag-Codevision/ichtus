@@ -127,11 +127,11 @@ export async function GET(request: Request) {
       amount: Number(inv.amount),
     }));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       customer: {
         id: customer.id,
-        tradeName: customer.tradeName || customer.companyName || customer.user.name,
+        tradeName: customer.tradeName || customer.companyName || customer.user?.name || "Cliente",
         companyName: customer.companyName,
         documentNumber: customer.documentNumber,
         street: customer.street,
@@ -139,12 +139,14 @@ export async function GET(request: Request) {
         neighborhood: customer.neighborhood,
         city: customer.city,
         state: customer.state,
-        user: {
-          id: customer.user.id,
-          name: customer.user.name,
-          email: customer.user.email,
-          phone: customer.user.phone,
-        },
+        user: customer.user
+          ? {
+              id: customer.user.id,
+              name: customer.user.name,
+              avatarUrl: customer.user.avatarUrl,
+              phone: customer.user.phone,
+            }
+          : null,
       },
       serviceOrders: formattedOrders,
       invoices: formattedInvoices,
@@ -157,6 +159,25 @@ export async function GET(request: Request) {
         pendingInvoicesCount: invoices.filter((inv) => inv.status === InvoiceStatus.PENDING).length,
       },
     });
+
+    // Se o cliente ainda não possuía cookie de sessão, assegura a persistência segura
+    if (!sessionCookie?.value && customer.user) {
+      const sessionPayload = {
+        userId: customer.user.id,
+        name: customer.user.name,
+        role: "CUSTOMER",
+        customerId: customer.id,
+        tradeName: customer.tradeName || customer.user.name,
+        companyName: customer.companyName || null,
+      };
+      response.cookies.set("glessios_portal_session", JSON.stringify(sessionPayload), {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+        sameSite: "lax",
+      });
+    }
+
+    return response;
   } catch (error) {
     console.error("Erro ao carregar dados do portal do cliente:", error);
     return NextResponse.json(

@@ -9,7 +9,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { PostStatus, BlogPost } from "@prisma/client";
 
-export const revalidate = 60; // Revalidação ISR a cada 60 segundos
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Blog de Tendências em Comunicação Visual & Arquitetura | ICTHUS Soluções e Design",
