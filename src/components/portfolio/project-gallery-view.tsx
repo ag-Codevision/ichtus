@@ -51,9 +51,9 @@ function OptimizedPhotoCard({
         src={img.url}
         alt={img.caption || projectTitle}
         fill
+        unoptimized
         loading={index < 3 ? "eager" : "lazy"}
         decoding="async"
-        quality={70}
         onLoad={() => setIsLoaded(true)}
         className={`object-cover transition-all duration-500 group-hover:scale-105 ${
           isLoaded ? "opacity-100" : "opacity-0"
@@ -229,7 +229,7 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
                       src={selectedVideo.thumbnailUrl}
                       alt={selectedVideo.title}
                       fill
-                      quality={75}
+                      unoptimized
                       className="object-cover opacity-80 group-hover:opacity-95 transition-opacity"
                     />
                     <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-4">
@@ -342,7 +342,7 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
                 src={project.galleryImages[selectedPhotoIdx].url}
                 alt={project.galleryImages[selectedPhotoIdx].caption || project.title}
                 fill
-                quality={85}
+                unoptimized
                 className="object-contain"
                 sizes="100vw"
                 priority

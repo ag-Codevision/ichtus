@@ -30,6 +30,7 @@ import {
   type ProjectDetailItem,
 } from "@/lib/portfolio-data";
 import { ProjectMediaShowcase } from "@/components/portfolio/project-gallery-view";
+import { PortfolioHeroBackground } from "@/components/portfolio/portfolio-hero-background";
 import { M3ScrollReveal, M3ScrollStagger, M3ScrollItem } from "@/components/ui/scroll-reveal";
 
 export const dynamic = "force-dynamic";
@@ -97,22 +98,11 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
             1. HERO DE CAPA CINEMATOGRÁFICO COM COREOGRAFIA DE ENTRADA
             ==================================================== */}
         <section className="relative w-full min-h-[500px] sm:min-h-[560px] lg:min-h-[620px] flex items-end justify-center overflow-hidden bg-[#0A0B0D] text-white pb-16 sm:pb-20">
-          {/* Imagem de Capa Otimizada com Carregamento Rápido */}
-          <div className="absolute inset-0 z-0">
-            <Image
-              src={project.coverImage || project.featuredImage}
-              alt={project.title}
-              fill
-              priority
-              quality={75}
-              decoding="async"
-              className="object-cover object-center scale-105 animate-hero-atmosphere opacity-60"
-              sizes="(max-width: 1280px) 100vw, 1280px"
-            />
-            {/* Gradientes de Fusão e Profundidade */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0E0F11] via-[#0E0F11]/65 to-black/45" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-500/15 via-transparent to-transparent pointer-events-none" />
-          </div>
+          {/* Imagem de Capa Otimizada com Carregamento Rápido e Placeholder Imediato */}
+          <PortfolioHeroBackground
+            src={project.coverImage || project.featuredImage}
+            alt={project.title}
+          />
 
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             {/* Navegação Breadcrumb Superior com animação de entrada */}
@@ -429,9 +419,9 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
                           src={rel.featuredImage}
                           alt={rel.title}
                           fill
+                          unoptimized
                           loading="lazy"
                           decoding="async"
-                          quality={65}
                           className="object-cover transition-transform duration-700 group-hover:scale-105"
                           sizes="(max-width: 768px) 100vw, 33vw"
                         />
