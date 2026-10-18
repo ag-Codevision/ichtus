@@ -46,7 +46,7 @@ sleep 5
 
 # 5. Execução de Migrações do Prisma
 echo "🗄️ Aplicando migrações do banco de dados Prisma..."
-$DOCKER_COMPOSE -f docker-compose.prod.yml exec -T app npx prisma db push
+$DOCKER_COMPOSE -f docker-compose.prod.yml run --rm migrator npx prisma db push || true
 
 # 6. Health Check do Endpoint (Porta 3005 do Glessios no Host)
 echo "🔍 Realizando Health Check da aplicação..."
