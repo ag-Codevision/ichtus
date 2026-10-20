@@ -6,13 +6,27 @@ $vpsUser = "root"
 $vpsDeployPath = "/opt/glessios"
 
 Write-Host "=================================================================" -ForegroundColor Cyan
-Write-Host "  DEPLOY AUTOMATIZADO ICTHUS - VPS PRODUCAO" -ForegroundColor Cyan
+Write-Host "  DEPLOY AUTOMATIZADO ICTHUS - VPS PRODUCAO & GITHUB BACKUP" -ForegroundColor Cyan
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host "Configuracoes:" -ForegroundColor Yellow
 Write-Host "  - Host VPS:    $vpsHost"
 Write-Host "  - Porta:       $vpsPort"
 Write-Host "  - Usuario:     $vpsUser"
 Write-Host "  - Destino:     $vpsDeployPath"
+Write-Host ""
+
+# 0. Sincronizar backup no GitHub antes de subir para a VPS
+Write-Host "-----------------------------------------------------------------" -ForegroundColor DarkGray
+Write-Host "Sincronizando backup no GitHub (https://github.com/ag-Codevision/ichtus.git)..." -ForegroundColor Cyan
+try {
+    $currentBranch = (git rev-parse --abbrev-ref HEAD 2>$null)
+    if (-not $currentBranch) { $currentBranch = "main" }
+    git push origin $currentBranch
+    Write-Host "Backup no GitHub atualizado com sucesso na branch '$currentBranch'!" -ForegroundColor Green
+} catch {
+    Write-Host "Aviso ao sincronizar com GitHub: $_" -ForegroundColor Yellow
+}
+Write-Host "-----------------------------------------------------------------" -ForegroundColor DarkGray
 Write-Host ""
 
 # 1. Testar conexao SSH
@@ -67,5 +81,6 @@ ssh -o StrictHostKeyChecking=no -p $vpsPort "$vpsUser@$vpsHost" $fullRemoteCmd
 Write-Host ""
 Write-Host "=================================================================" -ForegroundColor Green
 Write-Host "  DEPLOY CONCLUIDO COM SUCESSO!" -ForegroundColor Green
-Write-Host "  Aplicacao ativa na VPS: http://$vpsHost:3005" -ForegroundColor Green
+Write-Host "  - Backup GitHub: https://github.com/ag-Codevision/ichtus.git" -ForegroundColor Green
+Write-Host "  - Aplicacao ativa na VPS: https://icthusbrasil.com (http://$vpsHost:3005)" -ForegroundColor Green
 Write-Host "=================================================================" -ForegroundColor Green
