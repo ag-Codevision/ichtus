@@ -72,9 +72,10 @@ Write-Host "Extraindo arquivos e executando deploy via Docker na VPS..." -Foregr
 $cmd1 = "cd " + $vpsDeployPath
 $cmd2 = "tar -xzf deploy.tar.gz"
 $cmd3 = "rm -f deploy.tar.gz"
-$cmd4 = "chmod +x scripts/deploy.sh"
-$cmd5 = "./scripts/deploy.sh"
-$fullRemoteCmd = "$cmd1 && $cmd2 && $cmd3 && $cmd4 && $cmd5"
+$cmd4 = "sed -i 's/\r$//' scripts/deploy.sh 2>/dev/null || true"
+$cmd5 = "chmod +x scripts/deploy.sh"
+$cmd6 = "./scripts/deploy.sh"
+$fullRemoteCmd = "$cmd1 && $cmd2 && $cmd3 && $cmd4 && $cmd5 && $cmd6"
 
 ssh -o StrictHostKeyChecking=no -p $vpsPort "$vpsUser@$vpsHost" $fullRemoteCmd
 
