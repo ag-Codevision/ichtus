@@ -29,6 +29,7 @@ export function HeroSculpture() {
   const currentRotation = useRef({ x: 0.1, y: -0.2 });
   const mouseInfluence = useRef({ x: 0, y: 0 });
   const timeRef = useRef(0);
+  const baseXRef = useRef(0);
 
   // Objetos Three.js mantidos em refs para ciclo de vida e descarte
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -55,9 +56,10 @@ export function HeroSculpture() {
 
     const width = container.clientWidth || 500;
     const height = container.clientHeight || 450;
+    baseXRef.current = width >= 1024 ? 1.05 : 0;
 
     const camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 100);
-    camera.position.set(0, 0, 6.9);
+    camera.position.set(0, 0, 7.2);
     cameraRef.current = camera;
 
     // 2. Renderizador WebGL de Alta Fidelidade com suporte a transmissão e refração
@@ -127,20 +129,21 @@ export function HeroSculpture() {
 
     // Rim/Back Light LED traseiro forte (Halo de luz laranja que penetra o acrílico, elevado)
     const backHaloLight = new THREE.PointLight(0xff650f, 10.0, 12, 1.4);
-    backHaloLight.position.set(0, 0.28, -1.0);
+    backHaloLight.position.set(baseXRef.current, 0.28, -1.0);
     scene.add(backHaloLight);
 
     // Luz dinâmica especular que segue a posição do cursor
     const dynamicPointLight = new THREE.PointLight(0xffffff, 2.6, 10);
-    dynamicPointLight.position.set(0, 0.28, 3.5);
+    dynamicPointLight.position.set(baseXRef.current, 0.28, 3.5);
     scene.add(dynamicPointLight);
     dynamicPointLightRef.current = dynamicPointLight;
 
     // 5. Criação das Geometrias e Materiais de Acrílico Cristalino
     const modelGroup = new THREE.Group();
     // Escala maior e mais imponente
-    modelGroup.scale.set(1.05, 1.05, 1.05);
-    modelGroup.position.y = 0.28;
+    modelGroup.scale.set(0.92, 0.92, 0.92);
+    const baseX = width >= 1024 ? 1.05 : 0;
+    modelGroup.position.set(baseX, 0.28, 0);
     modelGroupRef.current = modelGroup;
     scene.add(modelGroup);
 
@@ -304,6 +307,7 @@ export function HeroSculpture() {
       const newWidth = container.clientWidth;
       const newHeight = container.clientHeight;
       if (newWidth === 0 || newHeight === 0) return;
+      baseXRef.current = newWidth >= 1024 ? 1.05 : 0;
 
       camera.aspect = newWidth / newHeight;
       camera.updateProjectionMatrix();
@@ -337,6 +341,7 @@ export function HeroSculpture() {
         const floatY = 0.28 + Math.sin(time * 1.4) * 0.08;
         const floatZ = Math.cos(time * 1.1) * 0.04;
         if (modelGroupRef.current) {
+          modelGroupRef.current.position.x = baseXRef.current;
           modelGroupRef.current.position.y = floatY;
           modelGroupRef.current.position.z = floatZ;
         }
@@ -388,12 +393,12 @@ export function HeroSculpture() {
     <div
       ref={containerRef}
       suppressHydrationWarning
-      className="relative w-full max-w-[620px] h-[400px] sm:h-[490px] lg:h-[540px] mx-auto flex items-center justify-center select-none -mt-4 sm:-mt-8 lg:-mt-14"
+      className="relative w-full max-w-[620px] lg:max-w-none lg:w-[840px] xl:w-[940px] lg:-ml-[160px] xl:-ml-[200px] h-[400px] sm:h-[490px] lg:h-[580px] mx-auto flex items-center justify-center select-none -mt-4 sm:-mt-8 lg:-mt-14 pointer-events-auto"
     >
       {/* Halo Traseiro Atmosférico (Brilho Laranja LED Quente com centro elevado) */}
       <div
         suppressHydrationWarning
-        className="absolute w-[360px] sm:w-[480px] h-[240px] sm:h-[320px] top-[15%] rounded-full bg-gradient-to-tr from-[#FF650F]/35 via-[#FF7A29]/20 to-transparent blur-[110px] pointer-events-none -z-10 animate-pulse-slow"
+        className="absolute w-[360px] sm:w-[480px] h-[240px] sm:h-[320px] top-[15%] lg:left-[70%] lg:-translate-x-1/2 rounded-full bg-gradient-to-tr from-[#FF650F]/35 via-[#FF7A29]/20 to-transparent blur-[110px] pointer-events-none -z-10 animate-pulse-slow"
         aria-hidden="true"
       />
 
@@ -424,7 +429,7 @@ export function HeroSculpture() {
           onClick={handleResetRotation}
           title="Centralizar visualização 3D"
           aria-label="Centralizar visualização 3D"
-          className="absolute bottom-3 right-3 p-2 rounded-full bg-[#1e2025]/80 hover:bg-[#282b32] text-zinc-400 hover:text-white border border-white/10 transition-all duration-200 shadow-md hover:scale-105 active:scale-95"
+          className="absolute bottom-3 right-3 lg:right-10 p-2 rounded-full bg-[#1e2025]/80 hover:bg-[#282b32] text-zinc-400 hover:text-white border border-white/10 transition-all duration-200 shadow-md hover:scale-105 active:scale-95 z-30 pointer-events-auto"
         >
           <RotateCcw className="w-4 h-4 text-[#FF650F]" />
         </button>

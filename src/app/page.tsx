@@ -70,7 +70,7 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
               {/* Coluna de Texto & Proposta de Valor com Coreografia de Entrada */}
-              <div className="lg:col-span-7 flex flex-col items-start text-left space-y-6">
+              <div className="lg:col-span-7 flex flex-col items-start text-left space-y-6 relative z-20 pointer-events-auto">
                 <div className="animate-hero-badge">
                   <Badge variant="orange" className="py-1 px-3.5 text-xs font-semibold shadow-sm">
                     <Sparkles className="w-3.5 h-3.5 text-[#FF650F]" />
@@ -140,7 +140,7 @@ export default function HomePage() {
 
               {/* Coluna da Escultura Metálica Interativa com Parallax Suave (60 FPS puros) */}
               <div
-                className="lg:col-span-5 flex items-center justify-center animate-hero-sculpture will-change-transform"
+                className="lg:col-span-5 flex items-center justify-center animate-hero-sculpture will-change-transform relative z-10 pointer-events-auto"
                 style={{
                   transform: "translate3d(var(--parallax-x, 0px), var(--parallax-y, 0px), 0)",
                   transition: "transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
