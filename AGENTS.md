@@ -1,5 +1,9 @@
 # Diretrizes e Workflows do Projeto ICTHUS / Glessios
 
+> **🔒 Escopo Restrito:** Esta diretriz e workflow são de escopo estritamente local e aplicam-se **única e exclusivamente a este projeto/repositório** (`F:\_CLIENTES\Glessios\Site` / `ag-Codevision/ichtus`). Não deve ser propagado, aplicado ou herdado por nenhum outro projeto ou cliente da máquina.
+
+---
+
 ## 🚀 Workflow Obrigatório de Deploy
 
 Sempre que o usuário solicitar a execução do deploy da aplicação (exemplos: *"faça deploy"*, *"sobe pra produção"*, *"atualiza o site"*, *"deploy na vps"* ou variações):
@@ -13,7 +17,7 @@ O assistente deve executar **obrigatoriamente** o fluxo de deploy dual em 3 etap
   ```bash
   git push origin main
   ```
-  *(Repositório: `https://github.com/ag-Codevision/ichtus.git`)*.
+  *(Repositório Oficial: `https://github.com/ag-Codevision/ichtus.git`)*.
 * Garantir que o repositório remoto esteja sempre atualizado como backup contínuo do projeto.
 
 ### 2. Atualização e Deploy na VPS de Produção

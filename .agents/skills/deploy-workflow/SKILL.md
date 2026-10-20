@@ -1,6 +1,6 @@
 ---
 name: deploy-workflow
-description: "Fluxo oficial de deploy do projeto ICTHUS / Glessios. Use sempre que o usuário solicitar deploy, atualização ou publicação da aplicação na VPS ou no ambiente de produção. Executa a sincronização obrigatória com o repositório GitHub de backup (ag-Codevision/ichtus) e o deploy na VPS (72.62.141.188:/opt/glessios)."
+description: "Fluxo oficial de deploy do projeto ICTHUS / Glessios. Restrito e exclusivo para este projeto (F:/_CLIENTES/Glessios/Site). Use sempre que o usuário solicitar deploy, atualização ou publicação da aplicação na VPS ou no ambiente de produção. Executa a sincronização obrigatória com o repositório GitHub de backup (ag-Codevision/ichtus) e o deploy na VPS (72.62.141.188:/opt/glessios)."
 version: "1.0.0"
 category: deployment
 tags: ["deploy", "vps", "github", "backup", "docker", "production"]
@@ -8,9 +8,9 @@ complexity: intermediate
 risk: safe
 ---
 
-# Workflow de Deploy Dual — VPS & GitHub (ICTHUS / Glessios)
+# Workflow de Deploy Dual — VPS & GitHub (Exclusivo ICTHUS / Glessios)
 
-Este workflow define as regras estritas e os passos automatizados a serem seguidos sempre que for solicitado o deploy da aplicação.
+> **🔒 Escopo Local:** Esta automação e seus destinos são estritamente restritos a este repositório (`F:\_CLIENTES\Glessios\Site`). Não se aplica e não interfere em nenhum outro projeto.
 
 ## Diretriz Principal
 O deploy da aplicação **nunca** deve ser realizado isoladamente apenas na VPS. Ele **sempre** deve garantir o versionamento e backup imediato no repositório oficial do GitHub da Codevision:
