@@ -21,30 +21,34 @@ Estrutura oficial de acessos simplificada em **estritamente 2 papéis (*Roles*) 
 
 ## 🧭 2. Links Rápidos de Login e Painéis
 
+### 🌐 Domínio Oficial em Produção:
+* **Site / Aplicação:** [https://icthusbrasil.com](https://icthusbrasil.com) *(ou [https://www.icthusbrasil.com](https://www.icthusbrasil.com))*
+* **Segurança:** Certificado SSL/TLS Let's Encrypt ativo (Redirecionamento automático HTTP → HTTPS)
+
 ### 🛠️ Acesso Administrativo (`ADMIN`)
 
-* **Painel Central Unificado (Produção):** [http://72.62.141.188:3005/admin](http://72.62.141.188:3005/admin)
-* **Tela de Login (Produção):** [http://72.62.141.188:3005/admin/login](http://72.62.141.188:3005/admin/login) *(ou `/glessios/login`)*
+* **Painel Central Unificado (Produção):** [https://icthusbrasil.com/admin](https://icthusbrasil.com/admin) *(ou direto via porta [http://72.62.141.188:3005/admin](http://72.62.141.188:3005/admin))*
+* **Tela de Login (Produção):** [https://icthusbrasil.com/admin/login](https://icthusbrasil.com/admin/login) *(ou `/glessios/login`)*
 * **Tela de Login (Local):** [http://localhost:3005/admin/login](http://localhost:3005/admin/login)
   * *Atalho Rápido:* Botão **"Entrar com Conta de Admin Demo (1 Clique)"** preenche e autentica automaticamente.
 
 #### Módulos Operacionais do Painel Unificado:
-* **Central de Comando (Dashboard):** [Produção](http://72.62.141.188:3005/admin) • [Local](http://localhost:3005/admin)
-* **CRM Comercial Kanban:** [Produção](http://72.62.141.188:3005/admin/crm) • [Local](http://localhost:3005/admin/crm)
-* **Linha de Produção & Fábrica (8 Fases):** [Produção](http://72.62.141.188:3005/admin/producao) • [Local](http://localhost:3005/admin/producao)
-* **Controle de Estoque (ACM, LEDs):** [Produção](http://72.62.141.188:3005/admin/estoque) • [Local](http://localhost:3005/admin/estoque)
-* **Gestão Financeira & DRE:** [Produção](http://72.62.141.188:3005/admin/financeiro) • [Local](http://localhost:3005/admin/financeiro)
-* **Agendamentos de Campo & Medição:** [Produção](http://72.62.141.188:3005/admin/agendamentos) • [Local](http://localhost:3005/admin/agendamentos)
-* **Proposta Comercial Executiva A4:** [Produção](http://72.62.141.188:3005/admin/propostas/cm8a7b6c5000108l4f1h20987) • [Local](http://localhost:3005/admin/propostas/cm8a7b6c5000108l4f1h20987)
+* **Central de Comando (Dashboard):** [Produção HTTPS](https://icthusbrasil.com/admin) • [Local](http://localhost:3005/admin)
+* **CRM Comercial Kanban:** [Produção HTTPS](https://icthusbrasil.com/admin/crm) • [Local](http://localhost:3005/admin/crm)
+* **Linha de Produção & Fábrica (8 Fases):** [Produção HTTPS](https://icthusbrasil.com/admin/producao) • [Local](http://localhost:3005/admin/producao)
+* **Controle de Estoque (ACM, LEDs):** [Produção HTTPS](https://icthusbrasil.com/admin/estoque) • [Local](http://localhost:3005/admin/estoque)
+* **Gestão Financeira & DRE:** [Produção HTTPS](https://icthusbrasil.com/admin/financeiro) • [Local](http://localhost:3005/admin/financeiro)
+* **Agendamentos de Campo & Medição:** [Produção HTTPS](https://icthusbrasil.com/admin/agendamentos) • [Local](http://localhost:3005/admin/agendamentos)
+* **Proposta Comercial Executiva A4:** [Produção HTTPS](https://icthusbrasil.com/admin/propostas/cm8a7b6c5000108l4f1h20987) • [Local](http://localhost:3005/admin/propostas/cm8a7b6c5000108l4f1h20987)
 
 ---
 
 ### 👤 Portal do Cliente Contratante (`CUSTOMER`)
 
-* **Tela de Login (Produção):** [http://72.62.141.188:3005/portal/login](http://72.62.141.188:3005/portal/login)
+* **Tela de Login (Produção):** [https://icthusbrasil.com/portal/login](https://icthusbrasil.com/portal/login)
 * **Tela de Login (Local):** [http://localhost:3005/portal/login](http://localhost:3005/portal/login)
   * *Atalho Rápido:* Botão **"Acessar com Conta Demo"**.
-* **Dashboard do Cliente:** [Produção](http://72.62.141.188:3005/portal/dashboard) • [Local](http://localhost:3005/portal/dashboard)
+* **Dashboard do Cliente:** [Produção HTTPS](https://icthusbrasil.com/portal/dashboard) • [Local](http://localhost:3005/portal/dashboard)
 
 ---
 

@@ -65,7 +65,7 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-glessios_admin}:${POSTGRES_PASSWORD:-GlessiosSecretProd2026SecureKey}@postgres:5432/${POSTGRES_DB:-glessios_prod}?schema=public
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-glessios_secret_super_seguro_development_2026_jwt_token}
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://72.62.141.188:3005}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://icthusbrasil.com}
       NVIDIA_API_KEY: ${NVIDIA_API_KEY}
       NVIDIA_MODEL: ${NVIDIA_MODEL:-meta/llama-3.2-11b-vision-instruct}
       UNSPLASH_ACCESS_KEY: ${UNSPLASH_ACCESS_KEY}

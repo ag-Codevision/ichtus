@@ -6,6 +6,8 @@ node_modules/
 # Next.js build
 .next/
 out/
+*.tsbuildinfo
+tsconfig.tsbuildinfo
 
 # Environment variables
 .env

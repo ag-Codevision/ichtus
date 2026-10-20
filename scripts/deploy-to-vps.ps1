@@ -49,7 +49,7 @@ try {
 
 # 4. Enviar pacote para a VPS via SCP
 Write-Host "Enviando pacote para $vpsUser@${vpsHost}:$vpsDeployPath..." -ForegroundColor Cyan
-scp -o StrictHostKeyChecking=no -P $vpsPort $tempArchive "$vpsUser@${vpsHost}:$vpsDeployPath/deploy.tar.gz"
+scp -O -o StrictHostKeyChecking=no -P $vpsPort $tempArchive "$vpsUser@${vpsHost}:$vpsDeployPath/deploy.tar.gz"
 Remove-Item $tempArchive -Force -ErrorAction SilentlyContinue
 Write-Host "Upload concluido com sucesso!" -ForegroundColor Green
 

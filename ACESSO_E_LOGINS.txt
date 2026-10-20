@@ -3,9 +3,10 @@
            GUIA DE LINKS DE LOGIN, ROLES E ACESSOS DO SISTEMA
 ================================================================================
 
-AMBIENTE DE PRODUÇÃO (VPS):
-URL Base: http://72.62.141.188:3005
-Status:   ONLINE (Containers Docker glessios_app e glessios_postgres ativos)
+AMBIENTE DE PRODUÇÃO (VPS & DOMÍNIO OFICIAL):
+URL Oficial: https://icthusbrasil.com (ou https://www.icthusbrasil.com)
+IP Direto:   http://72.62.141.188:3005
+Status:      ONLINE com SSL Let's Encrypt (HTTPS Ativo e Redirecionamento 301)
 
 AMBIENTE LOCAL:
 URL Base: http://localhost:3005
@@ -19,11 +20,11 @@ operacao tecnica do chao de fabrica (projetos, corte CNC, serralheria,
 montagem, baixas de estoque e instalacao) TUDO EM UM UNICO PAINEL.
 
 LINK DE LOGIN DO ADMIN:
-- Producao: http://72.62.141.188:3005/admin/login
+- Producao: https://icthusbrasil.com/admin/login
 - Local:    http://localhost:3005/admin/login
 
 DASHBOARD CENTRAL UNIFICADO:
-- Producao: http://72.62.141.188:3005/admin
+- Producao: https://icthusbrasil.com/admin
 - Local:    http://localhost:3005/admin
 
 CREDENCIAIS OFICIAIS:
