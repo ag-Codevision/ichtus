@@ -39,7 +39,7 @@ chmod -R 777 ./public/uploads 2>/dev/null || true
 
 # 3. Limpeza Preventiva de Disco e Build das Imagens
 echo "🧹 Executando limpeza preventiva de cache do Docker..."
-docker builder prune -af --keep-storage 2GB 2>/dev/null || true
+docker builder prune -af 2>/dev/null || true
 docker image prune -f 2>/dev/null || true
 
 echo "📦 Construindo containers de produção com isolamento de recursos..."
@@ -85,4 +85,3 @@ fi
 
 echo "✅ Deploy concluído com sucesso!"
 echo "🌐 Plataforma Glessios operacional e isolada em produção."
-

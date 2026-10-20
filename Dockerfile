@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # -----------------------------------------------------------------------------
 # Dockerfile Multi-Stage de Produção — Glessios Comunicação Visual
 # Plataforma Web Integrada (Next.js 15 App Router + Prisma ORM + PostgreSQL)
