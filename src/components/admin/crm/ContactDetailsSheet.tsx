@@ -183,6 +183,11 @@ export function ContactDetailsSheet({
   const phoneUrl = contact?.phone ? `tel:${contact.phone.replace(/\D/g, "")}` : null;
   const emailUrl = contact?.email ? `mailto:${contact.email}` : null;
 
+  const rawInterlocutorWpp = contact?.contactPersonPhone?.replace(/\D/g, "");
+  const interlocutorWppUrl = rawInterlocutorWpp ? `https://wa.me/${rawInterlocutorWpp.startsWith("55") ? rawInterlocutorWpp : `55${rawInterlocutorWpp}`}` : null;
+  const interlocutorPhoneUrl = contact?.contactPersonPhone ? `tel:${contact.contactPersonPhone.replace(/\D/g, "")}` : null;
+  const interlocutorEmailUrl = contact?.contactPersonEmail ? `mailto:${contact.contactPersonEmail}` : null;
+
   const handleCopyPix = () => {
     if (contact?.pixKey) {
       navigator.clipboard.writeText(contact.pixKey);
@@ -570,6 +575,40 @@ export function ContactDetailsSheet({
                         </div>
                       )}
                     </div>
+                    
+                      {contact.leadChannel && (
+                        <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">
+                              {contact.leadChannel === "INDICATION" ? "🤝" :
+                               contact.leadChannel === "GOOGLE" ? "🔍" :
+                               contact.leadChannel === "INSTAGRAM" ? "📸" :
+                               contact.leadChannel === "FACEBOOK" ? "📘" :
+                               contact.leadChannel === "WHATSAPP" ? "💬" : "🌐"}
+                            </span>
+                            <div>
+                              <span className="font-bold">Origem: </span>
+                              <span>
+                                {contact.leadChannel === "INDICATION" ? "Indicação" :
+                                 contact.leadChannel === "GOOGLE" ? "Google" :
+                                 contact.leadChannel === "INSTAGRAM" ? "Instagram" :
+                                 contact.leadChannel === "FACEBOOK" ? "Facebook" :
+                                 contact.leadChannel === "WHATSAPP" ? "WhatsApp" : "Outro Canal"}
+                              </span>
+                              {contact.leadChannelDetails && (
+                                <span className="ml-1 font-semibold text-blue-800 dark:text-blue-200">
+                                  ({contact.leadChannelDetails})
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20">
+                            Canal de Aquisição
+                          </span>
+                        </div>
+                      )}
+
+
                     {/* Bloco 1: Contato e Comunicação */}
                     <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.06] space-y-2.5">
                       <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">

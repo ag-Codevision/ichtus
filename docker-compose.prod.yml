@@ -42,7 +42,26 @@ services:
     networks:
       - glessios_network
 
-  # 3. Aplicação Next.js 15 Standalone (Glessios)
+  # 3. Microserviço Dedicado de WhatsApp (Baileys Multi-Device)
+  whatsapp:
+    build:
+      context: ./whatsapp-service
+      dockerfile: Dockerfile
+    container_name: glessios_whatsapp
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+          cpus: "0.5"
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - glessios_wppdata:/app/auth_info
+    networks:
+      - glessios_network
+
+  # 4. Aplicação Next.js 15 Standalone (Glessios)
   app:
     build:
       context: .
@@ -59,6 +78,8 @@ services:
         condition: service_healthy
       migrator:
         condition: service_completed_successfully
+      whatsapp:
+        condition: service_started
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-glessios_admin}:${POSTGRES_PASSWORD:-GlessiosSecretProd2026SecureKey}@postgres:5432/${POSTGRES_DB:-glessios_prod}?schema=public
@@ -67,7 +88,7 @@ services:
       NVIDIA_API_KEY: ${NVIDIA_API_KEY}
       NVIDIA_MODEL: ${NVIDIA_MODEL:-meta/llama-3.2-11b-vision-instruct}
       UNSPLASH_ACCESS_KEY: ${UNSPLASH_ACCESS_KEY}
-      WACLI_API_URL: ${WACLI_API_URL:-http://localhost:3001}
+      WACLI_API_URL: http://whatsapp:3001
       CRON_SECRET: ${CRON_SECRET}
       PORT: 3000
     ports:
@@ -80,6 +101,8 @@ services:
 volumes:
   glessios_pgdata:
     name: glessios_pgdata
+  glessios_wppdata:
+    name: glessios_wppdata
 
 networks:
   glessios_network:

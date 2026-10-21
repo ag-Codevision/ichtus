@@ -28,6 +28,11 @@ logo horizontal web.png
 logo horizontal escuro.png
 logo.png
 
+# WhatsApp e sessões
+whatsapp_auth
+whatsapp-service/node_modules
+whatsapp-service/auth_info
+
 # Ambientes e arquivos locais
 .env*.local
 .env

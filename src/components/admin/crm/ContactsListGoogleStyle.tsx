@@ -15,6 +15,9 @@ export interface ContactItem {
   documentNumber: string | null;
   contactPerson: string | null;
   contactRole: string | null;
+  contactPersonPhone?: string | null;
+  contactPersonEmail?: string | null;
+  contactPersonNotes?: string | null;
   phone: string | null;
   whatsapp: string | null;
   email: string | null;

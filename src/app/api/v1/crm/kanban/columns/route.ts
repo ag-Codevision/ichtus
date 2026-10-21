@@ -16,6 +16,27 @@ export async function GET() {
       },
     });
 
+    // Garantir coluna de Produção ativa
+    const hasProduction = columns.some(
+      (c) => c.name.trim().toLowerCase() === "produção" || c.name.trim().toLowerCase() === "producao"
+    );
+
+    if (!hasProduction) {
+      const lastOrder = columns.length > 0 ? Math.max(...columns.map((c) => c.order)) + 1 : 0;
+      const createdProdCol = await prisma.kanbanColumn.create({
+        data: {
+          name: "Produção",
+          color: "#FF650F",
+          order: lastOrder,
+          isSystem: true,
+        },
+        include: {
+          _count: { select: { leads: true } },
+        },
+      });
+      columns.push(createdProdCol as any);
+    }
+
     return NextResponse.json({ success: true, columns });
   } catch (error: any) {
     console.error("[Kanban API] Erro ao listar colunas:", error);

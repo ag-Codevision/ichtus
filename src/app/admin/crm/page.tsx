@@ -27,6 +27,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash2,
+  Lock,
   Edit2,
   ArrowLeft,
   ArrowRight,
@@ -88,8 +89,36 @@ interface Column {
   name: string;
   order: number;
   color: string | null;
+  isSystem?: boolean;
   leads: Lead[];
 }
+
+
+const DEFAULT_TOOLS = [
+  "Dupla face",
+  "MDF",
+  "Metal",
+  "Acrílico",
+  "Vidro",
+  "Película poliéster",
+  "Adesivo vinil",
+  "Chaves especiais",
+  "Cinta lacre",
+  "Manta magnética",
+  "Escada",
+  "Andaime",
+  "Material de limpeza",
+  "Soprador",
+  "Extensão",
+  "Furadeira",
+  "Parafusos",
+  "Buchas",
+  "Espaçadores",
+  "Iluminação",
+  "LED",
+  "ACM",
+  "Cola",
+];
 
 export default function CrmPage() {
   const router = useRouter();
@@ -161,7 +190,44 @@ export default function CrmPage() {
     priority: "MEDIUM",
     dueDate: "",
     notes: "",
+    budgetCode: "",
+    helperId: "",
+    voltage: "110V",
+    tools: [] as string[],
+    paintDetails: "",
+    freightDetails: "",
   });
+
+  const [availableToolsList, setAvailableToolsList] = useState<string[]>(DEFAULT_TOOLS);
+  const [customToolInput, setCustomToolInput] = useState("");
+  const [isAddingCustomTool, setIsAddingCustomTool] = useState(false);
+  const [serviceProviders, setServiceProviders] = useState<any[]>([]);
+  const [nextBudgetCodePreview, setNextBudgetCodePreview] = useState("");
+
+  
+  // Carrega código de orçamento e prestadores auxiliares ao abrir modal
+  useEffect(() => {
+    if (isNewLeadModalOpen) {
+      fetch("/api/v1/crm/leads/next-code")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.budgetCode) {
+            setNextBudgetCodePreview(data.budgetCode);
+            setNewLeadForm((prev) => ({ ...prev, budgetCode: data.budgetCode }));
+          }
+        })
+        .catch((err) => console.warn("Aviso ao carregar próximo código:", err));
+
+      fetch("/api/v1/crm/contacts?type=SERVICE_PROVIDER&limit=50")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.contacts) {
+            setServiceProviders(data.contacts);
+          }
+        })
+        .catch((err) => console.warn("Aviso ao carregar prestadores:", err));
+    }
+  }, [isNewLeadModalOpen]);
 
   // Clientes disponíveis para vincular no Kanban
   const [availableClients, setAvailableClients] = useState<any[]>([]);
@@ -565,6 +631,12 @@ export default function CrmPage() {
           priority: "MEDIUM",
           dueDate: "",
           notes: "",
+          budgetCode: "",
+          helperId: "",
+          voltage: "110V",
+          tools: [],
+          paintDetails: "",
+          freightDetails: "",
         });
         fetchKanban();
       } else {
@@ -657,7 +729,7 @@ export default function CrmPage() {
             className="flex items-center gap-1.5 text-xs font-bold rounded-full shadow-sm"
           >
             <Plus className="w-4 h-4" />
-            <span>{activeView === "CONTACTS" ? "Novo Contato" : "Nova Oportunidade"}</span>
+            <span>{activeView === "CONTACTS" ? "Novo Contato" : "Novo Trabalho"}</span>
           </Button>
         </div>
       </div>
@@ -916,22 +988,34 @@ export default function CrmPage() {
                             >
                               <ArrowRight className="w-3 h-3" />
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditColumn(col)}
-                              title="Editar campo"
-                              className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
-                            >
-                              <Edit2 className="w-3 h-3" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteColumn(col)}
-                              title="Excluir campo"
-                              className="p-1 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-500/10"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
+                            {col.name.trim().toLowerCase() === "produção" || col.name.trim().toLowerCase() === "producao" || col.isSystem ? (
+                              <span
+                                title="Coluna Fixa da Linha de Produção (não pode ser alterada nem excluída)"
+                                className="px-2 py-0.5 rounded-md bg-orange-500/10 text-[#FF650F] text-[10px] font-bold flex items-center gap-1 border border-orange-500/20"
+                              >
+                                <Lock className="w-2.5 h-2.5" />
+                                Produção
+                              </span>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditColumn(col)}
+                                  title="Editar campo"
+                                  className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteColumn(col)}
+                                  title="Excluir campo"
+                                  className="p-1 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-500/10"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
 
@@ -1221,7 +1305,7 @@ export default function CrmPage() {
                   Funil de Vendas
                 </span>
                 <h3 className="text-lg font-black text-zinc-900 dark:text-white tracking-tight">
-                  Nova Oportunidade
+                  Novo Trabalho
                 </h3>
               </div>
               <button
@@ -1343,6 +1427,204 @@ export default function CrmPage() {
                   />
                 </div>
               </div>
+
+              
+              {/* ID do Orçamento Sequencial Inteligente */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/5 border border-orange-500/25 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block">
+                    ID do Orçamento Gerado
+                  </span>
+                  <span className="text-base sm:text-lg font-black font-mono text-[#FF650F]">
+                    [{nextBudgetCodePreview || "3000"}]
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-orange-500/20 text-[#FF650F] border border-orange-500/30">
+                  Sequencial Inteligente
+                </span>
+              </div>
+
+              {/* Seletor de Ajudante Auxiliar (Prestador de Serviço) */}
+              <div>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Ajudante Auxiliar (Prestador de Serviço)
+                </label>
+                <select
+                  value={newLeadForm.helperId}
+                  onChange={(e) => setNewLeadForm({ ...newLeadForm, helperId: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                >
+                  <option value="">Equipe interna (Sem prestador auxiliar externo)</option>
+                  {serviceProviders.map((prov) => (
+                    <option key={prov.id} value={prov.id}>
+                      {prov.fullName || prov.tradeName || prov.companyName} {prov.phone ? `(${prov.phone})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Seletor de Voltagem do Local */}
+              <div>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                  Voltagem Elétrica do Local
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {["110V", "220V"].map((vol) => {
+                    const isSelected = newLeadForm.voltage === vol;
+                    return (
+                      <button
+                        key={vol}
+                        type="button"
+                        onClick={() => setNewLeadForm({ ...newLeadForm, voltage: vol })}
+                        className={`py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                          isSelected
+                            ? "bg-[#FF650F] text-white shadow-md shadow-orange-500/20 ring-2 ring-[#FF650F]/30"
+                            : "bg-white dark:bg-[#121316] text-zinc-700 dark:text-zinc-300 border border-black/10 dark:border-white/10 hover:border-[#FF650F]/40"
+                        }`}
+                      >
+                        ⚡ <span>{vol}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Checklist de Ferramentas & Recursos de Campo */}
+              <div className="p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.06] dark:border-white/[0.06] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block">
+                    🔧 Ferramentas & Recursos Necessários
+                  </label>
+                  <span className="text-[10px] font-mono text-zinc-400">
+                    {newLeadForm.tools.length} selecionados
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto no-scrollbar p-1">
+                  {availableToolsList.map((tool) => {
+                    const isChecked = newLeadForm.tools.includes(tool);
+                    return (
+                      <button
+                        key={tool}
+                        type="button"
+                        onClick={() => {
+                          setNewLeadForm((prev) => ({
+                            ...prev,
+                            tools: isChecked
+                              ? prev.tools.filter((t) => t !== tool)
+                              : [...prev.tools, tool],
+                          }));
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1 ${
+                          isChecked
+                            ? "bg-[#FF650F] text-white shadow-xs"
+                            : "bg-white dark:bg-[#121316] text-zinc-700 dark:text-zinc-300 border border-black/[0.08] dark:border-white/[0.08] hover:border-[#FF650F]/40"
+                        }`}
+                      >
+                        <span>{isChecked ? "✓" : "+"}</span>
+                        <span>{tool}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Adicionar Novo Recurso Personalizado */}
+                {isAddingCustomTool ? (
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <input
+                      type="text"
+                      placeholder="Nome do novo recurso..."
+                      value={customToolInput}
+                      onChange={(e) => setCustomToolInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (customToolInput.trim()) {
+                            const trimmed = customToolInput.trim();
+                            if (!availableToolsList.includes(trimmed)) {
+                              setAvailableToolsList((prev) => [...prev, trimmed]);
+                            }
+                            setNewLeadForm((prev) => ({
+                              ...prev,
+                              tools: [...prev.tools, trimmed],
+                            }));
+                            setCustomToolInput("");
+                            setIsAddingCustomTool(false);
+                          }
+                        }
+                      }}
+                      className="flex-1 px-3 py-1.5 rounded-lg bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (customToolInput.trim()) {
+                          const trimmed = customToolInput.trim();
+                          if (!availableToolsList.includes(trimmed)) {
+                            setAvailableToolsList((prev) => [...prev, trimmed]);
+                          }
+                          setNewLeadForm((prev) => ({
+                            ...prev,
+                            tools: [...prev.tools, trimmed],
+                          }));
+                          setCustomToolInput("");
+                          setIsAddingCustomTool(false);
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-[#FF650F] text-white text-xs font-bold"
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingCustomTool(false);
+                        setCustomToolInput("");
+                      }}
+                      className="px-2 py-1.5 text-xs text-zinc-400 hover:text-zinc-600"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingCustomTool(true)}
+                    className="text-[11px] font-bold text-[#FF650F] hover:underline flex items-center gap-1 pt-1"
+                  >
+                    + Adicionar Novo Recurso / Ferramenta
+                  </button>
+                )}
+              </div>
+
+              {/* Campos de Tinta e Frete */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    🎨 Tinta & Acabamento
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Tinta PU Preto Fosco, Verniz UV..."
+                    value={newLeadForm.paintDetails}
+                    onChange={(e) => setNewLeadForm({ ...newLeadForm, paintDetails: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    🚚 Frete & Transporte
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Incluso, R$ 150,00, Retirada no local..."
+                    value={newLeadForm.freightDetails}
+                    onChange={(e) => setNewLeadForm({ ...newLeadForm, freightDetails: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+              </div>
+
 
               <div>
                 <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
@@ -1514,7 +1796,7 @@ export default function CrmPage() {
         <button
           type="button"
           onClick={activeView === "CONTACTS" ? handleOpenNewContact : () => setIsNewLeadModalOpen(true)}
-          aria-label={activeView === "CONTACTS" ? "Novo Contato" : "Nova Oportunidade"}
+          aria-label={activeView === "CONTACTS" ? "Novo Contato" : "Novo Trabalho"}
           className="w-14 h-14 rounded-full flex items-center justify-center text-white bg-gradient-to-tr from-[#FF650F] to-[#FFA05E] shadow-[0_6px_20px_rgba(255,101,15,0.4)] active:scale-95 transition-all duration-200 border-2 border-white/20 focus:outline-none"
         >
           <Plus className="w-6 h-6 stroke-[2.5]" />

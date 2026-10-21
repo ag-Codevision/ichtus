@@ -8,8 +8,6 @@ import {
   Truck,
   Wrench,
   Briefcase,
-  Search,
-  Check,
   MapPin,
   Phone,
   Mail,
@@ -17,6 +15,9 @@ import {
   FileText,
   AlertCircle,
   Loader2,
+  UserCheck,
+  MessageSquare,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -26,6 +27,16 @@ interface ContactFormModalProps {
   onSuccess: () => void;
   initialData?: any | null;
 }
+
+const ROLE_SUGGESTIONS = [
+  "Secretária",
+  "Indicação",
+  "Proprietário(a)",
+  "Arquiteto(a)",
+  "Gerente de Compras",
+  "Recepção",
+  "Diretor(a)",
+];
 
 export function ContactFormModal({
   isOpen,
@@ -46,12 +57,20 @@ export function ContactFormModal({
     stateRegistration: "",
     municipalRegistration: "",
     rg: "",
+    // Interlocutor / Quem estou falando
     contactPerson: "",
     contactRole: "",
+    contactPersonPhone: "",
+    contactPersonEmail: "",
+    contactPersonNotes: "",
+    leadChannel: "",
+    leadChannelDetails: "",
+    // Contatos da Empresa
     phone: "",
     whatsapp: "",
     email: "",
     financialEmail: "",
+    // Endereço
     zipCode: "",
     street: "",
     number: "",
@@ -60,6 +79,7 @@ export function ContactFormModal({
     city: "",
     state: "",
     referencePoint: "",
+    // Financeiro
     creditLimit: "",
     paymentTerms: "",
     pixKeyType: "CNPJ",
@@ -89,6 +109,11 @@ export function ContactFormModal({
         rg: initialData.rg || "",
         contactPerson: initialData.contactPerson || "",
         contactRole: initialData.contactRole || "",
+        contactPersonPhone: initialData.contactPersonPhone || "",
+        contactPersonEmail: initialData.contactPersonEmail || "",
+        contactPersonNotes: initialData.contactPersonNotes || "",
+        leadChannel: initialData.leadChannel || "",
+        leadChannelDetails: initialData.leadChannelDetails || "",
         phone: initialData.phone || "",
         whatsapp: initialData.whatsapp || "",
         email: initialData.email || "",
@@ -124,6 +149,11 @@ export function ContactFormModal({
         rg: "",
         contactPerson: "",
         contactRole: "",
+        contactPersonPhone: "",
+        contactPersonEmail: "",
+        contactPersonNotes: "",
+        leadChannel: "",
+        leadChannelDetails: "",
         phone: "",
         whatsapp: "",
         email: "",
@@ -185,10 +215,16 @@ export function ContactFormModal({
         : "/api/v1/crm/contacts";
       const method = isEditing ? "PUT" : "POST";
 
+      // Assegura que se o usuário preencheu o celular do interlocutor mas não preencheu o WhatsApp da empresa, ele seja aproveitado
+      const payload = {
+        ...formData,
+        whatsapp: formData.whatsapp?.trim() || formData.contactPersonPhone?.trim() || "",
+      };
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -340,14 +376,14 @@ export function ContactFormModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="sm:col-span-2">
                   <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Nome Fantasia *
+                    Nome Fantasia / Nome Comercial *
                   </label>
                   <input
                     type="text"
                     required
                     value={formData.tradeName}
                     onChange={(e) => setFormData({ ...formData, tradeName: e.target.value })}
-                    placeholder="Ex: Loja Tech Batel, Distribuidora Curitiba"
+                    placeholder="Ex: Clínica Odonto Vida, Construtora Batel"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                   />
                 </div>
@@ -359,7 +395,7 @@ export function ContactFormModal({
                     type="text"
                     value={formData.companyName}
                     onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                    placeholder="Ex: Concept Batel Comércio de Roupas Ltda"
+                    placeholder="Ex: Odonto Vida Serviços Odontológicos Ltda"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                   />
                 </div>
@@ -431,20 +467,229 @@ export function ContactFormModal({
             )}
           </div>
 
-          {/* Dados de Contato e Comunicação */}
-          <div className="p-4 rounded-3xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.06] space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-[#FF650F]" />
-              Contato & WhatsApp
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* ========================================================================= */}
+          {/* SEÇÃO DEDICADA: INTERLOCUTOR / COM QUEM ESTOU CONVERSANDO                  */}
+          {/* ========================================================================= */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-orange-500/[0.05] via-orange-500/[0.02] to-transparent border-2 border-orange-500/25 dark:border-orange-500/20 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-orange-500/15 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-orange-500/15 text-[#FF650F] flex items-center justify-center shrink-0">
+                  <UserCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                    Com Quem Estou Conversando? (Interlocutor Direto)
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-500/10 text-[#FF650F] border border-orange-500/20">
+                      Atendimento
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Dados da pessoa física em contato com você (ex: secretária da clínica, quem indicou, arquiteta ou comprador).
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Nome da Pessoa de Contato
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.contactPerson}
+                    onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                    placeholder="Ex: Patrícia (Secretária), Dra. Camila, Carlos"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-orange-500/20 focus:border-[#FF650F] text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Relação com a Empresa / Cargo
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.contactRole}
+                    onChange={(e) => setFormData({ ...formData, contactRole: e.target.value })}
+                    placeholder="Ex: Secretária da Clínica, Quem fez a indicação, Arquiteta..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-orange-500/20 focus:border-[#FF650F] text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Sugestões rápidas de relação / cargo */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mr-1">
+                  Atalhos:
+                </span>
+                {ROLE_SUGGESTIONS.map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => setFormData((p) => ({ ...p, contactRole: role }))}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
+                      formData.contactRole === role
+                        ? "bg-[#FF650F] text-white shadow-xs"
+                        : "bg-white/80 dark:bg-white/[0.06] text-zinc-600 dark:text-zinc-300 border border-black/[0.06] dark:border-white/[0.08] hover:border-orange-500/40"
+                    }`}
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    WhatsApp / Celular Direto do Interlocutor
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.contactPersonPhone}
+                    onChange={(e) => setFormData({ ...formData, contactPersonPhone: e.target.value })}
+                    placeholder="5541999999999 (Celular direto)"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-orange-500/20 focus:border-[#FF650F] text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    E-mail Direto do Interlocutor
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.contactPersonEmail}
+                    onChange={(e) => setFormData({ ...formData, contactPersonEmail: e.target.value })}
+                    placeholder="patricia.secretaria@clinica.com.br"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-orange-500/20 focus:border-[#FF650F] text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  WhatsApp Principal *
+                  Anotações da Conversa & Contexto da Indicação
+                </label>
+                <textarea
+                  rows={2}
+                  value={formData.contactPersonNotes}
+                  onChange={(e) => setFormData({ ...formData, contactPersonNotes: e.target.value })}
+                  placeholder="Ex: Veio por indicação do Dr. Roberto; foi quem pediu o orçamento da fachada; prefere ser contatada pelo WhatsApp à tarde..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-orange-500/20 focus:border-[#FF650F] text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          
+          {/* Seletor de Origem do Lead / Canal de Aquisição */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-blue-500/[0.04] to-indigo-500/[0.08] dark:from-blue-500/[0.06] dark:to-indigo-500/[0.12] border border-blue-500/20 dark:border-blue-500/30 space-y-3.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-500 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                    Origem do Lead / Canal de Aquisição
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                      Marketing & CRM
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    De onde este contato conheceu a empresa ou como chegou até nós.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 pt-1">
+              {[
+                { id: "INDICATION", label: "Indicação", icon: "🤝" },
+                { id: "GOOGLE", label: "Google", icon: "🔍" },
+                { id: "INSTAGRAM", label: "Instagram", icon: "📸" },
+                { id: "FACEBOOK", label: "Facebook", icon: "📘" },
+                { id: "WHATSAPP", label: "WhatsApp", icon: "💬" },
+                { id: "OTHER", label: "Outro", icon: "🌐" },
+              ].map((channel) => {
+                const isSelected = formData.leadChannel === channel.id;
+                return (
+                  <button
+                    key={channel.id}
+                    type="button"
+                    onClick={() => {
+                      setFormData((prev: any) => ({
+                        ...prev,
+                        leadChannel: isSelected ? "" : channel.id,
+                        leadChannelDetails: isSelected ? "" : prev.leadChannelDetails,
+                      }));
+                    }}
+                    className={`px-3 py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center justify-center gap-1 transition-all ${
+                      isSelected
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-500/30"
+                        : "bg-white dark:bg-[#121316] text-zinc-700 dark:text-zinc-300 border border-black/[0.08] dark:border-white/[0.08] hover:border-blue-500/40"
+                    }`}
+                  >
+                    <span className="text-base">{channel.icon}</span>
+                    <span>{channel.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {formData.leadChannel === "INDICATION" && (
+              <div className="pt-1">
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  De quem é a indicação? (Nome da pessoa ou empresa que indicou)
                 </label>
                 <input
                   type="text"
-                  required
+                  value={formData.leadChannelDetails}
+                  onChange={(e) => setFormData({ ...formData, leadChannelDetails: e.target.value })}
+                  placeholder="Ex: Dr. Roberto, Loja Vizinha, Arquiteto Fernando..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-blue-500/30 focus:border-blue-500 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none"
+                />
+              </div>
+            )}
+
+            {formData.leadChannel === "OTHER" && (
+              <div className="pt-1">
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Qual o canal de origem?
+                </label>
+                <input
+                  type="text"
+                  value={formData.leadChannelDetails}
+                  onChange={(e) => setFormData({ ...formData, leadChannelDetails: e.target.value })}
+                  placeholder="Ex: Fachada de rua, Evento, Feira comercial, Rádio..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-blue-500/30 focus:border-blue-500 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none"
+                />
+              </div>
+            )}
+          </div>
+
+
+          {/* Dados de Contato Institucional da Empresa / Titular */}
+          <div className="p-4 rounded-3xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.06] space-y-3">
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-[#FF650F]" />
+                Comunicação da Empresa / Geral
+              </h4>
+              <p className="text-[11px] text-zinc-400 mt-0.5">
+                Telefones e e-mails institucionais do estabelecimento (ex: recepção, SAC e faturamento).
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  WhatsApp Geral da Empresa *
+                </label>
+                <input
+                  type="text"
+                  required={!formData.contactPersonPhone}
                   value={formData.whatsapp}
                   onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
                   placeholder="5541999999999"
@@ -453,7 +698,7 @@ export function ContactFormModal({
               </div>
               <div>
                 <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Telefone Fixo / Secundário
+                  Telefone Fixo / Recepção
                 </label>
                 <input
                   type="text"
@@ -465,7 +710,7 @@ export function ContactFormModal({
               </div>
               <div>
                 <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  E-mail Geral
+                  E-mail Geral / Comercial
                 </label>
                 <input
                   type="email"
@@ -484,30 +729,6 @@ export function ContactFormModal({
                   value={formData.financialEmail}
                   onChange={(e) => setFormData({ ...formData, financialEmail: e.target.value })}
                   placeholder="financeiro@empresa.com.br"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Pessoa de Contato / Responsável
-                </label>
-                <input
-                  type="text"
-                  value={formData.contactPerson}
-                  onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-                  placeholder="Ex: Roberta Mendes"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Cargo / Setor
-                </label>
-                <input
-                  type="text"
-                  value={formData.contactRole}
-                  onChange={(e) => setFormData({ ...formData, contactRole: e.target.value })}
-                  placeholder="Ex: Gerente de Compras / Arquiteta"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                 />
               </div>
@@ -617,7 +838,7 @@ export function ContactFormModal({
               </div>
               <div className="sm:col-span-3">
                 <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Ponto de Referência (vital para equipes de instalação)
+                  Ponto de Referência (vital para equipes de campo e instalação)
                 </label>
                 <input
                   type="text"
@@ -695,13 +916,13 @@ export function ContactFormModal({
           {/* Anotações Gerais */}
           <div>
             <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-              Observações Internas
+              Observações Gerais do Cadastro
             </label>
             <textarea
               rows={3}
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Histórico comercial, particularidades de entrega, horários para instalação..."
+              placeholder="Histórico da empresa/fornecedor, particularidades contratuais, horários de funcionamento..."
               className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
             />
           </div>

@@ -31,6 +31,11 @@ import {
   Mail,
   Building2,
   Share2,
+  Zap,
+  Wrench,
+  Truck,
+  Paintbrush,
+  FileCheck,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -109,6 +114,22 @@ export interface LeadDetailFull {
   dueDate: string | null;
   isCompleted: boolean;
   coverImage: string | null;
+  budgetCode?: string | null;
+  helperId?: string | null;
+  helper?: {
+    id: string;
+    tradeName?: string | null;
+    companyName?: string | null;
+    fullName?: string | null;
+    phone?: string | null;
+    whatsapp?: string | null;
+  } | null;
+  voltage?: string | null;
+  tools?: string[];
+  paintDetails?: string | null;
+  freightDetails?: string | null;
+  proposalContent?: string | null;
+  contractContent?: string | null;
   tags: { tag: KanbanTagItem }[];
   checklists: LeadChecklistData[];
   attachments: LeadAttachmentData[];
@@ -174,6 +195,16 @@ export function LeadCardDrawerModal({
 
   // Edição Completa da Oportunidade e Contato (CRUD do Card)
   const [isEditingInfo, setIsEditingInfo] = useState(false);
+
+  // Estados para Disparo de Orçamento/Contrato e Geração com IA
+  const [isDispatchingBudget, setIsDispatchingBudget] = useState(false);
+  const [isDispatchingContract, setIsDispatchingContract] = useState(false);
+  const [isGeneratingAIDocs, setIsGeneratingAIDocs] = useState(false);
+  const [dispatchFeedback, setDispatchFeedback] = useState<string | null>(null);
+  const [drawerHelpers, setDrawerHelpers] = useState<any[]>([]);
+  const [newDrawerCustomTool, setNewDrawerCustomTool] = useState("");
+  const [isAddingDrawerCustomTool, setIsAddingDrawerCustomTool] = useState(false);
+
   const [infoForm, setInfoForm] = useState({
     contactName: "",
     contactPhone: "",
@@ -274,6 +305,21 @@ export function LeadCardDrawerModal({
   if (!isOpen) return null;
 
   // Atualização genérica de campos do lead
+  
+  // Carrega lista de prestadores para seleção de ajudante auxiliar
+  useEffect(() => {
+    if (isOpen) {
+      fetch("/api/v1/crm/contacts?type=SERVICE_PROVIDER&limit=50")
+        .then((res) => res.json())
+        .then((resData) => {
+          if (resData.success && resData.contacts) {
+            setDrawerHelpers(resData.contacts);
+          }
+        })
+        .catch((e) => console.warn("Aviso ao carregar prestadores:", e));
+    }
+  }, [isOpen]);
+
   const handleUpdateLeadField = async (payload: any) => {
     if (!leadId) return;
     try {
@@ -293,6 +339,64 @@ export function LeadCardDrawerModal({
   };
 
   // Salvar Título
+  
+  const handleDispatchWhatsApp = async (type: "budget" | "contract") => {
+    if (!leadId) return;
+    const isBudget = type === "budget";
+    if (isBudget) setIsDispatchingBudget(true);
+    else setIsDispatchingContract(true);
+    setDispatchFeedback(null);
+
+    try {
+      const res = await fetch(`/api/v1/crm/leads/${leadId}/dispatch-whatsapp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type }),
+      });
+      const resData = await res.json();
+      if (resData.success) {
+        setDispatchFeedback(
+          isBudget
+            ? "Orçamento enviado com sucesso via WhatsApp!"
+            : "Contrato enviado com sucesso via WhatsApp!"
+        );
+        if (resData.waMeUrl) {
+          window.open(resData.waMeUrl, "_blank");
+        }
+      } else {
+        alert(resData.error || "Falha no disparo via WhatsApp.");
+      }
+    } catch {
+      alert("Erro ao disparar mensagem para o cliente.");
+    } finally {
+      if (isBudget) setIsDispatchingBudget(false);
+      else setIsDispatchingContract(false);
+    }
+  };
+
+  const handleRegenerateAIDocs = async () => {
+    if (!leadId) return;
+    setIsGeneratingAIDocs(true);
+    try {
+      const res = await fetch(`/api/v1/crm/leads/${leadId}/generate-ai-docs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ docType: "both" }),
+      });
+      const resData = await res.json();
+      if (resData.success) {
+        setDispatchFeedback("Proposta e Contrato atualizados e sincronizados com a IA!");
+        fetchLeadDetails();
+      } else {
+        alert(resData.error || "Falha ao sincronizar documentos.");
+      }
+    } catch {
+      alert("Erro ao conectar ao motor de IA.");
+    } finally {
+      setIsGeneratingAIDocs(false);
+    }
+  };
+
   const handleSaveTitle = () => {
     if (!titleValue.trim()) return;
     setIsEditingTitle(false);
@@ -642,6 +746,14 @@ export function LeadCardDrawerModal({
         {/* CABEÇALHO DO VERSO DO CARTÃO */}
         <div className="p-4 sm:p-6 bg-white dark:bg-[#18191E] border-b border-black/[0.05] dark:border-white/[0.06] flex items-start justify-between gap-4 shrink-0">
           <div className="space-y-1.5 min-w-0 flex-1">
+            
+              {/* ID do Orçamento Sequencial Inteligente */}
+              {data?.budgetCode && (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-500/10 text-[#FF650F] border border-orange-500/20 text-[11px] font-mono font-black">
+                  <span>ID Orçamento: [{data.budgetCode}]</span>
+                </div>
+              )}
+
             {/* Seletor da Coluna no Topo estilo Trello */}
             <div className="flex items-center gap-2 text-xs">
               <span className="text-zinc-500 font-medium">na lista:</span>
@@ -1532,6 +1644,79 @@ export function LeadCardDrawerModal({
                 Ações Comerciais
               </span>
               <div className="space-y-2">
+
+                {/* Feedback de Disparo */}
+                {dispatchFeedback && (
+                  <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    <span>{dispatchFeedback}</span>
+                  </div>
+                )}
+
+                {/* Disparo de Orçamento via WhatsApp */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  isLoading={isDispatchingBudget}
+                  onClick={() => handleDispatchWhatsApp("budget")}
+                  className="w-full justify-start text-xs font-bold gap-2 rounded-xl py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                >
+                  <MessageCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Disparar Orçamento (WhatsApp)</span>
+                </Button>
+
+                {/* Disparo de Contrato via WhatsApp */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  isLoading={isDispatchingContract}
+                  onClick={() => handleDispatchWhatsApp("contract")}
+                  className="w-full justify-start text-xs font-bold gap-2 rounded-xl py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30"
+                >
+                  <FileCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <span>Disparar Contrato p/ Assinatura</span>
+                </Button>
+
+                {/* Abrir Proposta em PDF */}
+                <a
+                  href={`/admin/crm/trabalhos/${leadId}/proposta`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full p-2 rounded-xl bg-zinc-100 dark:bg-white/[0.06] hover:bg-zinc-200 dark:hover:bg-white/[0.1] text-zinc-900 dark:text-white text-xs font-bold flex items-center justify-between transition-colors shadow-xs"
+                >
+                  <span className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-[#FF650F]" />
+                    <span>Ver Proposta Comercial (PDF)</span>
+                  </span>
+                  <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
+                </a>
+
+                {/* Abrir Contrato Dinâmico */}
+                <a
+                  href={`/admin/crm/trabalhos/${leadId}/contrato`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full p-2 rounded-xl bg-zinc-100 dark:bg-white/[0.06] hover:bg-zinc-200 dark:hover:bg-white/[0.1] text-zinc-900 dark:text-white text-xs font-bold flex items-center justify-between transition-colors shadow-xs"
+                >
+                  <span className="flex items-center gap-2">
+                    <FileCheck className="w-4 h-4 text-purple-600" />
+                    <span>Ver Contrato Dinâmico</span>
+                  </span>
+                  <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
+                </a>
+
+                {/* Regenerar com IA */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  isLoading={isGeneratingAIDocs}
+                  onClick={handleRegenerateAIDocs}
+                  className="w-full justify-start text-[11px] font-semibold gap-2 rounded-xl py-1.5 text-purple-600 dark:text-purple-400 border-purple-500/20 hover:bg-purple-500/10"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                  <span>Regenerar Documentos c/ IA</span>
+                </Button>
+
                 {/* Converter em OS */}
                 <Button
                   variant="primary"

@@ -1,28 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import QRCode from "qrcode";
 import { getSystemSettings, saveSystemSettings } from "@/lib/settings/system-settings";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/wacli";
 
 /**
  * GET /api/v1/admin/settings/whatsapp
- * Obtém o status da conexão do WhatsApp e o QR Code de pareamento
+ * Obtém o status da conexão do WhatsApp e o QR Code real de pareamento (Baileys)
  */
 export async function GET() {
   try {
     const settings = getSystemSettings();
-    const { apiUrl, sessionName, mode } = settings.whatsapp;
+    const apiUrl =
+      process.env.WACLI_API_URL || settings?.whatsapp?.apiUrl || "http://127.0.0.1:3001";
+    const sessionName = settings.whatsapp.sessionName || "glessios-wpp";
 
     let isDaemonOnline = false;
-    let externalStatus = "DISCONNECTED";
-    let externalQr: string | null = null;
-    let connectedNumber = settings.whatsapp.connectedNumber;
+    let finalStatus: "CONNECTED" | "PAIRING_REQUIRED" | "DISCONNECTED" = "DISCONNECTED";
+    let qrCodeBase64: string | null = null;
+    let connectedNumber: string | null = null;
 
-    // 1. Tentar verificar se o microserviço HTTP está online
+    // 1. Consulta o microserviço HTTP do Baileys
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 1200);
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-      const res = await fetch(`${apiUrl}/api/status?session=${sessionName}`, {
+      const res = await fetch(`${apiUrl}/api/status`, {
         signal: controller.signal,
       }).catch(() => null);
 
@@ -31,54 +32,36 @@ export async function GET() {
       if (res && res.ok) {
         isDaemonOnline = true;
         const data = await res.json();
-        externalStatus = data.status || (data.connected ? "CONNECTED" : "PAIRING_REQUIRED");
-        if (data.qrCode) externalQr = data.qrCode;
-        if (data.phone) connectedNumber = data.phone;
+        finalStatus = data.connected ? "CONNECTED" : "PAIRING_REQUIRED";
+        qrCodeBase64 = data.qrCode || null;
+        connectedNumber = data.phone || null;
+
+        // Sincroniza o estado atual no system-settings local
+        if (settings.whatsapp.status !== finalStatus || settings.whatsapp.connectedNumber !== connectedNumber) {
+          saveSystemSettings({
+            whatsapp: {
+              ...settings.whatsapp,
+              status: finalStatus,
+              connectedNumber: connectedNumber || undefined,
+              lastConnectedAt: finalStatus === "CONNECTED" ? new Date().toISOString() : settings.whatsapp.lastConnectedAt,
+            },
+          });
+        }
       }
-    } catch {
+    } catch (fetchErr: any) {
+      console.warn("[SETTINGS_WPP] Falha ao consultar microserviço:", fetchErr?.message || fetchErr);
       isDaemonOnline = false;
     }
 
-    // 2. Determinar status final
-    let finalStatus = settings.whatsapp.status;
-
-    if (isDaemonOnline) {
-      finalStatus = externalStatus === "CONNECTED" ? "CONNECTED" : "PAIRING_REQUIRED";
-    } else if (process.env.NODE_ENV !== "production") {
-      // Em desenvolvimento sem daemon ativo
-      finalStatus = settings.whatsapp.status === "CONNECTED" ? "CONNECTED" : "PAIRING_REQUIRED";
-    } else {
+    if (!isDaemonOnline) {
       finalStatus = "DISCONNECTED";
     }
-
-    // 3. Gerar QR Code se for necessário pareamento
-    let qrCodeBase64 = externalQr;
-
-    if (!qrCodeBase64 && finalStatus !== "CONNECTED") {
-      // Gera string de pareamento estruturada padrão WhatsApp Multi-Device (WhatsApp Web Protocol)
-      const pairingSecret = `2@${Buffer.from(`glessios-wpp-session-${Date.now()}`).toString("base64")},${Buffer.from("WACLI-GLESSIOS-PAIRING-TOKEN").toString("base64")},${Date.now()}`;
-      qrCodeBase64 = await QRCode.toDataURL(pairingSecret, {
-        errorCorrectionLevel: "H",
-        margin: 2,
-        width: 320,
-        color: {
-          dark: "#0B0C0D",
-          light: "#FFFFFF",
-        },
-      });
-    }
-
-    const displayEndpoint = process.env.NODE_ENV === "production"
-      ? "Gateway Oficial de Produção (Icthus WACLI Service)"
-      : (apiUrl.includes("localhost") ? "Ambiente de Desenvolvimento (WACLI Service)" : apiUrl);
 
     return NextResponse.json({
       success: true,
       status: finalStatus,
       isDaemonOnline,
       sessionName,
-      apiUrl: displayEndpoint,
-      mode,
       connectedNumber: finalStatus === "CONNECTED" ? connectedNumber : null,
       qrCode: qrCodeBase64,
       lastCheckedAt: new Date().toISOString(),
@@ -96,12 +79,12 @@ export async function GET() {
         {
           step: 3,
           title: "Escanear QR Code",
-          desc: "Toque no botão 'Conectar um Aparelho' e aponte a câmera para o QR Code ao lado.",
+          desc: "Toque em 'Conectar um Aparelho' e aponte a câmera para o QR Code ao lado. O pareamento é imediato.",
         },
         {
           step: 4,
-          title: "Sincronização Imediata",
-          desc: "Após a leitura, seu WhatsApp estará integrado para disparos de credenciais, OS e faturas.",
+          title: "Sincronização Automática",
+          desc: "Após a leitura, a tela atualizará sozinha e o WhatsApp estará ativo para disparos reais.",
         },
       ],
     });
@@ -116,7 +99,7 @@ export async function GET() {
 
 /**
  * POST /api/v1/admin/settings/whatsapp
- * Ações: test_send, refresh_qr, simulate_connect, disconnect, save_settings
+ * Ações: test_send, disconnect, save_settings
  */
 export async function POST(req: NextRequest) {
   try {
@@ -124,6 +107,8 @@ export async function POST(req: NextRequest) {
     const { action } = body;
 
     const currentSettings = getSystemSettings();
+    const apiUrl =
+      process.env.WACLI_API_URL || currentSettings?.whatsapp?.apiUrl || "http://127.0.0.1:3001";
 
     if (action === "test_send") {
       const { to, message } = body;
@@ -142,30 +127,22 @@ export async function POST(req: NextRequest) {
         messageId: result.messageId,
         error: result.error,
         message: result.success
-          ? `Disparo efetuado com sucesso! (Modo: ${result.mode === "mock_dev" ? "Simulação de Desenvolvimento" : result.mode.toUpperCase()})`
+          ? "Disparo efetuado com sucesso pelo WhatsApp oficial da Icthus!"
           : result.error || "Falha no disparo da mensagem.",
       });
     }
 
-    if (action === "simulate_connect" || action === "connect") {
-      // Permite ao admin simular ou confirmar pareamento da sessão
-      const updated = saveSystemSettings({
-        whatsapp: {
-          ...currentSettings.whatsapp,
-          status: "CONNECTED",
-          connectedNumber: body.phone || "+55 (41) 99824-3990",
-          lastConnectedAt: new Date().toISOString(),
-        },
-      });
-
-      return NextResponse.json({
-        success: true,
-        status: updated.whatsapp.status,
-        message: "Sessão pareada e ativa com sucesso!",
-      });
-    }
-
     if (action === "disconnect") {
+      // Notifica o microserviço Baileys para fazer logout real e limpar tokens
+      try {
+        await fetch(`${apiUrl}/api/disconnect`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }).catch(() => null);
+      } catch (e) {
+        console.warn("[SETTINGS_WPP] Aviso ao enviar disconnect para microserviço:", e);
+      }
+
       const updated = saveSystemSettings({
         whatsapp: {
           ...currentSettings.whatsapp,

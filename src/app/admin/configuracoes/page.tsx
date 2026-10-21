@@ -120,42 +120,39 @@ export default function AdminSettingsPage() {
     fetchAllSettings();
   }, []);
 
-  const refreshWhatsappStatus = async () => {
-    setIsCheckingWpp(true);
+  const refreshWhatsappStatus = async (silent: boolean = false) => {
+    if (!silent) setIsCheckingWpp(true);
     setTestFeedback(null);
     try {
       const res = await fetch("/api/v1/admin/settings/whatsapp");
       const json = await res.json();
       if (json.success) {
         setWppStatus(json);
-        setFeedback({ type: "success", text: "Status do WhatsApp atualizado em tempo real!" });
+        if (!silent) {
+          setFeedback({ type: "success", text: "Status do WhatsApp atualizado em tempo real!" });
+        }
       }
     } catch {
-      setFeedback({ type: "error", text: "Não foi possível sincronizar com o serviço do WhatsApp." });
+      if (!silent) {
+        setFeedback({ type: "error", text: "Não foi possível sincronizar com o serviço do WhatsApp." });
+      }
     } finally {
-      setIsCheckingWpp(false);
+      if (!silent) setIsCheckingWpp(false);
     }
   };
 
-  const handleSimulateConnect = async () => {
-    setIsCheckingWpp(true);
-    try {
-      const res = await fetch("/api/v1/admin/settings/whatsapp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "simulate_connect", phone: "+55 (41) 99824-3990" }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        await refreshWhatsappStatus();
-        setFeedback({ type: "success", text: "Sessão pareada e ativa com sucesso no sistema!" });
-      }
-    } catch {
-      setFeedback({ type: "error", text: "Erro ao confirmar conexão da sessão." });
-    } finally {
-      setIsCheckingWpp(false);
-    }
-  };
+  // Polling automático ativo: detecta a leitura do QR Code pelo celular sem precisar clicar em nada
+  useEffect(() => {
+    if (activeTab !== "WHATSAPP") return;
+
+    // Se ainda não conectou, verifica a cada 3 segundos; se conectado, verifica a cada 20 segundos
+    const intervalTime = wppStatus?.status === "CONNECTED" ? 20000 : 3000;
+    const interval = setInterval(() => {
+      refreshWhatsappStatus(true);
+    }, intervalTime);
+
+    return () => clearInterval(interval);
+  }, [activeTab, wppStatus?.status]);
 
   const handleDisconnect = async () => {
     setIsCheckingWpp(true);
@@ -394,11 +391,7 @@ export default function AdminSettingsPage() {
                     Sessão ativa:{" "}
                     <code className="text-[#FF650F] font-mono font-bold bg-[#FF650F]/10 px-1.5 py-0.5 rounded">
                       {wppStatus?.sessionName || "glessios-wpp"}
-                    </code>{" "}
-                    • Gateway:{" "}
-                    <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                      Produção (Icthus WACLI Service)
-                    </span>
+                    </code>
                     {wppStatus?.connectedNumber && (
                       <span className="ml-2 font-bold text-emerald-600 dark:text-emerald-400">
                         • Número: {wppStatus.connectedNumber}
@@ -412,7 +405,7 @@ export default function AdminSettingsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={refreshWhatsappStatus}
+                  onClick={() => refreshWhatsappStatus(false)}
                   disabled={isCheckingWpp}
                   className="rounded-xl text-xs h-9"
                 >
@@ -432,15 +425,10 @@ export default function AdminSettingsPage() {
                     Desconectar Aparelho
                   </Button>
                 ) : (
-                  <Button
-                    size="sm"
-                    onClick={handleSimulateConnect}
-                    disabled={isCheckingWpp}
-                    className="rounded-xl text-xs h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-                    Confirmar Pareamento
-                  </Button>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                    Aguardando leitura do QR Code
+                  </div>
                 )}
               </div>
             </div>
@@ -510,7 +498,7 @@ export default function AdminSettingsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={refreshWhatsappStatus}
+                  onClick={() => refreshWhatsappStatus(false)}
                   className="rounded-xl text-xs h-8"
                 >
                   <RefreshCw className="w-3.5 h-3.5 mr-1" />
@@ -562,7 +550,7 @@ export default function AdminSettingsPage() {
                     <div>
                       <h4 className="text-xs font-bold text-zinc-900 dark:text-white">Escanear QR Code</h4>
                       <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                        Toque em "Conectar um Aparelho" e aponte a câmera para o QR Code ao lado.
+                        Toque em "Conectar um Aparelho" e aponte a câmera para o QR Code ao lado. A leitura é instantânea.
                       </p>
                     </div>
                   </div>
@@ -574,7 +562,7 @@ export default function AdminSettingsPage() {
                     <div>
                       <h4 className="text-xs font-bold text-zinc-900 dark:text-white">Disparos Prontos</h4>
                       <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                        O status mudará para Conectado e todas as rotinas enviarão mensagens reais.
+                        A tela atualizará sozinha e o WhatsApp estará conectado sem precisar de confirmação manual.
                       </p>
                     </div>
                   </div>

@@ -170,6 +170,11 @@ model Customer {
   // Contato e Comunicação
   contactPerson         String?                // Nome do contato responsável
   contactRole           String?                // Cargo (ex: Diretor de Compras)
+  contactPersonPhone    String?                // Telefone/WhatsApp direto do interlocutor
+  contactPersonEmail    String?                // E-mail direto do interlocutor
+  contactPersonNotes    String?                // Anotações da conversa / contexto da indicação
+  leadChannel           String?                // Origem do Lead (INDICATION, GOOGLE, FACEBOOK, INSTAGRAM, WHATSAPP, OTHER)
+  leadChannelDetails    String?                // Detalhes (ex: De quem é a indicação, feira)
   phone                 String?                // Telefone Fixo
   whatsapp              String?                // WhatsApp Comercial (5541999999999)
   email                 String?                // E-mail Geral
@@ -203,6 +208,7 @@ model Customer {
   invoices              Invoice[]
   appointments          Appointment[]
   leads                 Lead[]
+  assistedLeads         Lead[]                 @relation("LeadHelper")
   stockItems            StockItem[]
   financialTransactions FinancialTransaction[]
 
@@ -229,10 +235,19 @@ model KanbanColumn {
 
 model Lead {
   id              String        @id @default(cuid())
+  budgetCode      String?       @unique // ID Sequencial Inteligente do Orçamento (ex: "3000 21 10 26")
   columnId        String
   column          KanbanColumn  @relation(fields: [columnId], references: [id])
   customerId      String?
   customer        Customer?     @relation(fields: [customerId], references: [id])
+  helperId        String?
+  helper          Customer?     @relation("LeadHelper", fields: [helperId], references: [id])
+  voltage         String?       // Voltagem do Local: "110V" ou "220V"
+  tools           String[]      @default([]) // Ferramentas & Recursos Necessários
+  paintDetails    String?       // Especificação de Tinta
+  freightDetails  String?       // Detalhes de Frete
+  proposalContent String?       @db.Text // Conteúdo dinâmico da Proposta
+  contractContent String?       @db.Text // Minuta dinâmica do Contrato
   title           String        // Ex: "Fachada Loja Tech - Letreiro Luminoso"
   contactName     String
   contactPhone    String

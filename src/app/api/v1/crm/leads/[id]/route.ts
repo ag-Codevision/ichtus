@@ -18,6 +18,16 @@ export async function GET(req: NextRequest, { params }: Params) {
         column: {
           select: { id: true, name: true, color: true },
         },
+        helper: {
+          select: {
+            id: true,
+            tradeName: true,
+            companyName: true,
+            fullName: true,
+            phone: true,
+            whatsapp: true,
+          },
+        },
         customer: {
           select: {
             id: true,
@@ -85,6 +95,14 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const body = await req.json();
     const {
+      budgetCode,
+      helperId,
+      voltage,
+      tools,
+      paintDetails,
+      freightDetails,
+      proposalContent,
+      contractContent,
       columnId,
       orderInColumn,
       title,
@@ -104,6 +122,14 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     const dataToUpdate: any = {};
 
+    if (budgetCode !== undefined) dataToUpdate.budgetCode = budgetCode?.trim() || null;
+    if (helperId !== undefined) dataToUpdate.helperId = helperId || null;
+    if (voltage !== undefined) dataToUpdate.voltage = voltage || null;
+    if (tools !== undefined) dataToUpdate.tools = Array.isArray(tools) ? tools : [];
+    if (paintDetails !== undefined) dataToUpdate.paintDetails = paintDetails?.trim() || null;
+    if (freightDetails !== undefined) dataToUpdate.freightDetails = freightDetails?.trim() || null;
+    if (proposalContent !== undefined) dataToUpdate.proposalContent = proposalContent;
+    if (contractContent !== undefined) dataToUpdate.contractContent = contractContent;
     if (columnId !== undefined) dataToUpdate.columnId = columnId;
     if (orderInColumn !== undefined) dataToUpdate.orderInColumn = Number(orderInColumn);
     if (title !== undefined) dataToUpdate.title = title;
@@ -128,6 +154,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       include: {
         column: { select: { id: true, name: true, color: true } },
         customer: true,
+        helper: true,
         tags: { include: { tag: true } },
         checklists: {
           orderBy: { order: "asc" },
@@ -138,6 +165,99 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       },
     });
 
+    
+    // Gatilho automático para Linha de Produção ao arrastar para coluna "Produção"
+    if (columnId !== undefined) {
+      try {
+        const targetCol = await prisma.kanbanColumn.findUnique({
+          where: { id: columnId },
+        });
+
+        const isProductionCol = targetCol && (
+          targetCol.name.trim().toLowerCase() === "produção" ||
+          targetCol.name.trim().toLowerCase() === "producao" ||
+          targetCol.isSystem
+        );
+
+        if (isProductionCol) {
+          const existingSO = await prisma.serviceOrder.findFirst({
+            where: { leadId: id },
+          });
+
+          if (!existingSO) {
+            const adminUser = await prisma.user.findFirst({
+              where: { role: "ADMIN" },
+            });
+
+            // Garante que o cliente exista
+            let effectiveCustomerId = updatedLead.customerId;
+            if (!effectiveCustomerId) {
+              const newCustomer = await prisma.customer.create({
+                data: {
+                  tradeName: updatedLead.contactName || updatedLead.title,
+                  fullName: updatedLead.contactName,
+                  phone: updatedLead.contactPhone,
+                  whatsapp: updatedLead.contactPhone,
+                  email: updatedLead.contactEmail || null,
+                  type: "CUSTOMER",
+                  status: "ACTIVE",
+                },
+              });
+              effectiveCustomerId = newCustomer.id;
+              await prisma.lead.update({
+                where: { id },
+                data: { customerId: effectiveCustomerId },
+              });
+            }
+
+            const currentYear = new Date().getFullYear();
+            const osCount = await prisma.serviceOrder.count();
+            const osCode = `OS-${currentYear}-${String(osCount + 1).padStart(4, "0")}`;
+            const val = updatedLead.estimatedValue ? Number(updatedLead.estimatedValue) : 0;
+
+            const toolsList = Array.isArray(updatedLead.tools) && updatedLead.tools.length > 0
+              ? `\n\n🔧 Ferramentas & Recursos: ${updatedLead.tools.join(", ")}`
+              : "";
+            const voltStr = updatedLead.voltage ? `\n⚡ Voltagem: ${updatedLead.voltage}` : "";
+            const paintStr = updatedLead.paintDetails ? `\n🎨 Tinta: ${updatedLead.paintDetails}` : "";
+            const freightStr = updatedLead.freightDetails ? `\n🚚 Frete: ${updatedLead.freightDetails}` : "";
+
+            await prisma.serviceOrder.create({
+              data: {
+                code: osCode,
+                customerId: effectiveCustomerId,
+                leadId: id,
+                createdById: adminUser ? adminUser.id : updatedLead.customer?.userId || id,
+                title: updatedLead.title,
+                description: `${updatedLead.notes || "Trabalho encaminhado via CRM."}${voltStr}${paintStr}${freightStr}${toolsList}`,
+                currentStage: "BRIEFING_ARTWORK",
+                priority: updatedLead.priority,
+                deadline: updatedLead.dueDate,
+                totalAmount: val,
+                discount: 0,
+                netAmount: val,
+                notes: `ID Orçamento: ${updatedLead.budgetCode || "N/A"}${updatedLead.helper ? ` | Ajudante Auxiliar: ${updatedLead.helper.fullName || updatedLead.helper.tradeName}` : ""}`,
+                items: {
+                  create: [
+                    {
+                      description: updatedLead.title,
+                      unit: "serviço",
+                      quantity: 1,
+                      unitPrice: val,
+                      totalPrice: val,
+                    },
+                  ],
+                },
+              },
+            });
+            console.log(`🏭 Ordem de Serviço ${osCode} criada automaticamente para o Trabalho ${id}`);
+          }
+        }
+      } catch (triggerErr) {
+        console.warn("[CRM] Aviso ao disparar criação automática na Linha de Produção:", triggerErr);
+      }
+    }
+  
     return NextResponse.json({
       success: true,
       lead: updatedLead,

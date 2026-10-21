@@ -1,0 +1,62 @@
+{
+  "documents": {
+    "logoUrl": "",
+    "companyTradeName": "Icthus Soluções & Design",
+    "companyLegalName": "Icthus Comunicação Visual Ltda",
+    "cnpj": "45.123.456/0001-78",
+    "stateRegistration": "Isento",
+    "phone": "(41) 3345-8900",
+    "whatsapp": "(41) 99824-3990",
+    "email": "contato@icthusbrasil.com",
+    "website": "https://icthusbrasil.com",
+    "address": "Rua das Indústrias, 1024 - CIC",
+    "city": "Curitiba",
+    "state": "PR",
+    "pixKey": "45123456000178",
+    "pixKeyType": "CNPJ",
+    "proposalValidityDays": 15,
+    "defaultWarrantyMonths": 12,
+    "proposalFooterNotes": "Proposta sujeita a aprovação técnica e cadastral. Instalação e frete inclusos conforme especificações deste orçamento.",
+    "contractDefaultJurisdiction": "Comarca de Curitiba, Estado do Paraná",
+    "contractGeneralClauses": "As partes elegem o foro da Comarca de Curitiba/PR para dirimir quaisquer dúvidas oriundas deste contrato, renunciando a qualquer outro por mais privilegiado que seja."
+  },
+  "whatsapp": {
+    "provider": "wacli",
+    "mode": "http",
+    "apiUrl": "http://localhost:3001",
+    "sessionName": "glessios-wpp",
+    "apiKey": "",
+    "autoSendCredentials": true,
+    "autoSendProofs": true,
+    "autoSendOSUpdates": true,
+    "autoSendPixInvoice": true,
+    "status": "PAIRING_REQUIRED",
+    "lastConnectedAt": null
+  },
+  "company": {
+    "tradeName": "Icthus Comunicação Visual",
+    "legalName": "Icthus Soluções & Design Visual Ltda",
+    "cnpj": "45.123.456/0001-78",
+    "email": "contato@glessios.com.br",
+    "phone": "(41) 3345-8900",
+    "whatsapp": "(41) 99824-3990",
+    "address": "Rua das Indústrias, 1024 - CIC",
+    "city": "Curitiba",
+    "state": "PR"
+  },
+  "portal": {
+    "defaultPassword": "Icthus@123",
+    "portalUrl": "https://glessios.com.br/portal/login",
+    "allowSelfRegistration": false,
+    "welcomeMessageTemplate": "Olá, {nome}! Seu perfil de acesso ao Portal do Cliente Icthus foi liberado.\n\n🔗 Acesse: {url}\n📧 Login: {email}\n🔑 Senha: {senha}"
+  },
+  "production": {
+    "notifyOnNewProof": true,
+    "notifyOnStageChange": true,
+    "notifyOnInstallationSchedule": true
+  },
+  "server": {
+    "vpsHost": "72.62.141.188",
+    "cronEnabled": true
+  }
+}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { LeadSource, PriorityLevel } from "@prisma/client";
 import { sendWhatsAppMessage, WhatsAppTemplates } from "@/lib/whatsapp/wacli";
+import { generateNextBudgetCode } from "@/lib/crm/budget-code";
 
 /**
  * GET /api/v1/crm/leads
@@ -17,6 +18,16 @@ export async function GET(req: NextRequest) {
           include: {
             assignedTo: {
               select: { id: true, name: true, email: true },
+            },
+            helper: {
+              select: {
+                id: true,
+                tradeName: true,
+                companyName: true,
+                fullName: true,
+                phone: true,
+                whatsapp: true,
+              },
             },
             customer: {
               select: {
@@ -76,6 +87,12 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
+      budgetCode,
+      helperId,
+      voltage,
+      tools = [],
+      paintDetails,
+      freightDetails,
       title,
       contactName,
       contactPhone,
@@ -112,6 +129,8 @@ export async function POST(req: NextRequest) {
       targetColumnId = firstCol.id;
     }
 
+    const finalBudgetCode = budgetCode?.trim() || (await generateNextBudgetCode());
+
     // Calcula a ordem no final da coluna
     const leadsInCol = await prisma.lead.count({
       where: { columnId: targetColumnId },
@@ -119,7 +138,13 @@ export async function POST(req: NextRequest) {
 
     const lead = await prisma.lead.create({
       data: {
-        title: title || `Orçamento — ${contactName}`,
+        budgetCode: finalBudgetCode,
+        helperId: helperId || null,
+        voltage: voltage || null,
+        tools: Array.isArray(tools) ? tools : [],
+        paintDetails: paintDetails?.trim() || null,
+        freightDetails: freightDetails?.trim() || null,
+        title: title || `Orçamento [${finalBudgetCode}] — ${contactName}`,
         contactName,
         contactPhone,
         contactEmail: contactEmail || null,
@@ -134,6 +159,7 @@ export async function POST(req: NextRequest) {
       },
       include: {
         customer: true,
+        helper: true,
       },
     });
 

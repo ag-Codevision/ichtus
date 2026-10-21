@@ -24,6 +24,10 @@ export interface SearchedClient {
   type: string;
   personType: string;
   documentNumber: string | null;
+  contactPerson?: string | null;
+  contactRole?: string | null;
+  contactPersonPhone?: string | null;
+  contactPersonEmail?: string | null;
   phone: string | null;
   whatsapp: string | null;
   email: string | null;
@@ -296,6 +300,11 @@ export function ClientSearchAutocomplete({
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-[10px] text-zinc-400 truncate mt-0.5">
+                          {c.contactPerson && (
+                            <span className="text-[#FF650F] font-semibold">
+                              🗣️ {c.contactPerson} {c.contactRole ? `(${c.contactRole})` : ""}
+                            </span>
+                          )}
                           {c.documentNumber && <span>{c.documentNumber}</span>}
                           {c.whatsapp && (
                             <span className="text-emerald-600 dark:text-emerald-400 font-mono">

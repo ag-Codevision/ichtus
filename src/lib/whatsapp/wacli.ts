@@ -1,5 +1,6 @@
 import { exec } from "child_process";
 import { promisify } from "util";
+import { getSystemSettings } from "@/lib/settings/system-settings";
 
 const execAsync = promisify(exec);
 
@@ -12,7 +13,7 @@ export interface WACLiSendOptions {
 export interface WACLiResult {
   success: boolean;
   messageId?: string;
-  mode: "cli" | "http" | "mock_dev";
+  mode: "http" | "cli" | "mock_dev";
   error?: string;
 }
 
@@ -28,10 +29,8 @@ export function normalizePhoneNumber(phone: string): string {
   return digits;
 }
 
-import { getSystemSettings } from "@/lib/settings/system-settings";
-
 /**
- * Cliente de Envio via WACLI (WhatsApp CLI / Daemon Service)
+ * Cliente de Envio via WhatsApp (Microserviço Baileys Dedicado)
  */
 export async function sendWhatsAppMessage({
   to,
@@ -40,14 +39,14 @@ export async function sendWhatsAppMessage({
 }: WACLiSendOptions): Promise<WACLiResult> {
   const targetNumber = normalizePhoneNumber(to);
   const sysSettings = getSystemSettings();
-  const wacliApiUrl = sysSettings?.whatsapp?.apiUrl || process.env.WACLI_API_URL || "http://localhost:3001";
-  const wacliPath = process.env.WACLI_PATH || "wacli";
+  const wacliApiUrl =
+    process.env.WACLI_API_URL || sysSettings?.whatsapp?.apiUrl || "http://127.0.0.1:3001";
   const session = sysSettings?.whatsapp?.sessionName || process.env.WACLI_SESSION || "glessios-wpp";
 
-  // 1. Tentar envio via serviço HTTP do WACLI (se rodando como daemon local)
+  // 1. Envio prioritário via Microserviço HTTP do WhatsApp (Baileys)
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1500);
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos para protocolo WS
 
     const response = await fetch(`${wacliApiUrl}/api/send`, {
       method: "POST",
@@ -63,57 +62,56 @@ export async function sendWhatsAppMessage({
 
     clearTimeout(timeoutId);
 
-    if (response.ok) {
-      const data = await response.json();
+    const data = await response.json().catch(() => null);
+
+    if (response.ok && data?.success) {
       return {
         success: true,
-        messageId: data.id || `wacli-http-${Date.now()}`,
+        messageId: data.messageId || data.id || `wpp-${Date.now()}`,
         mode: "http",
       };
+    } else if (data?.error) {
+      return {
+        success: false,
+        mode: "http",
+        error: data.error,
+      };
     }
-  } catch {
-    // Falha de conexão com daemon HTTP, prosseguir para tentativa via CLI local
+  } catch (err: any) {
+    console.warn(`[WHATSAPP CLIENT] Falha de comunicação com microserviço (${wacliApiUrl}):`, err?.message || err);
   }
 
-  // 2. Tentar envio direto via linha de comando (CLI)
-  try {
-    // Sanitização de texto para shell seguro
-    const safeMsg = message.replace(/"/g, '\\"');
-    const mediaFlag = mediaUrl ? ` --media "${mediaUrl}"` : "";
-    const cmd = `${wacliPath} send --session "${session}" --to "${targetNumber}" --text "${safeMsg}"${mediaFlag}`;
+  // 2. Se o microserviço HTTP falhou, verificar se há CLI local instalada
+  const wacliPath = process.env.WACLI_PATH;
+  if (wacliPath) {
+    try {
+      const safeMsg = message.replace(/"/g, '\\"');
+      const mediaFlag = mediaUrl ? ` --media "${mediaUrl}"` : "";
+      const cmd = `${wacliPath} send --session "${session}" --to "${targetNumber}" --text "${safeMsg}"${mediaFlag}`;
 
-    const { stdout, stderr } = await execAsync(cmd, { timeout: 2500 });
-    if (!stderr || stderr.trim().length === 0 || stdout.includes("success")) {
+      const { stdout, stderr } = await execAsync(cmd, { timeout: 8000 });
+      if (!stderr || stderr.trim().length === 0 || stdout.includes("success")) {
+        return {
+          success: true,
+          messageId: `wacli-cli-${Date.now()}`,
+          mode: "cli",
+        };
+      }
+    } catch (cliError: any) {
       return {
-        success: true,
-        messageId: `wacli-cli-${Date.now()}`,
+        success: false,
         mode: "cli",
+        error: cliError?.message || "Erro ao executar CLI local do WhatsApp",
       };
     }
-  } catch (cliError: any) {
-    // Se a CLI não estiver instalada ou não tiver sessão ativa, registrar log estruturado em desenvolvimento
-    if (process.env.NODE_ENV !== "production") {
-      console.warn(
-        `[WACLI DEV MOCK] Mensagem simulada com sucesso para ${targetNumber}:\n${message}`
-      );
-      return {
-        success: true,
-        messageId: `mock-dev-${Date.now()}`,
-        mode: "mock_dev",
-      };
-    }
-
-    return {
-      success: false,
-      mode: "cli",
-      error: cliError?.message || "Erro desconhecido ao executar WACLI",
-    };
   }
 
+  // Retorna erro real sem fingir mock fake
   return {
     success: false,
-    mode: "cli",
-    error: "Falha ao enviar mensagem através dos adaptadores do WACLI",
+    mode: "http",
+    error:
+      "Não foi possível enviar a mensagem. O WhatsApp não está conectado ou o serviço está iniciando. Verifique o QR Code em Configurações.",
   };
 }
 
@@ -143,7 +141,7 @@ A sua ordem *${osCode}* avançou de etapa:
 📍 *Status Atual:* ${newStage}
 
 Acompanhe os detalhes em tempo real no seu Portal do Cliente:
-👉 https://glessios.com.br/portal
+👉 https://icthusbrasil.com/portal
   `.trim(),
 
   // Boas-Vindas e Acesso ao Portal do Cliente com Credenciais
@@ -201,10 +199,9 @@ O comprovante é processado automaticamente e sua produção é liberada de imed
 };
 
 /**
- * Cliente WACLI canônico
+ * Cliente WhatsApp canônico
  */
 export const wacli = {
   sendMessage: sendWhatsAppMessage,
   templates: WhatsAppTemplates,
 };
-

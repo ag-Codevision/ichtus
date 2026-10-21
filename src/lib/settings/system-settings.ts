@@ -1,7 +1,30 @@
 import fs from "fs";
 import path from "path";
 
+export interface DocumentCustomizationSettings {
+  logoUrl?: string;
+  companyTradeName: string;
+  companyLegalName: string;
+  cnpj: string;
+  stateRegistration?: string;
+  phone: string;
+  whatsapp: string;
+  email: string;
+  website?: string;
+  address: string;
+  city: string;
+  state: string;
+  pixKey?: string;
+  pixKeyType?: string;
+  proposalValidityDays: number;
+  defaultWarrantyMonths: number;
+  proposalFooterNotes?: string;
+  contractDefaultJurisdiction?: string;
+  contractGeneralClauses?: string;
+}
+
 export interface SystemSettings {
+  documents: DocumentCustomizationSettings;
   whatsapp: {
     provider: "wacli" | "evolution" | "z-api" | "custom_http";
     mode: "http" | "cli";
@@ -47,6 +70,27 @@ export interface SystemSettings {
 const SETTINGS_FILE_PATH = path.join(process.cwd(), "src", "config", "system-settings.json");
 
 export const DEFAULT_SETTINGS: SystemSettings = {
+  documents: {
+    logoUrl: "",
+    companyTradeName: "Icthus Soluções & Design",
+    companyLegalName: "Icthus Comunicação Visual Ltda",
+    cnpj: "45.123.456/0001-78",
+    stateRegistration: "Isento",
+    phone: "(41) 3345-8900",
+    whatsapp: "(41) 99824-3990",
+    email: "contato@icthusbrasil.com",
+    website: "https://icthusbrasil.com",
+    address: "Rua das Indústrias, 1024 - CIC",
+    city: "Curitiba",
+    state: "PR",
+    pixKey: "45123456000178",
+    pixKeyType: "CNPJ",
+    proposalValidityDays: 15,
+    defaultWarrantyMonths: 12,
+    proposalFooterNotes: "Proposta sujeita a aprovação técnica e cadastral. Instalação e frete inclusos conforme especificações deste orçamento.",
+    contractDefaultJurisdiction: "Comarca de Curitiba, Estado do Paraná",
+    contractGeneralClauses: "As partes elegem o foro da Comarca de Curitiba/PR para dirimir quaisquer dúvidas oriundas deste contrato, renunciando a qualquer outro por mais privilegiado que seja.",
+  },
   whatsapp: {
     provider: "wacli",
     mode: "http",
@@ -106,6 +150,7 @@ export function getSystemSettings(): SystemSettings {
         portal: { ...DEFAULT_SETTINGS.portal, ...(parsed.portal || {}) },
         production: { ...DEFAULT_SETTINGS.production, ...(parsed.production || {}) },
         server: { ...DEFAULT_SETTINGS.server, ...(parsed.server || {}) },
+        documents: { ...DEFAULT_SETTINGS.documents, ...(parsed.documents || {}) },
       };
     }
   } catch (err) {
@@ -128,6 +173,7 @@ export function saveSystemSettings(settings: Partial<SystemSettings>): SystemSet
       portal: { ...current.portal, ...(settings.portal || {}) },
       production: { ...current.production, ...(settings.production || {}) },
       server: { ...current.server, ...(settings.server || {}) },
+      documents: { ...current.documents, ...(settings.documents || {}) },
     };
 
     const dir = path.dirname(SETTINGS_FILE_PATH);

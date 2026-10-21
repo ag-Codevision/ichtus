@@ -29,6 +29,13 @@ yarn-error.log*
 public/uploads/*
 !public/uploads/.gitkeep
 
+# WhatsApp Auth Sessions & Microservice
+whatsapp_auth/
+whatsapp-service/auth_info/
+whatsapp-service/node_modules/
+*.session
+*.auth
+
 # IDE & OS
 .vscode/
 .idea/
