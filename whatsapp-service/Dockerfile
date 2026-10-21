@@ -5,7 +5,7 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-RUN apk add --no-cache curl openssl
+RUN apk add --no-cache curl openssl git
 
 COPY package.json ./
 
