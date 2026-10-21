@@ -22,25 +22,31 @@ export async function GET(request: Request) {
       }
     }
 
-    // Se não encontrou cliente na sessão, busca o cliente piloto (Loja Concept Batel)
-    let customer = null;
-    if (customerId) {
-      customer = await prisma.customer.findUnique({
-        where: { id: customerId },
-        include: { user: true },
-      });
+    // Se não houver identificador de cliente válido na sessão, rejeita sem fallbacks
+    if (!customerId) {
+      return NextResponse.json(
+        { success: false, error: "Acesso não autenticado. Faça login no Portal do Cliente." },
+        { status: 401 }
+      );
     }
 
-    if (!customer) {
-      customer = await prisma.customer.findFirst({
-        include: { user: true },
-      });
-    }
+    const customer = await prisma.customer.findUnique({
+      where: { id: customerId },
+      include: { user: true },
+    });
 
     if (!customer) {
       return NextResponse.json(
-        { success: false, error: "Nenhum cliente cadastrado no sistema" },
+        { success: false, error: "Perfil de cliente não encontrado no sistema." },
         { status: 404 }
+      );
+    }
+
+    // Regra estrita: apenas usuários com role CUSTOMER e ativos têm acesso
+    if (!customer.user || customer.user.role !== "CUSTOMER" || !customer.user.isActive) {
+      return NextResponse.json(
+        { success: false, error: "Acesso não autorizado. Esta área é restrita a clientes ativos." },
+        { status: 403 }
       );
     }
 
@@ -159,23 +165,6 @@ export async function GET(request: Request) {
         pendingInvoicesCount: invoices.filter((inv) => inv.status === InvoiceStatus.PENDING).length,
       },
     });
-
-    // Se o cliente ainda não possuía cookie de sessão, assegura a persistência segura
-    if (!sessionCookie?.value && customer.user) {
-      const sessionPayload = {
-        userId: customer.user.id,
-        name: customer.user.name,
-        role: "CUSTOMER",
-        customerId: customer.id,
-        tradeName: customer.tradeName || customer.user.name,
-        companyName: customer.companyName || null,
-      };
-      response.cookies.set("glessios_portal_session", JSON.stringify(sessionPayload), {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7,
-        sameSite: "lax",
-      });
-    }
 
     return response;
   } catch (error) {

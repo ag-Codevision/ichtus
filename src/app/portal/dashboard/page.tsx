@@ -197,9 +197,12 @@ export default function PortalDashboardPage() {
           }
         }
         setData(json);
+      } else {
+        router.push("/portal/login");
       }
     } catch (err) {
       console.error("Erro ao carregar dados do portal:", err);
+      router.push("/portal/login");
     } finally {
       setLoading(false);
     }

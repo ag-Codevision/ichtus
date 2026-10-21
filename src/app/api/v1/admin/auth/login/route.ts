@@ -17,21 +17,33 @@ export async function POST(request: Request) {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    // Busca o usuário com role ADMIN
+    // Busca o usuário
     const user = await prisma.user.findUnique({
       where: { email: cleanEmail },
     });
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: "Administrador não cadastrado no sistema" },
+        { success: false, error: "Administrador não cadastrado no sistema." },
         { status: 404 }
       );
     }
 
+    // Regra estrita de Role: Apenas ADMIN pode acessar o ERP
     if (user.role !== "ADMIN") {
       return NextResponse.json(
-        { success: false, error: "Acesso restrito apenas a usuários administradores." },
+        {
+          success: false,
+          error: "Acesso restrito apenas a administradores. Clientes devem acessar pelo Portal do Cliente (/portal/login).",
+        },
+        { status: 403 }
+      );
+    }
+
+    // Regra de ativação de conta
+    if (!user.isActive) {
+      return NextResponse.json(
+        { success: false, error: "Acesso administrativo desativado para esta conta." },
         { status: 403 }
       );
     }

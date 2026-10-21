@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-// POST: Autenticação de clientes e administradores no Portal do Cliente
+// POST: Autenticação exclusiva para Clientes no Portal do Cliente
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -63,12 +63,35 @@ export async function POST(request: Request) {
       );
     }
 
+    // Regra estrita de Role: Administradores não podem logar no portal de clientes
+    if (user.role !== "CUSTOMER") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Acesso não autorizado. Esta área é exclusiva para clientes. Administradores devem acessar pelo painel de gestão.",
+        },
+        { status: 403 }
+      );
+    }
+
     // Regra do sistema: o cliente só acessa se a chave estiver ligada no CRM (isActive = true)
     if (!user.isActive) {
       return NextResponse.json(
         {
           success: false,
           error: "O acesso ao Portal do Cliente está desativado para esta conta. Solicite a liberação com a equipe Icthus.",
+        },
+        { status: 403 }
+      );
+    }
+
+    // Validação estrita: o usuário deve possuir cadastro associado em Customer
+    const customerData = user.customerProfile;
+    if (!customerData) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Conta de usuário sem perfil de cliente vinculado. Entre em contato com a equipe Icthus.",
         },
         { status: 403 }
       );
@@ -95,23 +118,15 @@ export async function POST(request: Request) {
       }
     }
 
-    // Se o usuário não tiver registro em Customer (ex: ADMIN), vincula ao cliente piloto para visualização do portal
-    let customerData = user.customerProfile;
-    if (!customerData) {
-      customerData = await prisma.customer.findFirst({
-        include: { user: true },
-      });
-    }
-
-    // Cria os dados de sessão do cliente
+    // Cria os dados de sessão exclusivos do cliente
     const sessionData = {
       userId: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
-      customerId: customerData?.id || null,
-      tradeName: customerData?.tradeName || user.name,
-      companyName: customerData?.companyName || null,
+      customerId: customerData.id,
+      tradeName: customerData.tradeName || user.name,
+      companyName: customerData.companyName || null,
     };
 
     const response = NextResponse.json({
