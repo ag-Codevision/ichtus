@@ -199,29 +199,111 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Se houver documento, verifica unicidade no banco
+    // 1. Validação de Unicidade de Documento (CPF / CNPJ)
     const cleanedDoc = documentNumber?.replace(/\D/g, "");
-    if (cleanedDoc) {
-      const existing = await prisma.customer.findFirst({
+    if (cleanedDoc && cleanedDoc.length >= 8) {
+      const existingDoc = await prisma.customer.findFirst({
         where: {
-          documentNumber: {
-            in: [documentNumber, cleanedDoc],
-          },
+          OR: [
+            { documentNumber: { equals: documentNumber?.trim(), mode: "insensitive" } },
+            { documentNumber: { equals: cleanedDoc } },
+            { documentNumber: { contains: cleanedDoc } },
+          ],
         },
       });
 
-      if (existing) {
+      if (existingDoc) {
+        const contactName = existingDoc.tradeName || existingDoc.fullName || existingDoc.companyName || "Outro Cadastro";
+        const docLabel = personType === "PJ" ? "CNPJ" : "CPF";
         return NextResponse.json(
           {
             success: false,
-            error: `Já existe um cadastro com o documento informado (${existing.tradeName || existing.fullName || existing.companyName}).`,
+            error: `Não foi possível cadastrar: O ${docLabel} informado (${documentNumber}) já está cadastrado para o contato "${contactName}".`,
           },
           { status: 409 }
         );
       }
     }
 
+    // 2. Validação de Unicidade de E-mail
     const cleanEmail = email?.trim()?.toLowerCase() || null;
+    if (cleanEmail) {
+      const existingEmail = await prisma.customer.findFirst({
+        where: {
+          email: { equals: cleanEmail, mode: "insensitive" },
+        },
+      });
+
+      if (existingEmail) {
+        const contactName = existingEmail.tradeName || existingEmail.fullName || existingEmail.companyName || "Outro Cadastro";
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Não foi possível cadastrar: O e-mail informado (${cleanEmail}) já está cadastrado para o contato "${contactName}".`,
+          },
+          { status: 409 }
+        );
+      }
+
+      const existingUser = await prisma.user.findUnique({
+        where: { email: cleanEmail },
+        include: { customerProfile: true },
+      });
+
+      if (existingUser && existingUser.customerProfile) {
+        const contactName = existingUser.customerProfile.tradeName || existingUser.customerProfile.fullName || existingUser.customerProfile.companyName || existingUser.name;
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Não foi possível cadastrar: O e-mail (${cleanEmail}) já está vinculado ao usuário do cliente "${contactName}".`,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    // 3. Validação de Unicidade de Telefone / WhatsApp
+    const rawPhone = phone?.trim();
+    const rawWpp = whatsapp?.trim();
+    const cleanedPhone = phone?.replace(/\D/g, "");
+    const cleanedWpp = whatsapp?.replace(/\D/g, "");
+
+    const phoneValuesToCheck: string[] = [];
+    if (cleanedWpp && cleanedWpp.length >= 8) {
+      phoneValuesToCheck.push(cleanedWpp);
+      if (cleanedWpp.startsWith("55") && cleanedWpp.length >= 12) {
+        phoneValuesToCheck.push(cleanedWpp.slice(2));
+      }
+      if (rawWpp) phoneValuesToCheck.push(rawWpp);
+    }
+    if (cleanedPhone && cleanedPhone.length >= 8) {
+      phoneValuesToCheck.push(cleanedPhone);
+      if (rawPhone) phoneValuesToCheck.push(rawPhone);
+    }
+
+    if (phoneValuesToCheck.length > 0) {
+      const existingPhone = await prisma.customer.findFirst({
+        where: {
+          OR: [
+            { whatsapp: { in: phoneValuesToCheck } },
+            { phone: { in: phoneValuesToCheck } },
+            { contactPersonPhone: { in: phoneValuesToCheck } },
+          ],
+        },
+      });
+
+      if (existingPhone) {
+        const contactName = existingPhone.tradeName || existingPhone.fullName || existingPhone.companyName || "Outro Cadastro";
+        const duplicateDisplay = rawWpp || rawPhone;
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Não foi possível cadastrar: O telefone/WhatsApp (${duplicateDisplay}) já está cadastrado para o contato "${contactName}".`,
+          },
+          { status: 409 }
+        );
+      }
+    }
     let linkedUserId: string | null = null;
 
     // Se informado e-mail, cria automaticamente o perfil de acesso no banco

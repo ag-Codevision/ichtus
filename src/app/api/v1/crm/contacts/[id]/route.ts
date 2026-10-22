@@ -213,6 +213,126 @@ export async function PUT(req: NextRequest, { params }: Params) {
       tags,
     } = body;
 
+    // 1. Validação de Unicidade de Documento (CPF / CNPJ) na Edição
+    if (documentNumber !== undefined && documentNumber !== null && documentNumber !== "") {
+      const cleanedDoc = documentNumber.replace(/\D/g, "");
+      if (cleanedDoc && cleanedDoc.length >= 8) {
+        const existingDoc = await prisma.customer.findFirst({
+          where: {
+            id: { not: id },
+            OR: [
+              { documentNumber: { equals: documentNumber.trim(), mode: "insensitive" } },
+              { documentNumber: { equals: cleanedDoc } },
+              { documentNumber: { contains: cleanedDoc } },
+            ],
+          },
+        });
+
+        if (existingDoc) {
+          const contactName = existingDoc.tradeName || existingDoc.fullName || existingDoc.companyName || "Outro Cadastro";
+          const docLabel = (personType || existing.personType) === "PJ" ? "CNPJ" : "CPF";
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Não foi possível atualizar: O ${docLabel} informado (${documentNumber}) já está cadastrado para o contato "${contactName}".`,
+            },
+            { status: 409 }
+          );
+        }
+      }
+    }
+
+    // 2. Validação de Unicidade de E-mail na Edição
+    const candidateEmail = email !== undefined ? (email ? email.trim().toLowerCase() : null) : existing.email;
+    if (candidateEmail) {
+      const existingEmail = await prisma.customer.findFirst({
+        where: {
+          id: { not: id },
+          email: { equals: candidateEmail, mode: "insensitive" },
+        },
+      });
+
+      if (existingEmail) {
+        const contactName = existingEmail.tradeName || existingEmail.fullName || existingEmail.companyName || "Outro Cadastro";
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Não foi possível atualizar: O e-mail informado (${candidateEmail}) já está cadastrado para o contato "${contactName}".`,
+          },
+          { status: 409 }
+        );
+      }
+
+      const existingUser = await prisma.user.findUnique({
+        where: { email: candidateEmail },
+        include: { customerProfile: true },
+      });
+
+      if (
+        existingUser &&
+        existingUser.id !== existing.userId &&
+        existingUser.customerProfile &&
+        existingUser.customerProfile.id !== id
+      ) {
+        const contactName =
+          existingUser.customerProfile.tradeName ||
+          existingUser.customerProfile.fullName ||
+          existingUser.customerProfile.companyName ||
+          existingUser.name;
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Não foi possível atualizar: O e-mail (${candidateEmail}) já está vinculado ao usuário do cliente "${contactName}".`,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    // 3. Validação de Unicidade de Telefone / WhatsApp na Edição
+    const candidatePhone = phone !== undefined ? phone?.trim() : existing.phone;
+    const candidateWpp = whatsapp !== undefined ? whatsapp?.trim() : existing.whatsapp;
+    const cleanedPhone = candidatePhone?.replace(/\D/g, "");
+    const cleanedWpp = candidateWpp?.replace(/\D/g, "");
+
+    const phoneValuesToCheck: string[] = [];
+    if (cleanedWpp && cleanedWpp.length >= 8) {
+      phoneValuesToCheck.push(cleanedWpp);
+      if (cleanedWpp.startsWith("55") && cleanedWpp.length >= 12) {
+        phoneValuesToCheck.push(cleanedWpp.slice(2));
+      }
+      if (candidateWpp) phoneValuesToCheck.push(candidateWpp);
+    }
+    if (cleanedPhone && cleanedPhone.length >= 8) {
+      phoneValuesToCheck.push(cleanedPhone);
+      if (candidatePhone) phoneValuesToCheck.push(candidatePhone);
+    }
+
+    if (phoneValuesToCheck.length > 0) {
+      const existingPhone = await prisma.customer.findFirst({
+        where: {
+          id: { not: id },
+          OR: [
+            { whatsapp: { in: phoneValuesToCheck } },
+            { phone: { in: phoneValuesToCheck } },
+            { contactPersonPhone: { in: phoneValuesToCheck } },
+          ],
+        },
+      });
+
+      if (existingPhone) {
+        const contactName = existingPhone.tradeName || existingPhone.fullName || existingPhone.companyName || "Outro Cadastro";
+        const duplicateDisplay = candidateWpp || candidatePhone;
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Não foi possível atualizar: O telefone/WhatsApp (${duplicateDisplay}) já está cadastrado para o contato "${contactName}".`,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const effectiveEmail = email !== undefined ? (email ? email.trim().toLowerCase() : null) : existing.email;
     const effectiveName = (tradeName || fullName || companyName || contactPerson || existing.tradeName || existing.fullName || existing.companyName || "Cliente").trim();
     const effectivePhone = whatsapp || phone || existing.whatsapp || existing.phone || null;

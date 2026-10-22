@@ -64,7 +64,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       outlined:
         "bg-transparent text-zinc-800 dark:text-zinc-200 hover:text-[#FF650F] dark:hover:text-[#FF781B] border border-black/15 dark:border-white/15 hover:border-[#FF650F] dark:hover:border-[#FF781B] hover:bg-orange-500/[0.06]",
       outline:
-        "bg-transparent text-zinc-700 hover:text-[#FF650F] border border-zinc-300 hover:border-[#FF650F] hover:bg-orange-50/40",
+        "bg-transparent text-zinc-700 dark:text-zinc-200 hover:text-[#FF650F] dark:hover:text-[#FF781B] border border-zinc-300 dark:border-white/20 hover:border-[#FF650F] dark:hover:border-[#FF781B] hover:bg-orange-50/40 dark:hover:bg-white/[0.06]",
       "outline-dark":
         "bg-transparent text-zinc-200 hover:text-white border border-white/20 hover:border-white/40 hover:bg-white/[0.06]",
 

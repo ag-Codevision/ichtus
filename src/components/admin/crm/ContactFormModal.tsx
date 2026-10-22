@@ -20,6 +20,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
 interface ContactFormModalProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ export function ContactFormModal({
   onSuccess,
   initialData,
 }: ContactFormModalProps) {
+  const { toast } = useToast();
   const isEditing = Boolean(initialData?.id);
 
   const [formData, setFormData] = useState({
@@ -230,13 +232,21 @@ export function ContactFormModal({
       const data = await res.json();
 
       if (data.success) {
+        toast.success(
+          isEditing ? "Cadastro atualizado com sucesso!" : "Contato cadastrado com sucesso!",
+          "Salvo com Sucesso"
+        );
         onSuccess();
         onClose();
       } else {
-        setErrorMessage(data.error || "Ocorreu um erro ao salvar o contato.");
+        const msg = data.error || "Ocorreu um erro ao salvar o contato.";
+        setErrorMessage(msg);
+        toast.error(msg, "Informação Já Cadastrada / Incompatível", 6500);
       }
     } catch {
-      setErrorMessage("Erro de comunicação com o servidor.");
+      const msg = "Erro de comunicação com o servidor.";
+      setErrorMessage(msg);
+      toast.error(msg, "Falha de Conexão");
     } finally {
       setIsSubmitting(false);
     }
@@ -279,9 +289,14 @@ export function ContactFormModal({
         {/* Formulário com Scroll Interno */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
           {errorMessage && (
-            <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{errorMessage}</span>
+            <div className="p-4 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-3 shadow-sm animate-in fade-in">
+              <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-bold uppercase tracking-wider text-[11px] text-amber-900 dark:text-amber-100">
+                  Atenção: Não foi possível salvar o contato
+                </p>
+                <p className="leading-relaxed font-medium">{errorMessage}</p>
+              </div>
             </div>
           )}
 

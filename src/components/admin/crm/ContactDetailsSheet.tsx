@@ -244,13 +244,13 @@ export function ContactDetailsSheet({
                   Excluir
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="outlined"
                   size="sm"
                   onClick={() => onEdit(contact)}
-                  className="gap-1.5 text-xs rounded-full h-8 px-3"
+                  className="gap-1.5 text-xs font-bold rounded-full h-8 px-3.5 text-zinc-900 dark:text-zinc-100 bg-black/[0.04] dark:bg-white/[0.08] hover:bg-[#FF650F]/15 dark:hover:bg-[#FF650F]/20 hover:text-[#FF650F] dark:hover:text-[#FF781B] border border-black/15 dark:border-white/20 hover:border-[#FF650F]/60 shadow-sm transition-all active:scale-95"
                 >
-                  <Edit className="w-3.5 h-3.5" />
-                  Editar
+                  <Edit className="w-3.5 h-3.5 text-[#FF650F]" />
+                  <span>Editar</span>
                 </Button>
               </>
             )}
