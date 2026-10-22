@@ -607,7 +607,7 @@ export default function AdminSettingsPage() {
                     </label>
                     <input
                       type="text"
-                      placeholder="Ex: (51) 98329-5686"
+                      placeholder="Ex: (99) 99999-9999"
                       value={testPhone}
                       onChange={(e) => setTestPhone(formatPhoneInput(e.target.value))}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F] font-mono font-medium" id="test-phone-input"
@@ -618,7 +618,7 @@ export default function AdminSettingsPage() {
                         Instrução de Formato:
                       </p>
                       <p>
-                        <strong>Não precisa digitar +55 nem o sinal de +</strong>. Digite apenas o <strong>DDD + Celular</strong> (ex: <code className="text-[#FF650F] font-mono font-bold">(51) 98329-5686</code>). O sistema formata visualmente, valida o 9º dígito diretamente com os servidores da Meta e garante a entrega da mensagem.
+                        <strong>Não precisa digitar +55 nem o sinal de +</strong>. Digite apenas o <strong>DDD + Celular</strong> (ex: <code className="text-[#FF650F] font-mono font-bold">(99) 99999-9999</code>). O sistema formata visualmente, valida o 9º dígito diretamente com os servidores da Meta e garante a entrega da mensagem.
                       </p>
                     </div>
                   </div>
