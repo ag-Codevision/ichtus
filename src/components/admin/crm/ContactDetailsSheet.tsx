@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
 interface ContactDetailsSheetProps {
   contactId: string | null;
@@ -61,6 +62,7 @@ export function ContactDetailsSheet({
   // Estados de Exclusão do Contato
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (contactId && isOpen) {
@@ -154,19 +156,23 @@ export function ContactDetailsSheet({
     if (!data?.id) return;
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/v1/crm/contacts/${data.id}?force=true`, {
+      const res = await fetch(`/api/v1/crm/contacts/${data.id}`, {
         method: "DELETE",
       });
       const json = await res.json();
       if (json.success) {
         setIsConfirmingDelete(false);
         onClose();
+        toast.success(
+          json.message || "Contato removido com sucesso.",
+          json.action === "archived" ? "Contato Arquivado" : "Excluído com Sucesso"
+        );
         if (onContactDeleted) onContactDeleted();
       } else {
-        alert(json.error || "Falha ao excluir o contato.");
+        toast.error(json.error || "Falha ao excluir o contato.", "Erro ao Excluir");
       }
     } catch {
-      alert("Erro ao comunicar com o servidor ao excluir.");
+      toast.error("Erro ao comunicar com o servidor ao excluir.", "Erro de Conexão");
     } finally {
       setIsDeleting(false);
     }

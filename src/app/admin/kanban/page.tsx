@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   Kanban,
+  Users,
   Plus,
   Search,
   Filter,
@@ -20,7 +21,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash2,
-  Lock,
   Edit2,
   ArrowLeft,
   ArrowRight,
@@ -112,7 +112,9 @@ const DEFAULT_TOOLS = [
 export default function KanbanPage() {
   const router = useRouter();
 
-  // Estados do Kanban
+  // ==========================================
+  // ESTADOS DO FUNIL KANBAN
+  // ==========================================
   const [columns, setColumns] = useState<Column[]>([]);
   const [isKanbanLoading, setIsKanbanLoading] = useState(true);
   const [kanbanSearch, setKanbanSearch] = useState("");
@@ -139,9 +141,9 @@ export default function KanbanPage() {
   const [selectedCardLeadId, setSelectedCardLeadId] = useState<string | null>(null);
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
 
-  // Detalhes do contato vinculado ao lead (sheet lateral)
+  // Detalhes do contato (caso aberto via card)
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [isContactDetailsOpen, setIsContactDetailsOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   // Cliente selecionado no Seletor Inteligente para nova oportunidade
   const [selectedClientForNewLead, setSelectedClientForNewLead] = useState<SearchedClient | null>(null);
@@ -560,12 +562,13 @@ export default function KanbanPage() {
 
   return (
     <div className="w-full max-w-[1700px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col space-y-5 animate-in fade-in duration-300">
-      {/* Top Header Card */}
+      {/* Top Header Card com Identidade Exata do Print (Sem o SegmentedButton) */}
       <div className="p-5 sm:p-7 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-        <div className="space-y-1.5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 text-[#FF650F] text-xs font-bold uppercase tracking-wider">
-            <Kanban className="w-3.5 h-3.5" />
-            <span>Pipeline Comercial</span>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FF650F] bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">
+              Ecossistema Comercial & Operacional
+            </span>
           </div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight flex items-center gap-2.5">
             <Kanban className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF650F]" />
@@ -576,7 +579,7 @@ export default function KanbanPage() {
           </p>
         </div>
 
-        {/* Botão de Ação Primária */}
+        {/* Botão de Ação Primária idêntico ao do print */}
         <div className="flex items-center gap-3">
           <Button
             variant="primary"
@@ -585,12 +588,12 @@ export default function KanbanPage() {
             className="flex items-center gap-1.5 text-xs font-bold rounded-full shadow-sm"
           >
             <Plus className="w-4 h-4" />
-            <span>Novo Trabalho</span>
+            <span>Nova Oportunidade</span>
           </Button>
         </div>
       </div>
 
-      {/* ÁREA DO FUNIL COMERCIAL & KANBAN */}
+      {/* ÁREA DO FUNIL COMERCIAL & KANBAN (100% IDÊNTICA AO PRINT) */}
       <div className="space-y-4">
         {/* Barra de Ferramentas Superior do Funil */}
         <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -601,46 +604,54 @@ export default function KanbanPage() {
                 type="text"
                 value={kanbanSearch}
                 onChange={(e) => setKanbanSearch(e.target.value)}
-                placeholder="Buscar oportunidade ou cliente..."
-                className="w-full pl-9 pr-4 py-2 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F] transition-all"
+                placeholder="Buscar oportunidade, projeto..."
+                className="w-full pl-10 pr-4 py-2 rounded-full bg-zinc-50 dark:bg-[#121316] border border-black/[0.08] dark:border-white/[0.08] text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 focus:outline-none focus:border-[#FF650F] shadow-sm"
               />
             </div>
 
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-zinc-400" />
-              <select
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-                className="px-3 py-2 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-[#FF650F]"
-              >
-                <option value="ALL">Todas as prioridades</option>
-                <option value="URGENT">Urgente</option>
-                <option value="HIGH">Alta prioridade</option>
-                <option value="MEDIUM">Média prioridade</option>
-                <option value="LOW">Baixa prioridade</option>
-              </select>
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold flex items-center gap-1 mr-1 shrink-0">
+                <Filter className="w-3.5 h-3.5 text-[#FF650F]" />
+                Prioridade:
+              </span>
+              {["ALL", "URGENT", "HIGH", "MEDIUM", "LOW"].map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPriorityFilter(p)}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all shrink-0 ${
+                    priorityFilter === p
+                      ? "bg-[#FF650F] text-white shadow-sm"
+                      : "bg-zinc-100 dark:bg-[#141519] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white border border-black/[0.05] dark:border-white/[0.06]"
+                  }`}
+                >
+                  {p === "ALL" ? "Todas" : priorityBadges[p as keyof typeof priorityBadges]?.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-end md:self-auto">
-            {/* Controles de Navegação Horizontal Fluida */}
-            <div className="flex items-center gap-1 bg-black/[0.03] dark:bg-white/[0.04] p-1 rounded-2xl border border-black/[0.06] dark:border-white/[0.06]">
+          {/* Ações Rápidas: + Nova Coluna / Campo e Navegação Lateral */}
+          <div className="flex items-center gap-2 justify-between md:justify-end">
+            <div className="hidden sm:flex items-center gap-1 bg-zinc-100 dark:bg-[#121316] px-2.5 py-1 rounded-full border border-black/[0.06] dark:border-white/[0.08] text-[11px] text-zinc-500 font-medium">
+              <Hand className="w-3.5 h-3.5 text-[#FF650F]" />
+              <span>Arraste para rolar</span>
+            </div>
+
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={handleScrollLeft}
-                className="p-1.5 rounded-xl hover:bg-black/[0.06] dark:hover:bg-white/[0.08] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all active:scale-95"
-                title="Rolar para a esquerda"
+                title="Rolar para esquerda"
+                className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-[#202128] dark:hover:bg-[#282932] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-center text-zinc-600 dark:text-zinc-300 transition-colors shadow-sm"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-[10px] font-mono px-1 text-zinc-400 font-bold hidden sm:inline">
-                Scroll
-              </span>
               <button
                 type="button"
                 onClick={handleScrollRight}
-                className="p-1.5 rounded-xl hover:bg-black/[0.06] dark:hover:bg-white/[0.08] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all active:scale-95"
-                title="Rolar para a direita"
+                title="Rolar para direita"
+                className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-[#202128] dark:hover:bg-[#282932] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-center text-zinc-600 dark:text-zinc-300 transition-colors shadow-sm"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -650,345 +661,249 @@ export default function KanbanPage() {
               variant="outline"
               size="sm"
               onClick={handleOpenAddColumn}
-              className="flex items-center gap-1.5 text-xs font-bold rounded-2xl border-dashed"
+              className="rounded-full text-xs font-bold gap-1.5 border-dashed border-[#FF650F]/50 text-[#FF650F] hover:bg-orange-500/10"
             >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-[#FF650F]" />
-              <span>Gerenciar Colunas</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>Novo Campo</span>
             </Button>
           </div>
         </div>
 
-        {/* Resumo de Métricas Rápidas do Funil */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div className="p-4 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-orange-500/10 text-[#FF650F] flex items-center justify-center shrink-0">
-              <Layers className="w-5 h-5" />
+        {/* CONTÊINER TIPO CARD COM MOUSE DRAG-TO-SCROLL (MÃOZINHA DO MOUSE) */}
+        <div className="rounded-3xl bg-zinc-100/80 dark:bg-[#121316] border border-black/[0.06] dark:border-white/[0.08] p-4 relative shadow-m3-1 overflow-hidden">
+          {isKanbanLoading ? (
+            <div className="flex items-center justify-center py-28 text-xs text-zinc-500 dark:text-zinc-400">
+              <div className="w-5 h-5 border-2 border-[#FF650F] border-t-transparent rounded-full animate-spin mr-3" />
+              Carregando campos do funil comercial...
             </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
-                Total no Funil
-              </span>
-              <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white font-mono">
-                {allLeads.length} trabalhos
-              </span>
-            </div>
-          </div>
+          ) : (
+            <div
+              ref={kanbanViewportRef}
+              onMouseDown={handleViewportMouseDown}
+              onMouseMove={handleViewportMouseMove}
+              onMouseUp={handleViewportMouseUp}
+              onMouseLeave={handleViewportMouseLeave}
+              className={`flex gap-4 overflow-x-auto pb-4 pt-1 items-start no-scrollbar select-none ${
+                isPanning ? "cursor-grabbing" : "cursor-grab"
+              }`}
+            >
+              {columns.map((col, index) => {
+                const filteredLeads = col.leads.filter((lead) => {
+                  const matchSearch =
+                    lead.contactName.toLowerCase().includes(kanbanSearch.toLowerCase()) ||
+                    lead.title.toLowerCase().includes(kanbanSearch.toLowerCase()) ||
+                    lead.contactPhone.includes(kanbanSearch) ||
+                    (lead.customer?.tradeName || "").toLowerCase().includes(kanbanSearch.toLowerCase());
+                  const matchPriority = priorityFilter === "ALL" || lead.priority === priorityFilter;
+                  return matchSearch && matchPriority;
+                });
 
-          <div className="p-4 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-              <Briefcase className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
-                Pipeline Estimado
-              </span>
-              <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white font-mono">
-                {formatCurrency(totalValue)}
-              </span>
-            </div>
-          </div>
+                const colValue = filteredLeads.reduce(
+                  (sum, l) => sum + (Number(l.estimatedValue) || 0),
+                  0
+                );
 
-          <div className="col-span-2 sm:col-span-1 p-4 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-red-500/10 text-red-600 flex items-center justify-center shrink-0">
-              <AlertCircle className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
-                Urgentes / Alta
-              </span>
-              <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white font-mono">
-                {urgentCount} prioridades
-              </span>
-            </div>
-          </div>
-        </div>
+                const isDropActive = dragOverColumnId === col.id;
 
-        {/* Quadro Kanban de Colunas */}
-        {isKanbanLoading ? (
-          <div className="p-16 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] flex flex-col items-center justify-center gap-3 text-zinc-400">
-            <Loader2 className="w-8 h-8 animate-spin text-[#FF650F]" />
-            <span className="text-xs font-semibold">Carregando oportunidades do funil...</span>
-          </div>
-        ) : (
-          <div
-            ref={kanbanViewportRef}
-            onMouseDown={handleViewportMouseDown}
-            onMouseMove={handleViewportMouseMove}
-            onMouseUp={handleViewportMouseUp}
-            onMouseLeave={handleViewportMouseLeave}
-            className={`flex gap-4 overflow-x-auto pb-6 pt-1 select-none no-scrollbar ${
-              isPanning ? "cursor-grabbing" : "cursor-grab"
-            }`}
-            style={{ scrollBehavior: isPanning ? "auto" : "smooth" }}
-          >
-            {columns.map((column, colIdx) => {
-              const filteredLeads = column.leads.filter((lead) => {
-                const matchSearch =
-                  lead.title.toLowerCase().includes(kanbanSearch.toLowerCase()) ||
-                  lead.contactName.toLowerCase().includes(kanbanSearch.toLowerCase()) ||
-                  (lead.customer?.fullName || "").toLowerCase().includes(kanbanSearch.toLowerCase());
-                const matchPriority = priorityFilter === "ALL" || lead.priority === priorityFilter;
-                return matchSearch && matchPriority;
-              });
-
-              const colValue = filteredLeads.reduce((acc, l) => acc + (Number(l.estimatedValue) || 0), 0);
-              const isOver = dragOverColumnId === column.id;
-
-              return (
-                <div
-                  key={column.id}
-                  onDragOver={(e) => handleDragOver(e, column.id)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, column.id)}
-                  className={`w-[310px] sm:w-[330px] shrink-0 rounded-3xl bg-[#F8F5F2] dark:bg-[#131418] border transition-all duration-200 flex flex-col max-h-[82vh] ${
-                    isOver
-                      ? "border-[#FF650F] ring-2 ring-[#FF650F]/20 bg-orange-500/[0.03]"
-                      : "border-black/[0.06] dark:border-white/[0.06]"
-                  }`}
-                >
-                  {/* Cabeçalho da Coluna */}
-                  <div className="p-4 pb-3 flex items-center justify-between border-b border-black/[0.05] dark:border-white/[0.05] shrink-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span
-                        className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: column.color || "#FF650F" }}
-                      />
-                      <h3 className="text-xs font-black text-zinc-900 dark:text-white truncate">
-                        {column.name}
-                      </h3>
-                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-black/[0.05] dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-400">
-                        {filteredLeads.length}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1 shrink-0">
-                      {colIdx > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => handleMoveColumn(colIdx, "left")}
-                          className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.05]"
-                          title="Mover coluna para a esquerda"
-                        >
-                          <ChevronLeft className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      {colIdx < columns.length - 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleMoveColumn(colIdx, "right")}
-                          className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.05]"
-                          title="Mover coluna para a direita"
-                        >
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditColumn(column)}
-                        className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.05]"
-                        title="Editar coluna"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      {!column.isSystem && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteColumn(column)}
-                          className="p-1 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
-                          title="Excluir coluna"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Sub-barra de Valor Total da Coluna */}
-                  <div className="px-4 py-2 bg-black/[0.02] dark:bg-white/[0.02] flex items-center justify-between text-[10px] text-zinc-500 font-mono border-b border-black/[0.03] dark:border-white/[0.03] shrink-0">
-                    <span>Subtotal da Fase</span>
-                    <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                      {formatCurrency(colValue)}
-                    </span>
-                  </div>
-
-                  {/* Lista com scroll dos Cards da Coluna */}
-                  <div className="p-3 space-y-3 overflow-y-auto flex-1 no-scrollbar min-h-[150px]">
-                    {filteredLeads.map((lead) => {
-                      const isDragging = draggedLeadId === lead.id;
-                      const hasAttachments = (lead.attachments?.length || 0) > 0;
-                      const totalChecklistItems = lead.checklists?.flatMap((c) => c.items).length || 0;
-                      const completedChecklistItems = lead.checklists?.flatMap((c) => c.items).filter((i) => i.isCompleted).length || 0;
-
-                      return (
-                        <div
-                          key={lead.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, lead.id)}
-                          onDragEnd={handleDragEnd}
-                          onClick={() => {
-                            setSelectedCardLeadId(lead.id);
-                            setIsCardModalOpen(true);
-                          }}
-                          className={`p-3.5 rounded-2xl bg-white dark:bg-[#1C1D22] border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md hover:border-[#FF650F]/40 group flex flex-col gap-2.5 ${
-                            isDragging
-                              ? "opacity-40 scale-95 border-dashed border-[#FF650F]"
-                              : "border-black/[0.06] dark:border-white/[0.06]"
-                          }`}
-                        >
-                          {/* Imagem de Capa do Card */}
-                          {lead.coverImage && (
-                            <div className="w-full h-28 rounded-xl overflow-hidden bg-black/5 dark:bg-white/5 relative">
-                              <img
-                                src={lead.coverImage}
-                                alt={lead.title}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                            </div>
-                          )}
-
-                          {/* Tags / Etiquetas Coloridas */}
-                          {lead.tags && lead.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {lead.tags.map((t) => (
-                                <span
-                                  key={t.tag.id}
-                                  className="text-[9px] font-bold px-2 py-0.5 rounded-md text-white shadow-xs"
-                                  style={{ backgroundColor: t.tag.color }}
-                                >
-                                  {t.tag.name}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Título e Prioridade */}
-                          <div className="flex items-start justify-between gap-2">
-                            <h4 className="text-xs font-bold text-zinc-900 dark:text-white leading-snug line-clamp-2 group-hover:text-[#FF650F] transition-colors">
-                              {lead.title}
-                            </h4>
-                            <span
-                              className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
-                                priorityBadges[lead.priority]?.className || ""
-                              }`}
-                            >
-                              {priorityBadges[lead.priority]?.label || lead.priority}
-                            </span>
-                          </div>
-
-                          {/* Contato / Cliente */}
-                          <div className="flex items-center gap-1.5 text-[11px] text-zinc-600 dark:text-zinc-400">
-                            <Briefcase className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                            <span className="truncate font-medium">
-                              {lead.customer?.fullName || lead.customer?.tradeName || lead.contactName}
-                            </span>
-                          </div>
-
-                          {/* Valor Estimado e Prazo */}
-                          <div className="flex items-center justify-between pt-1 border-t border-black/[0.04] dark:border-white/[0.05] text-[10px] font-mono">
-                            <span className="font-extrabold text-[#FF650F]">
-                              {formatCurrency(lead.estimatedValue || 0)}
-                            </span>
-                            {lead.dueDate && (
-                              <span className="flex items-center gap-1 text-zinc-500">
-                                <Clock className="w-3 h-3" />
-                                {formatDate(lead.dueDate)}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Indicadores de Checklist, Anexo e Comentários */}
-                          <div className="flex items-center justify-between pt-1 text-[10px] text-zinc-400">
-                            <div className="flex items-center gap-3">
-                              {totalChecklistItems > 0 && (
-                                <span
-                                  className={`flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
-                                    completedChecklistItems === totalChecklistItems
-                                      ? "bg-emerald-500/10 text-emerald-600"
-                                      : "bg-black/[0.04] dark:bg-white/[0.05]"
-                                  }`}
-                                >
-                                  <CheckSquare className="w-3 h-3" />
-                                  {completedChecklistItems}/{totalChecklistItems}
-                                </span>
-                              )}
-                              {hasAttachments && (
-                                <span className="flex items-center gap-1 text-[9px]">
-                                  <Paperclip className="w-3 h-3" />
-                                  {lead.attachments?.length}
-                                </span>
-                              )}
-                              {(lead._count?.comments || 0) > 0 && (
-                                <span className="flex items-center gap-1 text-[9px]">
-                                  <MessageSquare className="w-3 h-3" />
-                                  {lead._count?.comments}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Botão de Excluir Rápido */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (confirm(`Deseja excluir a oportunidade "${lead.title}"?`)) {
-                                  handleDeleteLeadQuick(lead.id);
-                                }
-                              }}
-                              className="p-1 rounded-lg opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
-                              title="Excluir card"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {filteredLeads.length === 0 && (
-                      <div className="py-8 text-center text-zinc-400 text-xs flex flex-col items-center justify-center gap-1">
-                        <Layers className="w-5 h-5 opacity-40" />
-                        <span>Nenhum trabalho nesta fase</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Rodapé da Coluna com Botão de Adicionar Card Rápido */}
-                  <div className="p-3 pt-2 border-t border-black/[0.04] dark:border-white/[0.04] shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNewLeadForm((prev) => ({ ...prev, columnId: column.id }));
-                        setIsNewLeadModalOpen(true);
-                      }}
-                      className="w-full py-2 px-3 rounded-xl bg-black/[0.03] dark:bg-white/[0.03] hover:bg-black/[0.06] dark:hover:bg-white/[0.06] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+                return (
+                  <div key={col.id} className="shrink-0">
+                    <div
+                      onDragOver={(e) => handleDragOver(e, col.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, col.id)}
+                      className={`w-80 rounded-3xl bg-white dark:bg-[#17181F] border flex flex-col h-fit self-start shadow-m3-1 transition-all duration-200 ${
+                        isDropActive
+                          ? "border-[#FF650F] ring-2 ring-[#FF650F] ring-offset-2 dark:ring-offset-[#121316] scale-[1.01] bg-orange-500/[0.03]"
+                          : "border-black/[0.06] dark:border-white/[0.08]"
+                      }`}
                     >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Adicionar Trabalho</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                      {/* Cabeçalho da Coluna com Controles de CRUD */}
+                      <div className="p-3.5 border-b border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="w-3 h-3 rounded-full shrink-0 shadow-sm"
+                            style={{ backgroundColor: col.color || "#FF650F" }}
+                          />
+                          <h3 className="font-bold text-sm text-zinc-900 dark:text-white truncate" title={col.name}>
+                            {col.name}
+                          </h3>
+                          <span className="text-[10px] bg-zinc-100 dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-400 px-2 py-0.5 rounded-full font-mono font-semibold shrink-0">
+                            {filteredLeads.length}
+                          </span>
+                        </div>
 
-            {/* Botão de Adicionar Coluna no Final do Quadro */}
-            <div className="w-[280px] shrink-0">
-              <button
-                type="button"
-                onClick={handleOpenAddColumn}
-                className="w-full h-32 rounded-3xl border-2 border-dashed border-black/10 dark:border-white/10 hover:border-[#FF650F]/50 bg-black/[0.01] dark:bg-white/[0.01] hover:bg-orange-500/[0.02] flex flex-col items-center justify-center gap-2 text-zinc-500 hover:text-[#FF650F] transition-all"
-              >
-                <div className="w-10 h-10 rounded-2xl bg-orange-500/10 flex items-center justify-center">
-                  <Plus className="w-5 h-5 text-[#FF650F]" />
-                </div>
-                <span className="text-xs font-bold tracking-tight">Adicionar Novo Campo</span>
-              </button>
+                        {/* Ações de Reordenação e Edição da Coluna */}
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleMoveColumn(index, "left")}
+                            disabled={index === 0}
+                            title="Mover coluna para a esquerda"
+                            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] disabled:opacity-20 disabled:hover:bg-transparent"
+                          >
+                            <ArrowLeft className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleMoveColumn(index, "right")}
+                            disabled={index === columns.length - 1}
+                            title="Mover coluna para a direita"
+                            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] disabled:opacity-20 disabled:hover:bg-transparent"
+                          >
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditColumn(col)}
+                            title="Editar campo"
+                            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteColumn(col)}
+                            title="Excluir campo"
+                            className="p-1 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-500/10"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Sub-barra de Total Financeiro */}
+                      <div className="px-3.5 py-1.5 bg-zinc-50 dark:bg-[#14151B] border-b border-black/[0.03] dark:border-white/[0.04] flex items-center justify-between text-[11px]">
+                        <span className="text-zinc-500 font-medium">Volume Estimado:</span>
+                        <span className="font-mono font-bold text-[#FF650F]">
+                          {formatCurrency(colValue)}
+                        </span>
+                      </div>
+
+                      {/* Cards da Coluna com Expansão Natural */}
+                      <div className="p-3 space-y-3 flex-grow min-h-[180px]">
+                        {isDropActive && draggedLeadId && (
+                          <div className="p-3 rounded-2xl border-2 border-dashed border-[#FF650F] bg-orange-500/10 text-center animate-pulse flex items-center justify-center gap-2 text-xs font-bold text-[#FF650F]">
+                            Solte o trabalho aqui
+                          </div>
+                        )}
+
+                        {filteredLeads.map((lead) => {
+                          const priorityInfo = priorityBadges[lead.priority] || priorityBadges.MEDIUM;
+                          const isApprovedStage = col.name.toLowerCase().includes("aprovad") || col.name.toLowerCase().includes("fechad");
+
+                          return (
+                            <div
+                              key={lead.id}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, lead.id)}
+                              onDragEnd={handleDragEnd}
+                              onClick={() => {
+                                setSelectedCardLeadId(lead.id);
+                                setIsCardModalOpen(true);
+                              }}
+                              className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.05] dark:border-white/[0.06] hover:border-[#FF650F]/50 dark:hover:border-[#FF650F]/50 cursor-pointer transition-all duration-200 group hover:shadow-md space-y-2.5 relative"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="space-y-0.5 min-w-0">
+                                  <h4 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white line-clamp-1 group-hover:text-[#FF650F] transition-colors">
+                                    {lead.title}
+                                  </h4>
+                                  <p className="text-[11px] text-zinc-500 truncate">
+                                    {lead.customer?.tradeName || lead.customer?.companyName || lead.customer?.fullName || lead.contactName}
+                                  </p>
+                                </div>
+                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${priorityInfo.className}`}>
+                                  {priorityInfo.label}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center justify-between text-xs pt-1">
+                                <span className="text-[10px] text-zinc-400 font-mono">
+                                  {lead.source}
+                                </span>
+                                <span className="font-mono font-black text-sm text-[#FF650F]">
+                                  {formatCurrency(Number(lead.estimatedValue) || 0)}
+                                </span>
+                              </div>
+
+                              {lead.dueDate && (
+                                <div className="flex items-center gap-1.5 pt-1">
+                                  <span
+                                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                                      new Date(lead.dueDate).getTime() < Date.now()
+                                        ? "bg-red-500/10 text-red-600"
+                                        : "bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300"
+                                    }`}
+                                  >
+                                    <Clock className="w-3 h-3" />
+                                    <span>{formatDate(lead.dueDate)}</span>
+                                  </span>
+                                </div>
+                              )}
+
+                              <div className="pt-2 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between text-xs">
+                                <a
+                                  href={`https://wa.me/${lead.contactPhone.replace(/\D/g, "")}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-1"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5" />
+                                  {lead.contactPhone}
+                                </a>
+
+                                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">
+                                  {formatDate(lead.createdAt)}
+                                </span>
+                              </div>
+
+                              {isApprovedStage && (
+                                <div className="pt-1">
+                                  <Button
+                                    variant="primary"
+                                    size="sm"
+                                    isLoading={convertingLeadId === lead.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleConvertToOS(lead.id);
+                                    }}
+                                    className="w-full text-xs font-bold rounded-xl gap-1.5 py-1.5"
+                                  >
+                                    <Layers className="w-3.5 h-3.5" />
+                                    Converter em Ordem de Serviço
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Botão de Adicionar Nova Coluna no Final do Kanban */}
+              <div className="shrink-0 w-72 flex flex-col">
+                <button
+                  type="button"
+                  onClick={handleOpenAddColumn}
+                  className="w-full py-16 rounded-3xl border-2 border-dashed border-black/10 dark:border-white/10 hover:border-[#FF650F] bg-white/40 dark:bg-[#17181F]/40 hover:bg-orange-500/5 text-zinc-500 hover:text-[#FF650F] transition-all flex flex-col items-center justify-center gap-2 group shadow-sm"
+                >
+                  <div className="w-10 h-10 rounded-2xl bg-black/[0.04] dark:bg-white/[0.06] group-hover:bg-[#FF650F] group-hover:text-white flex items-center justify-center text-zinc-600 dark:text-zinc-300 transition-colors">
+                    <Plus className="w-5 h-5 stroke-[2.5]" />
+                  </div>
+                  <span className="text-xs font-bold tracking-tight">Adicionar Novo Campo</span>
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* ======================================================== */}
-      {/* MODAL: NOVO TRABALHO DO KANBAN COM VÍNCULO AO CRM        */}
+      {/* MODAL: NOVA OPORTUNIDADE DO KANBAN COM VÍNCULO AO CRM    */}
       {/* ======================================================== */}
       {isNewLeadModalOpen && (
         <div
@@ -1003,48 +918,42 @@ export default function KanbanPage() {
               <div className="w-10 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
             </div>
 
-            <div className="p-4 sm:p-5 border-b border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-orange-500/10 text-[#FF650F] flex items-center justify-center shrink-0">
-                  <Plus className="w-5 h-5 stroke-[2.5]" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                    Novo Trabalho no Funil
-                  </h3>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                    Cadastre uma nova oportunidade comercial
-                  </p>
-                </div>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.04] dark:border-white/[0.06] shrink-0">
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FF650F]">
+                  Funil de Vendas
+                </span>
+                <h3 className="text-lg font-black text-zinc-900 dark:text-white tracking-tight">
+                  Nova Oportunidade
+                </h3>
               </div>
-
               <button
                 type="button"
                 onClick={() => setIsNewLeadModalOpen(false)}
-                className="p-1.5 rounded-full hover:bg-black/[0.05] dark:hover:bg-white/[0.05] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateLead} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 no-scrollbar text-xs">
+            <form onSubmit={handleCreateLead} className="p-6 space-y-4 overflow-y-auto max-h-[70vh] no-scrollbar">
               <div>
-                <label className="block text-[11px] font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Título do Trabalho / Projeto *
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Título do Projeto / Oportunidade *
                 </label>
                 <input
                   type="text"
                   required
+                  placeholder="Ex: Fachada ACM Loja Conceito"
                   value={newLeadForm.title}
                   onChange={(e) => setNewLeadForm({ ...newLeadForm, title: e.target.value })}
-                  placeholder="Ex: Fachada ACM com Letra Caixa LED"
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                 />
               </div>
 
               {/* Seletor Inteligente de Cliente */}
               <div>
-                <label className="block text-[11px] font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
                   Cliente Vinculado (CRM)
                 </label>
                 <ClientSearchAutocomplete
@@ -1071,57 +980,55 @@ export default function KanbanPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
                     Nome do Contato *
                   </label>
                   <input
                     type="text"
                     required
+                    placeholder="João Silva"
                     value={newLeadForm.contactName}
                     onChange={(e) => setNewLeadForm({ ...newLeadForm, contactName: e.target.value })}
-                    placeholder="Nome da pessoa de contato"
-                    className="w-full px-3.5 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-[11px] font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
                     WhatsApp / Telefone *
                   </label>
                   <input
                     type="text"
                     required
+                    placeholder="(41) 99999-9999"
                     value={newLeadForm.contactPhone}
                     onChange={(e) => setNewLeadForm({ ...newLeadForm, contactPhone: e.target.value })}
-                    placeholder="(00) 00000-0000"
-                    className="w-full px-3.5 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
                     Valor Estimado (R$)
                   </label>
                   <input
                     type="number"
                     step="0.01"
+                    placeholder="4500.00"
                     value={newLeadForm.estimatedValue}
                     onChange={(e) => setNewLeadForm({ ...newLeadForm, estimatedValue: e.target.value })}
-                    placeholder="0,00"
-                    className="w-full px-3.5 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] text-xs font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-[11px] font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
                     Prioridade
                   </label>
                   <select
                     value={newLeadForm.priority}
                     onChange={(e) => setNewLeadForm({ ...newLeadForm, priority: e.target.value as any })}
-                    className="w-full px-3 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                   >
                     <option value="LOW">Baixa</option>
                     <option value="MEDIUM">Média</option>
@@ -1129,34 +1036,33 @@ export default function KanbanPage() {
                     <option value="URGENT">Urgente</option>
                   </select>
                 </div>
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Data de Entrega (Prazo)
+                  </label>
+                  <input
+                    type="date"
+                    value={newLeadForm.dueDate}
+                    onChange={(e) => setNewLeadForm({ ...newLeadForm, dueDate: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Prazo de Entrega Estimado
-                </label>
-                <input
-                  type="date"
-                  value={newLeadForm.dueDate}
-                  onChange={(e) => setNewLeadForm({ ...newLeadForm, dueDate: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Observações / Escopo Técnico
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Observações & Briefing
                 </label>
                 <textarea
-                  rows={3}
+                  rows={2}
+                  placeholder="Detalhes sobre medidas, cores e prazos..."
                   value={newLeadForm.notes}
                   onChange={(e) => setNewLeadForm({ ...newLeadForm, notes: e.target.value })}
-                  placeholder="Detalhes sobre medidas, cores, iluminação..."
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F] resize-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2.5">
+              <div className="pt-2 flex items-center justify-end gap-3">
                 <Button
                   type="button"
                   variant="outline"
@@ -1170,7 +1076,7 @@ export default function KanbanPage() {
                   variant="primary"
                   className="rounded-full px-5 text-xs font-bold"
                 >
-                  Criar Trabalho
+                  Adicionar ao Funil
                 </Button>
               </div>
             </form>
@@ -1179,57 +1085,90 @@ export default function KanbanPage() {
       )}
 
       {/* ======================================================== */}
-      {/* MODAL: GERENCIAR COLUNAS / FASES DO KANBAN               */}
+      {/* MODAL: NOVO / EDITAR CAMPO DO FUNIL                      */}
       {/* ======================================================== */}
       {isColumnModalOpen && (
         <div
-          className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-[85] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setIsColumnModalOpen(false)}
         >
           <div
-            className="w-full max-w-sm bg-white dark:bg-[#18191E] rounded-3xl border border-black/[0.08] dark:border-white/[0.08] shadow-2xl p-5 space-y-4"
+            className="w-full max-w-sm bg-white dark:bg-[#18191E] rounded-3xl border border-black/[0.08] dark:border-white/[0.08] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white">
-                {editingColumn ? "Editar Coluna do Funil" : "Nova Coluna do Funil"}
-              </h3>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.04] dark:border-white/[0.06]">
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FF650F]">
+                  Personalização do Funil
+                </span>
+                <h3 className="text-base font-black text-zinc-900 dark:text-white tracking-tight">
+                  {editingColumn ? "Editar Campo do Funil" : "Novo Campo no Funil"}
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsColumnModalOpen(false)}
-                className="p-1 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveColumn} className="space-y-4 text-xs">
+            <form onSubmit={handleSaveColumn} className="p-6 space-y-4">
               <div>
-                <label className="block text-[11px] font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Nome da Coluna *
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Nome do Campo / Coluna *
                 </label>
                 <input
                   type="text"
                   required
+                  placeholder="Ex: Em Negociação, Em Produção..."
                   value={columnForm.name}
                   onChange={(e) => setColumnForm({ ...columnForm, name: e.target.value })}
-                  placeholder="Ex: Proposta Enviada"
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Cor da Tag
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-2">
+                  Cor de Identificação
                 </label>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  {[
+                    "#FF650F", // Laranja Icthus
+                    "#2563EB", // Azul
+                    "#16A34A", // Verde
+                    "#9333EA", // Roxo
+                    "#D97706", // Âmbar
+                    "#DC2626", // Vermelho
+                    "#DB2777", // Rosa
+                    "#0891B2", // Ciano
+                    "#4B5563", // Grafite
+                  ].map((hex) => (
+                    <button
+                      key={hex}
+                      type="button"
+                      onClick={() => setColumnForm({ ...columnForm, color: hex })}
+                      className={`w-7 h-7 rounded-full transition-transform flex items-center justify-center ${
+                        columnForm.color === hex
+                          ? "scale-110 ring-2 ring-offset-2 ring-black dark:ring-white dark:ring-offset-[#18191E]"
+                          : "hover:scale-105 opacity-80 hover:opacity-100"
+                      }`}
+                      style={{ backgroundColor: hex }}
+                    >
+                      {columnForm.color === hex && <Check className="w-3.5 h-3.5 text-white" />}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2">
                   <input
                     type="color"
                     value={columnForm.color}
                     onChange={(e) => setColumnForm({ ...columnForm, color: e.target.value })}
-                    className="w-10 h-10 rounded-xl cursor-pointer border-0 bg-transparent"
+                    className="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent p-0"
                   />
-                  <span className="font-mono text-zinc-500">{columnForm.color}</span>
+                  <span className="text-xs font-mono text-zinc-500 uppercase">{columnForm.color}</span>
                 </div>
               </div>
 
@@ -1248,7 +1187,7 @@ export default function KanbanPage() {
                   isLoading={isSavingColumn}
                   className="rounded-full px-5 text-xs font-bold"
                 >
-                  {editingColumn ? "Atualizar Coluna" : "Criar Coluna"}
+                  {editingColumn ? "Atualizar Campo" : "Criar Campo"}
                 </Button>
               </div>
             </form>
@@ -1271,16 +1210,16 @@ export default function KanbanPage() {
         onConvertToOS={handleConvertToOS}
         onOpenContactDetails={(contactId) => {
           setSelectedContactId(contactId);
-          setIsContactDetailsOpen(true);
+          setIsDetailsOpen(true);
         }}
       />
 
       {/* MODAL: FICHA 360º DO CONTATO (CASO CLIQUE DENTRO DO CARD) */}
       <ContactDetailsSheet
         contactId={selectedContactId}
-        isOpen={isContactDetailsOpen}
+        isOpen={isDetailsOpen}
         onClose={() => {
-          setIsContactDetailsOpen(false);
+          setIsDetailsOpen(false);
           setSelectedContactId(null);
         }}
         onEdit={() => {}}
@@ -1289,12 +1228,12 @@ export default function KanbanPage() {
         }}
       />
 
-      {/* Botão Flutuante (FAB) de Adicionar Trabalho no Mobile */}
+      {/* Botão Flutuante (FAB) de Adicionar Oportunidade no Mobile */}
       <div className="fixed bottom-[90px] right-6 z-40 lg:hidden">
         <button
           type="button"
           onClick={() => setIsNewLeadModalOpen(true)}
-          aria-label="Novo Trabalho"
+          aria-label="Nova Oportunidade"
           className="w-14 h-14 rounded-full flex items-center justify-center text-white bg-gradient-to-tr from-[#FF650F] to-[#FFA05E] shadow-[0_6px_20px_rgba(255,101,15,0.4)] active:scale-95 transition-all duration-200 border-2 border-white/20 focus:outline-none"
         >
           <Plus className="w-6 h-6 stroke-[2.5]" />

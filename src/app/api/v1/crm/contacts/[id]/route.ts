@@ -324,11 +324,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
  * Desativação ou exclusão lógica do contato
  */
 export async function DELETE(req: NextRequest, { params }: Params) {
+  const { id } = await params;
   try {
-    const { id } = await params;
-    const { searchParams } = new URL(req.url);
-    const force = searchParams.get("force") === "true";
-
     const contact = await prisma.customer.findUnique({
       where: { id },
       include: {
@@ -337,7 +334,10 @@ export async function DELETE(req: NextRequest, { params }: Params) {
             serviceOrders: true,
             invoices: true,
             leads: true,
+            assistedLeads: true,
             stockItems: true,
+            appointments: true,
+            financialTransactions: true,
           },
         },
       },
@@ -350,51 +350,103 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       );
     }
 
-    const hasRelations =
-      contact._count.serviceOrders > 0 ||
-      contact._count.invoices > 0 ||
-      contact._count.leads > 0 ||
-      contact._count.stockItems > 0;
+    const hasFiscalOrOrderRecords =
+      contact._count.serviceOrders > 0 || contact._count.invoices > 0;
 
-    // Se tiver relações históricas ou não for forçado, faz exclusão lógica (inativação)
-    if (hasRelations && !force) {
+    // Se possui ordens de serviço ou faturas registradas (vínculos legais obrigatórios), arquiva com segurança
+    if (hasFiscalOrOrderRecords) {
       await prisma.customer.update({
         where: { id },
         data: { status: CustomerStatus.INACTIVE },
       });
+
       if (contact.userId) {
-        await prisma.user.update({
-          where: { id: contact.userId },
-          data: { isActive: false },
-        }).catch(() => {});
+        await prisma.user
+          .update({
+            where: { id: contact.userId },
+            data: { isActive: false },
+          })
+          .catch(() => {});
       }
+
       return NextResponse.json({
         success: true,
-        message: "Contato arquivado/inativado e perfil de acesso desativado.",
+        action: "archived",
+        message:
+          "O contato possui ordens de serviço ou faturas registradas e foi arquivado com segurança.",
       });
     }
 
-    // Se não tiver relações ou se for forçado, deleta o registro
-    await prisma.customer.delete({
-      where: { id },
+    // Se não possui faturas ou ordens de serviço, desvincula referências opcionais e realiza exclusão permanente
+    await prisma.$transaction(async (tx) => {
+      if (contact._count.leads > 0) {
+        await tx.lead.updateMany({
+          where: { customerId: id },
+          data: { customerId: null },
+        });
+      }
+      if (contact._count.assistedLeads > 0) {
+        await tx.lead.updateMany({
+          where: { helperId: id },
+          data: { helperId: null },
+        });
+      }
+      if (contact._count.appointments > 0) {
+        await tx.appointment.updateMany({
+          where: { customerId: id },
+          data: { customerId: null },
+        });
+      }
+      if (contact._count.financialTransactions > 0) {
+        await tx.financialTransaction.updateMany({
+          where: { customerId: id },
+          data: { customerId: null },
+        });
+      }
+      if (contact._count.stockItems > 0) {
+        await tx.stockItem.updateMany({
+          where: { supplierId: id },
+          data: { supplierId: null },
+        });
+      }
+      await tx.customer.delete({
+        where: { id },
+      });
     });
 
     if (contact.userId) {
       const user = await prisma.user.findUnique({ where: { id: contact.userId } });
       if (user && user.role === "CUSTOMER") {
         await prisma.user.delete({ where: { id: contact.userId } }).catch(() => {});
+      } else if (user) {
+        await prisma.user
+          .update({ where: { id: contact.userId }, data: { isActive: false } })
+          .catch(() => {});
       }
     }
 
     return NextResponse.json({
       success: true,
+      action: "deleted",
       message: "Contato removido com sucesso.",
     });
-  } catch (error: any) {
-    console.error("Erro ao excluir contato:", error);
-    return NextResponse.json(
-      { success: false, error: "Falha ao remover o contato." },
-      { status: 500 }
-    );
+  } catch (error) {
+    console.error("Erro na exclusão do contato, executando fallback de arquivamento seguro:", error);
+    try {
+      await prisma.customer.update({
+        where: { id },
+        data: { status: CustomerStatus.INACTIVE },
+      });
+      return NextResponse.json({
+        success: true,
+        action: "archived",
+        message: "Contato arquivado e inativado com segurança no sistema.",
+      });
+    } catch (fallbackError) {
+      return NextResponse.json(
+        { success: false, error: "Falha ao remover ou arquivar o contato." },
+        { status: 500 }
+      );
+    }
   }
 }

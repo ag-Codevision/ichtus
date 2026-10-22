@@ -31,6 +31,8 @@ export async function GET(req: NextRequest) {
 
     if (statusParam && statusParam !== "ALL") {
       where.status = statusParam as CustomerStatus;
+    } else if (!statusParam) {
+      where.status = { not: CustomerStatus.INACTIVE };
     }
 
     if (search) {

@@ -14,6 +14,8 @@ import { GoogleSearchBarWithChips, FilterChipType } from "@/components/admin/crm
 import { ContactsListGoogleStyle, ContactItem } from "@/components/admin/crm/ContactsListGoogleStyle";
 import { ContactDetailsSheet } from "@/components/admin/crm/ContactDetailsSheet";
 import { ContactFormModal } from "@/components/admin/crm/ContactFormModal";
+import { useToast } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export default function CrmPage() {
   // ==========================================
@@ -37,6 +39,9 @@ export default function CrmPage() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingContactData, setEditingContactData] = useState<any | null>(null);
+  const { toast } = useToast();
+  const [contactToDelete, setContactToDelete] = useState<ContactItem | null>(null);
+  const [isDeletingContact, setIsDeletingContact] = useState(false);
 
   // Carrega lista de contatos do CRM com ordenação
   const fetchContacts = useCallback(async () => {
@@ -95,39 +100,52 @@ export default function CrmPage() {
     setIsFormModalOpen(true);
   };
 
-  // Exclusão de contato a partir da lista
-  const handleDeleteContactFromList = async (contactId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este contato? Esta ação removerá ou inativará os dados associados na Icthus.")) return;
+  // Exclusão in-app de contato a partir da lista
+  const handleRequestDeleteContact = (contact: ContactItem) => {
+    setContactToDelete(contact);
+  };
+
+  const handleConfirmDeleteContact = async () => {
+    if (!contactToDelete) return;
+    setIsDeletingContact(true);
     try {
-      const res = await fetch(`/api/v1/crm/contacts/${contactId}?force=true`, {
+      const res = await fetch(`/api/v1/crm/contacts/${contactToDelete.id}`, {
         method: "DELETE",
       });
       const data = await res.json();
       if (data.success) {
+        toast.success(
+          data.message || "Contato removido com sucesso.",
+          data.action === "archived" ? "Contato Arquivado" : "Excluído com Sucesso"
+        );
+        setContactToDelete(null);
         fetchContacts();
       } else {
-        alert("Erro ao excluir contato: " + (data.error || "Falha na exclusão."));
+        toast.error(data.error || "Falha ao remover o contato.", "Erro ao Excluir");
       }
     } catch {
-      alert("Falha de comunicação com o servidor ao excluir contato.");
+      toast.error("Falha de comunicação com o servidor ao excluir contato.", "Erro de Conexão");
+    } finally {
+      setIsDeletingContact(false);
     }
   };
 
   return (
     <div className="w-full max-w-[1700px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col space-y-5 animate-in fade-in duration-300">
-      {/* Top Header Card */}
+      {/* Top Header Card com Identidade Exata do Print (Sem o SegmentedButton) */}
       <div className="p-5 sm:p-7 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-        <div className="space-y-1.5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 text-[#FF650F] text-xs font-bold uppercase tracking-wider">
-            <Users className="w-3.5 h-3.5" />
-            <span>Gestão de Relacionamento</span>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FF650F] bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">
+              Ecossistema Comercial & Operacional
+            </span>
           </div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight flex items-center gap-2.5">
             <Users className="w-6 h-6 sm:w-7 sm:h-7 text-[#FF650F]" />
             CRM & Base de Contatos
           </h1>
           <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
-            Gerencie clientes, fornecedores de insumos e prestadores de serviços de forma 360°.
+            Gerencie clientes, fornecedores de insumos e prestadores de serviços de forma 360º.
           </p>
         </div>
 
@@ -146,7 +164,7 @@ export default function CrmPage() {
       </div>
 
       {/* ======================================================== */}
-      {/* BASE DE CONTATOS & CRM NO FORMATO APP DO GOOGLE         */}
+      {/* VISTA 1: BASE DE CONTATOS & CRM NO FORMATO APP DO GOOGLE */}
       {/* ======================================================== */}
       <div className="space-y-4">
         {/* Métricas e KPIs em Cards Tonais Rápidos */}
@@ -227,7 +245,7 @@ export default function CrmPage() {
               isLoading={isContactsLoading}
               onSelectContact={handleOpenContactDetails}
               onEditContact={handleOpenEditContact}
-              onDeleteContact={(c) => handleDeleteContactFromList(c.id)}
+              onDeleteContact={handleRequestDeleteContact}
             />
           </div>
         </div>
@@ -257,6 +275,25 @@ export default function CrmPage() {
         }}
         onEdit={handleOpenEditContact}
         onContactDeleted={fetchContacts}
+      />
+
+      {/* ======================================================== */}
+      {/* MODAL 3: DIÁLOGO IN-APP DE CONFIRMAÇÃO DE EXCLUSÃO       */}
+      {/* ======================================================== */}
+      <ConfirmDialog
+        isOpen={Boolean(contactToDelete)}
+        onClose={() => !isDeletingContact && setContactToDelete(null)}
+        onConfirm={handleConfirmDeleteContact}
+        isLoading={isDeletingContact}
+        title="Excluir Contato"
+        description={
+          contactToDelete
+            ? `Deseja realmente remover o contato "${contactToDelete.tradeName || contactToDelete.fullName || contactToDelete.companyName}"? Caso possua histórico de ordens de serviço ou faturas, ele será arquivado com segurança.`
+            : ""
+        }
+        confirmText="Confirmar Exclusão"
+        cancelText="Cancelar"
+        variant="destructive"
       />
 
       {/* Botão Flutuante (FAB) de Adicionar Contato no Mobile */}
