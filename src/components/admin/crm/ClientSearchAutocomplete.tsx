@@ -41,6 +41,7 @@ interface ClientSearchAutocompleteProps {
   onSelectClient: (client: SearchedClient | null) => void;
   onOpenNewContactModal?: () => void;
   required?: boolean;
+  placeholder?: string;
 }
 
 export function ClientSearchAutocomplete({
@@ -48,6 +49,7 @@ export function ClientSearchAutocomplete({
   onSelectClient,
   onOpenNewContactModal,
   required = false,
+  placeholder = "Digite para buscar cliente (Nome, Fantasia, Razão Social, CNPJ, CPF, Telefone)...",
 }: ClientSearchAutocompleteProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchedClient[]>([]);
@@ -195,7 +197,7 @@ export function ClientSearchAutocomplete({
                 setQuery(e.target.value);
                 setIsOpen(true);
               }}
-              placeholder="Pesquisar por nome, razão social, CNPJ/CPF, WhatsApp..."
+              placeholder={placeholder}
               className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-[#FF650F] shadow-sm transition-all"
             />
             {query ? (

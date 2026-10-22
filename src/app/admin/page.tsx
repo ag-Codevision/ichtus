@@ -187,13 +187,21 @@ export default function AdminDashboardPage() {
                   <Briefcase className="w-4 h-4 text-glessios-orange" />
                   Gestão Comercial & Financeira
                 </h2>
-                <Link
-                  href="/admin/crm"
-                  className="text-xs font-bold text-glessios-orange hover:opacity-80 flex items-center gap-1 transition-opacity"
-                >
-                  Abrir CRM
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+                <div className="flex items-center gap-3">
+                  <Link
+                    href="/admin/crm"
+                    className="text-xs font-bold text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 transition-colors"
+                  >
+                    Contatos
+                  </Link>
+                  <Link
+                    href="/admin/kanban"
+                    className="text-xs font-bold text-glessios-orange hover:opacity-80 flex items-center gap-1 transition-opacity"
+                  >
+                    Abrir Funil
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
               </div>
 
               {/* Card: Funil de Vendas Recente */}

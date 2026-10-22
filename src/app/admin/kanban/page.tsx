@@ -1066,7 +1066,6 @@ export default function KanbanPage() {
                       }));
                     }
                   }}
-                  placeholder="Pesquisar cliente por nome, CNPJ, WhatsApp..."
                 />
               </div>
 
