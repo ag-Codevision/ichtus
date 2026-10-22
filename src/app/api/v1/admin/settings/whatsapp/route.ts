@@ -121,13 +121,19 @@ export async function POST(req: NextRequest) {
 
       const result = await sendWhatsAppMessage({ to, message });
 
+      const destinationInfo = result.resolvedJid
+        ? result.resolvedJid.split("@")[0]
+        : to;
+
       return NextResponse.json({
         success: result.success,
         mode: result.mode,
         messageId: result.messageId,
+        resolvedJid: result.resolvedJid,
+        verified: result.verified,
         error: result.error,
         message: result.success
-          ? "Disparo efetuado com sucesso pelo WhatsApp oficial da Icthus!"
+          ? `Disparo efetuado com sucesso pelo WhatsApp oficial da Icthus! (Destinatário: +${destinationInfo})`
           : result.error || "Falha no disparo da mensagem.",
       });
     }

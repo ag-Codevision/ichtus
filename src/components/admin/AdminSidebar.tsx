@@ -69,10 +69,17 @@ export function AdminSidebar({
   const businessItems = [
     {
       label: "CRM & Contatos",
-      description: "Clientes, Fornecedores & Funil",
+      description: "Clientes, Fornecedores & Insumos",
       href: "/admin/crm",
       icon: Users,
-      active: pathname.startsWith("/admin/crm"),
+      active: pathname === "/admin/crm" || (pathname.startsWith("/admin/crm") && !pathname.startsWith("/admin/crm/kanban")),
+    },
+    {
+      label: "Funil Kanban",
+      description: "Pipeline Comercial & Leads",
+      href: "/admin/kanban",
+      icon: Kanban,
+      active: pathname.startsWith("/admin/kanban"),
     },
     {
       label: "Agendamentos",

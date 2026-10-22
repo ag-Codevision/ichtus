@@ -37,6 +37,71 @@ function formatPhoneNumber(jidOrId) {
   return `+${raw}`;
 }
 
+/**
+ * Resolve o JID canônico e oficial registrado na Meta para o número de destino.
+ * No Brasil (DDI 55), contas antigas de celular (especialmente fora de SP) estão registradas
+ * nos servidores da Meta SEM o nono dígito (12 dígitos). Se enviar com o 9 para uma conta sem o 9
+ * (ou vice-versa), a Meta descarta silenciosamente a mensagem.
+ * O método sock.onWhatsApp() consulta diretamente a base da Meta e obtém o JID exato.
+ */
+async function resolveCanonicalJid(targetPhone) {
+  if (!sock || !isConnected) {
+    throw new Error("O WhatsApp não está conectado no momento.");
+  }
+
+  // Remove caracteres não numéricos
+  let digits = targetPhone.replace(/\D/g, "");
+
+  // Se o usuário digitou apenas DDD + número (10 ou 11 dígitos), prefixar DDI 55
+  if (!digits.startsWith("55") && (digits.length === 10 || digits.length === 11)) {
+    digits = "55" + digits;
+  }
+
+  // Se já for um JID com domínio ou grupo
+  if (targetPhone.includes("@g.us")) {
+    return { jid: targetPhone, exists: true };
+  }
+
+  const candidates = [digits];
+
+  // Gera variação com e sem o 9º dígito para o Brasil
+  if (digits.startsWith("55")) {
+    const ddd = digits.slice(2, 4);
+    const rest = digits.slice(4);
+
+    if (digits.length === 13 && rest.startsWith("9")) {
+      // Formato 13 dígitos: 55 + DDD + 9 + 8 dígitos -> testar também formato de 12 dígitos sem o 9
+      const withoutNine = `55${ddd}${rest.slice(1)}`;
+      candidates.push(withoutNine);
+    } else if (digits.length === 12) {
+      // Formato 12 dígitos: 55 + DDD + 8 dígitos -> testar também formato de 13 dígitos com o 9
+      const withNine = `55${ddd}9${rest}`;
+      candidates.push(withNine);
+    }
+  }
+
+  console.log(`[WHATSAPP] Validando número na Meta via onWhatsApp. Candidatos:`, candidates);
+
+  try {
+    const checkResults = await sock.onWhatsApp(...candidates);
+    console.log(`[WHATSAPP] Resultado da verificação da Meta:`, checkResults);
+
+    if (Array.isArray(checkResults) && checkResults.length > 0) {
+      const active = checkResults.find((r) => r && r.exists);
+      if (active && active.jid) {
+        console.log(`[WHATSAPP] ✅ JID canônico oficial identificado na Meta: ${active.jid}`);
+        return { jid: active.jid, exists: true };
+      }
+    }
+  } catch (lookupErr) {
+    console.warn(`[WHATSAPP] Aviso ao consultar onWhatsApp (${lookupErr.message}). Prosseguindo com fallback.`);
+  }
+
+  const fallbackJid = digits.includes("@s.whatsapp.net") ? digits : `${digits}@s.whatsapp.net`;
+  console.log(`[WHATSAPP] Usando JID fallback: ${fallbackJid}`);
+  return { jid: fallbackJid, exists: false };
+}
+
 async function startWhatsApp() {
   if (isStarting) return;
   isStarting = true;
@@ -202,12 +267,7 @@ const server = http.createServer(async (req, res) => {
           );
         }
 
-        let digits = to.replace(/\D/g, "");
-        if (!digits.startsWith("55") && (digits.length === 10 || digits.length === 11)) {
-          digits = "55" + digits;
-        }
-
-        const jid = digits.includes("@s.whatsapp.net") ? digits : `${digits}@s.whatsapp.net`;
+        const { jid, exists } = await resolveCanonicalJid(to);
 
         let sentResult;
         if (mediaUrl) {
@@ -221,13 +281,15 @@ const server = http.createServer(async (req, res) => {
           });
         }
 
-        console.log(`[WHATSAPP] Mensagem enviada com sucesso para ${jid}. ID: ${sentResult?.key?.id}`);
+        console.log(`[WHATSAPP] Mensagem enviada com sucesso para ${jid} (verificado Meta: ${exists}). ID: ${sentResult?.key?.id}`);
 
         res.writeHead(200, { "Content-Type": "application/json" });
         return res.end(
           JSON.stringify({
             success: true,
             messageId: sentResult?.key?.id || `wpp-${Date.now()}`,
+            resolvedJid: jid,
+            verified: exists,
             mode: "baileys_live",
           })
         );

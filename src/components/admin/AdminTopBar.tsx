@@ -15,7 +15,8 @@ export function AdminTopBar({ onOpenMobileMenu }: AdminTopBarProps) {
   const pathname = usePathname();
 
   const getPageTitle = () => {
-    if (pathname.startsWith("/admin/crm")) return "Funil Comercial & CRM Kanban";
+    if (pathname.startsWith("/admin/kanban")) return "Funil Comercial & Kanban";
+    if (pathname.startsWith("/admin/crm")) return "CRM & Base de Contatos";
     if (pathname.startsWith("/admin/agendamentos")) return "Agendamentos de Campo & Instalação";
     if (pathname.startsWith("/admin/producao")) return "Linha de Produção Fabril (8 Etapas)";
     if (pathname.startsWith("/admin/estoque")) return "Controle de Estoque & Insumos";

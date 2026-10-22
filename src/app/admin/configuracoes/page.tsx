@@ -48,6 +48,25 @@ export default function AdminSettingsPage() {
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testFeedback, setTestFeedback] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
+  // Formata o telefone dinamicamente no padrão brasileiro (XX) XXXXX-XXXX
+  const formatPhoneInput = (val: string) => {
+    let clean = val.replace(/\D/g, "");
+    // Se colou com DDI 55 e tem mais de 11 dígitos, remove o 55 para formatar
+    if (clean.startsWith("55") && clean.length > 11) {
+      clean = clean.slice(2);
+    }
+    if (clean.length <= 2) {
+      return clean.length > 0 ? `(${clean}` : "";
+    }
+    if (clean.length <= 6) {
+      return `(${clean.slice(0, 2)}) ${clean.slice(2)}`;
+    }
+    if (clean.length <= 10) {
+      return `(${clean.slice(0, 2)}) ${clean.slice(2, 6)}-${clean.slice(6)}`;
+    }
+    return `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7, 11)}`;
+  };
+
   // Estados Gerais de Configurações
   const [settings, setSettings] = useState<any>({
     whatsapp: {
@@ -588,11 +607,20 @@ export default function AdminSettingsPage() {
                     </label>
                     <input
                       type="text"
-                      placeholder="Ex: 41999998888 ou 5541999998888"
+                      placeholder="Ex: (51) 98329-5686"
                       value={testPhone}
-                      onChange={(e) => setTestPhone(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                      onChange={(e) => setTestPhone(formatPhoneInput(e.target.value))}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F] font-mono font-medium" id="test-phone-input"
                     />
+                    <div className="mt-2 p-2.5 rounded-xl bg-zinc-100 dark:bg-white/[0.03] border border-black/5 dark:border-white/5 text-[11px] text-zinc-600 dark:text-zinc-400 space-y-1">
+                      <p className="flex items-center gap-1.5 font-bold text-zinc-800 dark:text-zinc-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#FF650F]" />
+                        Instrução de Formato:
+                      </p>
+                      <p>
+                        <strong>Não precisa digitar +55 nem o sinal de +</strong>. Digite apenas o <strong>DDD + Celular</strong> (ex: <code className="text-[#FF650F] font-mono font-bold">(51) 98329-5686</code>). O sistema formata visualmente, valida o 9º dígito diretamente com os servidores da Meta e garante a entrega da mensagem.
+                      </p>
+                    </div>
                   </div>
 
                   <div>

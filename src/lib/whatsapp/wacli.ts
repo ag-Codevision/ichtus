@@ -14,11 +14,14 @@ export interface WACLiResult {
   success: boolean;
   messageId?: string;
   mode: "http" | "cli" | "mock_dev";
+  resolvedJid?: string;
+  verified?: boolean;
   error?: string;
 }
 
 /**
  * Normaliza o número de telefone para formato internacional padrão (DDI + DDD + Número)
+ * Aceita números com ou sem +55, com ou sem formatação, máscaras ou espaços.
  */
 export function normalizePhoneNumber(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -69,6 +72,8 @@ export async function sendWhatsAppMessage({
         success: true,
         messageId: data.messageId || data.id || `wpp-${Date.now()}`,
         mode: "http",
+        resolvedJid: data.resolvedJid,
+        verified: data.verified,
       };
     } else if (data?.error) {
       return {

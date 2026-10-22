@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   Kanban,
+  Users,
   Calendar,
   Layers,
   Package,
@@ -107,11 +108,18 @@ export function AdminMobileAppMenu() {
       badgeColor: "text-[#FF650F]",
       items: [
         {
-          label: "CRM Kanban",
-          description: "Funil de Vendas & Oportunidades",
+          label: "CRM & Contatos",
+          description: "Clientes, Fornecedores & Prestadores",
           href: "/admin/crm",
+          icon: Users,
+          active: pathname === "/admin/crm" || (pathname.startsWith("/admin/crm") && !pathname.startsWith("/admin/crm/kanban")),
+        },
+        {
+          label: "Funil Kanban",
+          description: "Funil Comercial & Oportunidades",
+          href: "/admin/kanban",
           icon: Kanban,
-          active: pathname.startsWith("/admin/crm"),
+          active: pathname.startsWith("/admin/kanban"),
         },
         {
           label: "Agendamentos",
