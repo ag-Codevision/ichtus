@@ -143,7 +143,13 @@ export default function AdminSettingsPage() {
     if (!silent) setIsCheckingWpp(true);
     setTestFeedback(null);
     try {
-      const res = await fetch("/api/v1/admin/settings/whatsapp");
+      const res = await fetch(`/api/v1/admin/settings/whatsapp?t=${Date.now()}`, {
+        cache: "no-store",
+        headers: {
+          "Pragma": "no-cache",
+          "Cache-Control": "no-cache",
+        },
+      });
       const json = await res.json();
       if (json.success) {
         setWppStatus(json);
@@ -183,8 +189,11 @@ export default function AdminSettingsPage() {
       });
       const json = await res.json();
       if (json.success) {
-        await refreshWhatsappStatus();
-        setFeedback({ type: "success", text: "Sessão desconectada. Novo QR Code gerado para pareamento." });
+        // Aguarda 1 segundo para o socket novo emitir o primeiro QR code e atualiza
+        setTimeout(() => {
+          refreshWhatsappStatus(false);
+        }, 1200);
+        setFeedback({ type: "success", text: "Sessão desconectada. Gerando novo QR Code para pareamento..." });
       }
     } catch {
       setFeedback({ type: "error", text: "Erro ao desconectar sessão." });

@@ -28,6 +28,49 @@ let isStarting = false;
 // Store de mensagens em memória para responder a solicitações de retry (Signal E2EE)
 const messageStore = new Map();
 
+// Utilitário para cache em memória compatível com a interface CacheStore do Baileys
+function createMemoryCache(maxSize = 2500) {
+  const store = new Map();
+  return {
+    get: (key) => store.get(key),
+    set: (key, value) => {
+      store.set(key, value);
+      if (store.size > maxSize) {
+        const first = store.keys().next().value;
+        store.delete(first);
+      }
+    },
+    del: (key) => store.delete(key),
+    flushAll: () => store.clear(),
+  };
+}
+
+const msgRetryCounterCache = createMemoryCache(3000);
+const userDevicesCache = createMemoryCache(3000);
+
+/**
+ * Esvazia os arquivos e pastas internas de auth_info sem remover o diretório em si.
+ * Isso evita o erro crítico EBUSY no Linux quando auth_info é ponto de montagem de volume no Docker.
+ */
+function clearAuthDir() {
+  try {
+    if (fs.existsSync(AUTH_DIR)) {
+      const files = fs.readdirSync(AUTH_DIR);
+      for (const file of files) {
+        const filePath = path.join(AUTH_DIR, file);
+        try {
+          fs.rmSync(filePath, { recursive: true, force: true });
+        } catch (fileErr) {
+          console.warn(`[WHATSAPP] Falha ao remover item de sessão ${file}:`, fileErr.message);
+        }
+      }
+      console.log(`[WHATSAPP] ✅ Pasta auth_info esvaziada com sucesso (${files.length} itens removidos).`);
+    }
+  } catch (err) {
+    console.error("[WHATSAPP] Erro ao esvaziar auth_info:", err);
+  }
+}
+
 const logger = pino({ level: process.env.LOG_LEVEL || "warn" });
 
 function formatPhoneNumber(jidOrId) {
@@ -142,6 +185,8 @@ async function startWhatsApp() {
         keys: makeCacheableSignalKeyStore(state.keys, logger),
       },
       logger,
+      msgRetryCounterCache,
+      userDevicesCache,
       printQRInTerminal: false,
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 60000,
@@ -208,23 +253,18 @@ async function startWhatsApp() {
           ? lastDisconnect.error.output?.statusCode
           : (lastDisconnect?.error)?.statusCode;
 
-        const isLoggedOut = statusCode === DisconnectReason.loggedOut;
-        console.log(`[WHATSAPP] Conexão encerrada. Código: ${statusCode}. Desconectado: ${isLoggedOut}`);
+        const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
+        console.log(`[WHATSAPP] Conexão encerrada. Código: ${statusCode}. Desconectado/Revogado: ${isLoggedOut}`);
 
         if (isLoggedOut) {
-          console.log("[WHATSAPP] Sessão deslogada. Limpando credenciais locais e reiniciando...");
-          try {
-            fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-            fs.mkdirSync(AUTH_DIR, { recursive: true });
-          } catch (e) {
-            console.error("[WHATSAPP] Erro ao limpar auth_dir:", e);
-          }
+          console.log("[WHATSAPP] Sessão deslogada/revogada. Limpando credenciais locais e reiniciando para novo QR Code...");
+          clearAuthDir();
           connectedPhone = null;
           currentQrCode = null;
           isStarting = false;
-          setTimeout(startWhatsApp, 3000);
+          setTimeout(startWhatsApp, 1000);
         } else {
-          console.log("[WHATSAPP] Reconectando automaticamente aos servidores do WhatsApp em 3s...");
+          console.log(`[WHATSAPP] Reconectando automaticamente aos servidores do WhatsApp em 3s (código: ${statusCode})...`);
           isStarting = false;
           setTimeout(startWhatsApp, 3000);
         }
@@ -392,18 +432,24 @@ const server = http.createServer(async (req, res) => {
     try {
       console.log("[WHATSAPP] Solicitação manual de desconexão recebida.");
       if (sock) {
-        await sock.logout().catch(() => null);
+        try {
+          await sock.logout();
+        } catch (logoutErr) {
+          console.warn("[WHATSAPP] Aviso ao executar logout:", logoutErr.message);
+        }
+        try {
+          sock.end(undefined);
+        } catch (_) {}
+        sock = null;
       }
-      try {
-        fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-        fs.mkdirSync(AUTH_DIR, { recursive: true });
-      } catch (e) {
-        console.error("[WHATSAPP] Erro ao limpar pasta auth_info:", e);
-      }
+      clearAuthDir();
       isConnected = false;
       connectedPhone = null;
       currentQrCode = null;
-      setTimeout(startWhatsApp, 1500);
+      isStarting = false;
+
+      // Inicia imediatamente novo socket limpo para gerar o QR code
+      setTimeout(startWhatsApp, 800);
 
       res.writeHead(200, { "Content-Type": "application/json" });
       return res.end(

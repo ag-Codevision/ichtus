@@ -23,8 +23,13 @@ export async function GET() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-      const res = await fetch(`${apiUrl}/api/status`, {
+      const res = await fetch(`${apiUrl}/api/status?t=${Date.now()}`, {
         signal: controller.signal,
+        cache: "no-store",
+        headers: {
+          "Pragma": "no-cache",
+          "Cache-Control": "no-cache",
+        },
       }).catch(() => null);
 
       clearTimeout(timeoutId);
