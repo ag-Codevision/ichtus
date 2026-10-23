@@ -34,7 +34,7 @@ if [ ! -f .env ]; then
 fi
 
 # 2.1 Garantir diretório de uploads com permissão total de escrita
-mkdir -p ./public/uploads/leads
+mkdir -p ./public/uploads/leads ./public/uploads/budgets ./public/uploads/documents
 chmod -R 777 ./public/uploads 2>/dev/null || true
 
 # 3. Limpeza Preventiva de Disco e Build das Imagens
