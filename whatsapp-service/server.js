@@ -42,10 +42,18 @@ function formatPhoneNumber(jidOrId) {
 }
 
 /**
- * Resolve o JID canônico e oficial para o número de destino.
- * No Brasil (DDI 55), celulares modernos operam obrigatoriamente com 9 dígitos (13 dígitos: 55 + DDD + 9xxxxxxxx).
- * A Meta armazena aliases legados de 12 dígitos, mas o envio DEVE ser feito para o JID moderno de 13 dígitos
- * para que o WhatsApp do celular do cliente decifre o texto sem ficar preso em "Aguardando mensagem".
+ * Resolve o JID canônico e oficial para o número de destino via API da Meta (Baileys).
+ * 
+ * Regra para celulares no Brasil (DDI 55):
+ * O WhatsApp da Meta armazena contas brasileiras sob dois padrões possíveis:
+ * 1. Legado (12 dígitos, sem o nono dígito '9', ex: 555183295686@s.whatsapp.net): contas mais antigas.
+ * 2. Moderno (13 dígitos, com o nono dígito '9', ex: 5551983295686@s.whatsapp.net): contas mais novas.
+ * 
+ * CRÍTICO: Se enviarmos para o formato que não corresponde ao registro oficial na Meta,
+ * a mensagem é descartada silenciosamente pelos servidores do WhatsApp ou a entrega não ocorre.
+ * 
+ * Portanto, geramos as variações possíveis (com 9 e sem 9) e consultamos `sock.onWhatsApp(...)`.
+ * Usamos EXATAMENTE o JID oficial confirmado pela Meta (`exists: true`).
  */
 async function resolveCanonicalJid(targetPhone) {
   if (!sock || !isConnected) {
@@ -55,51 +63,68 @@ async function resolveCanonicalJid(targetPhone) {
   // Remove caracteres não numéricos
   let digits = targetPhone.replace(/\D/g, "");
 
+  // Se já for um JID com domínio ou grupo
+  if (targetPhone.includes("@g.us") || targetPhone.includes("@broadcast")) {
+    return { jid: targetPhone, exists: true };
+  }
+
   // Se o usuário digitou apenas DDD + número (10 ou 11 dígitos), prefixar DDI 55
   if (!digits.startsWith("55") && (digits.length === 10 || digits.length === 11)) {
     digits = "55" + digits;
   }
 
-  // Se já for um JID com domínio ou grupo
-  if (targetPhone.includes("@g.us")) {
-    return { jid: targetPhone, exists: true };
-  }
+  const candidateNumbers = [];
 
-  // Celulares no Brasil (DDI 55 + DDD 2 dígitos + 9 dígitos começando com 9 = 13 dígitos)
-  if (digits.startsWith("55")) {
+  // Variações para números brasileiros (+55)
+  if (digits.startsWith("55") && digits.length >= 12) {
     const ddd = digits.slice(2, 4);
     const rest = digits.slice(4);
 
-    if (digits.length === 13 && rest.startsWith("9")) {
-      const canonicalJid = `${digits}@s.whatsapp.net`;
+    if (rest.length === 9) {
+      // Número informado com 9 dígitos locais (13 dígitos no total)
+      // Variação 1: formato legado da Meta (sem o 9 inicial) -> 12 dígitos
       const legacyWithoutNine = `55${ddd}${rest.slice(1)}`;
-      try {
-        const checkResults = await sock.onWhatsApp(digits, legacyWithoutNine);
-        console.log(`[WHATSAPP] Verificação de celular na Meta (${digits}):`, checkResults);
-        const exists = Array.isArray(checkResults) && checkResults.some((r) => r && r.exists);
-        console.log(`[WHATSAPP] ✅ JID de celular brasileiro definido: ${canonicalJid} (ativo: ${exists})`);
-        return { jid: canonicalJid, exists };
-      } catch (err) {
-        console.warn(`[WHATSAPP] Aviso ao verificar onWhatsApp (${err.message}). Prosseguindo com ${canonicalJid}`);
-        return { jid: canonicalJid, exists: true };
+      candidateNumbers.push(legacyWithoutNine);
+      // Variação 2: formato moderno (com os 9 dígitos) -> 13 dígitos
+      candidateNumbers.push(digits);
+    } else if (rest.length === 8) {
+      // Número informado com 8 dígitos locais (12 dígitos no total)
+      // Se for celular (começando de 6 a 9), pode ter nono dígito na Meta
+      if (parseInt(rest[0], 10) >= 6) {
+        candidateNumbers.push(`55${ddd}9${rest}`);
       }
-    } else if (digits.length === 12 && !rest.startsWith("9")) {
-      // Pode ser telefone fixo comercial (8 dígitos locais) ou celular antigo informado sem o 9
-      // Se for celular (primeiro dígito entre 6 e 9), converte para o formato com 9
-      const firstLocalDigit = rest.charAt(0);
-      if (parseInt(firstLocalDigit, 10) >= 6) {
-        const withNineDigits = `55${ddd}9${rest}`;
-        const canonicalJid = `${withNineDigits}@s.whatsapp.net`;
-        console.log(`[WHATSAPP] Celular informado sem o 9º dígito. Normalizado para: ${canonicalJid}`);
-        return { jid: canonicalJid, exists: true };
-      }
+      // Variação exata informada (legado ou fixo)
+      candidateNumbers.push(digits);
+    } else {
+      candidateNumbers.push(digits);
     }
+  } else {
+    candidateNumbers.push(digits);
   }
 
-  // Fallback padrão para outros números e internacionais
-  const standardJid = digits.includes("@s.whatsapp.net") ? digits : `${digits}@s.whatsapp.net`;
-  console.log(`[WHATSAPP] Usando JID padrão: ${standardJid}`);
-  return { jid: standardJid, exists: true };
+  console.log(`[WHATSAPP] 🔍 Consultando registro oficial na Meta para variações:`, candidateNumbers);
+
+  try {
+    const checkResults = await sock.onWhatsApp(...candidateNumbers);
+    console.log(`[WHATSAPP] 📥 Resposta onWhatsApp da Meta:`, JSON.stringify(checkResults));
+
+    if (Array.isArray(checkResults)) {
+      // Procura primeiro pelo candidato que a Meta confirmou como ativo (exists: true)
+      const activeUser = checkResults.find((r) => r && r.exists && r.jid);
+      if (activeUser) {
+        console.log(`[WHATSAPP] ✅ JID oficial confirmado pela Meta: ${activeUser.jid}`);
+        return { jid: activeUser.jid, exists: true };
+      }
+    }
+  } catch (err) {
+    console.warn(`[WHATSAPP] ⚠️ Falha na verificação onWhatsApp (${err.message}). Prosseguindo com fallback.`);
+  }
+
+  // Fallback seguro se não houver confirmação na Meta
+  const fallbackNum = candidateNumbers[0] || digits;
+  const fallbackJid = fallbackNum.includes("@s.whatsapp.net") ? fallbackNum : `${fallbackNum}@s.whatsapp.net`;
+  console.log(`[WHATSAPP] ⚠️ JID não confirmado na Meta. Usando fallback: ${fallbackJid}`);
+  return { jid: fallbackJid, exists: false };
 }
 
 async function startWhatsApp() {
@@ -295,10 +320,15 @@ const server = http.createServer(async (req, res) => {
 
         const { jid, exists } = await resolveCanonicalJid(to);
 
-        // Identifica se o destinatário é o mesmo aparelho pareado no sistema
+        // Identifica com precisão se o destinatário é o mesmo aparelho pareado no sistema (DDD + número)
         const connectedDigits = (sock.user?.id || "").split(":")[0].split("@")[0].replace(/\D/g, "");
         const targetDigits = jid.split("@")[0].replace(/\D/g, "");
-        const isSelf = Boolean(connectedDigits && targetDigits && (connectedDigits === targetDigits || connectedDigits.endsWith(targetDigits.slice(-8)) || targetDigits.endsWith(connectedDigits.slice(-8))));
+        const isSelf = Boolean(
+          connectedDigits &&
+          targetDigits &&
+          (connectedDigits === targetDigits ||
+            (connectedDigits.length >= 10 && targetDigits.length >= 10 && connectedDigits.slice(-10) === targetDigits.slice(-10)))
+        );
 
         if (isSelf) {
           console.warn(`[WHATSAPP] ⚠️ AVISO: Mensagem sendo enviada para o próprio número pareado (${connectedPhone || targetDigits}).`);
@@ -312,17 +342,21 @@ const server = http.createServer(async (req, res) => {
           };
           sentResult = await sock.sendMessage(jid, payload);
           if (sentResult?.key?.id) {
-            messageStore.set(sentResult.key.id, {
-              imageMessage: { caption: message, url: mediaUrl },
-            });
+            // Salva o proto original da mensagem para atender retries do Signal Protocol E2EE
+            messageStore.set(
+              sentResult.key.id,
+              sentResult.message || { imageMessage: { caption: message, url: mediaUrl } }
+            );
           }
         } else {
           const payload = { text: message };
           sentResult = await sock.sendMessage(jid, payload);
           if (sentResult?.key?.id) {
-            messageStore.set(sentResult.key.id, {
-              conversation: message,
-            });
+            // Salva o proto original da mensagem para atender retries do Signal Protocol E2EE
+            messageStore.set(
+              sentResult.key.id,
+              sentResult.message || { conversation: message }
+            );
           }
         }
 
@@ -388,6 +422,23 @@ const server = http.createServer(async (req, res) => {
           error: err?.message || "Falha ao desconectar sessão.",
         })
       );
+    }
+  }
+
+  // 5. Diagnóstico de número na Meta
+  if (req.method === "GET" && pathname === "/api/check-phone") {
+    try {
+      const phone = parsedUrl.searchParams.get("phone") || "";
+      if (!sock || !isConnected) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ success: false, error: "WhatsApp não está conectado no momento." }));
+      }
+      const canonical = await resolveCanonicalJid(phone);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ success: true, input: phone, ...canonical }));
+    } catch (e) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ success: false, error: e.message }));
     }
   }
 
