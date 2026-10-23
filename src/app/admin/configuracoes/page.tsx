@@ -601,9 +601,21 @@ export default function AdminSettingsPage() {
                 </div>
 
                 <form onSubmit={handleSendTestMessage} className="space-y-3.5">
+                  {wppStatus?.connectedNumber && (
+                    <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs flex items-center justify-between">
+                      <span className="text-zinc-500 dark:text-zinc-400 font-medium flex items-center gap-1.5">
+                        <Smartphone className="w-4 h-4 text-emerald-500" />
+                        Remetente Pareado (Servidor):
+                      </span>
+                      <span className="font-mono font-black text-emerald-700 dark:text-emerald-300">
+                        {wppStatus.connectedNumber}
+                      </span>
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      Número de Destino (com DDD):
+                      Número de Destino (Cliente / Quem irá receber):
                     </label>
                     <input
                       type="text"
@@ -612,13 +624,22 @@ export default function AdminSettingsPage() {
                       onChange={(e) => setTestPhone(formatPhoneInput(e.target.value))}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F] font-mono font-medium" id="test-phone-input"
                     />
+                    {wppStatus?.connectedNumber && testPhone.replace(/\D/g, "").length >= 8 && (
+                      wppStatus.connectedNumber.replace(/\D/g, "").endsWith(testPhone.replace(/\D/g, "").slice(-8)) ||
+                      testPhone.replace(/\D/g, "").endsWith(wppStatus.connectedNumber.replace(/\D/g, "").slice(-8))
+                    ) && (
+                      <div className="mt-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-amber-500" />
+                        <span>Você informou o mesmo número que está pareado no sistema como remetente.</span>
+                      </div>
+                    )}
                     <div className="mt-2 p-2.5 rounded-xl bg-zinc-100 dark:bg-white/[0.03] border border-black/5 dark:border-white/5 text-[11px] text-zinc-600 dark:text-zinc-400 space-y-1">
                       <p className="flex items-center gap-1.5 font-bold text-zinc-800 dark:text-zinc-200">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#FF650F]" />
                         Instrução de Formato:
                       </p>
                       <p>
-                        <strong>Não precisa digitar +55 nem o sinal de +</strong>. Digite apenas o <strong>DDD + Celular</strong> (ex: <code className="text-[#FF650F] font-mono font-bold">(99) 99999-9999</code>). O sistema formata visualmente, valida o 9º dígito diretamente com os servidores da Meta e garante a entrega da mensagem.
+                        <strong>Não precisa digitar +55 nem o sinal de +</strong>. Digite apenas o <strong>DDD + Celular do cliente</strong> (ex: <code className="text-[#FF650F] font-mono font-bold">(99) 99999-9999</code>). O robô Icthus despacha a mensagem de forma autônoma e transparente.
                       </p>
                     </div>
                   </div>
@@ -637,7 +658,7 @@ export default function AdminSettingsPage() {
 
                   <div className="flex items-center justify-between pt-1">
                     <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                      Dica: teste enviando para o seu próprio WhatsApp pessoal.
+                      O robô envia diretamente para o número informado acima.
                     </span>
 
                     <Button

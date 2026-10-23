@@ -123,7 +123,9 @@ export async function POST(req: NextRequest) {
 
       const destinationInfo = result.resolvedJid
         ? result.resolvedJid.split("@")[0]
-        : to;
+        : to.replace(/\D/g, "");
+
+      const isSelf = Boolean(result.isSelf);
 
       return NextResponse.json({
         success: result.success,
@@ -131,9 +133,12 @@ export async function POST(req: NextRequest) {
         messageId: result.messageId,
         resolvedJid: result.resolvedJid,
         verified: result.verified,
+        isSelf,
         error: result.error,
         message: result.success
-          ? `Disparo efetuado com sucesso pelo WhatsApp oficial da Icthus! (Destinatário: +${destinationInfo})`
+          ? isSelf
+            ? `Disparo concluído! Atenção: o número de destino (+${destinationInfo}) é o mesmo aparelho pareado no sistema.`
+            : `Disparo efetuado com sucesso para o destinatário +${destinationInfo}!`
           : result.error || "Falha no disparo da mensagem.",
       });
     }

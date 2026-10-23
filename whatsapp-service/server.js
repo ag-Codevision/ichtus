@@ -8,6 +8,7 @@ const {
   DisconnectReason,
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
+  makeCacheableSignalKeyStore,
 } = require("@whiskeysockets/baileys");
 const { Boom } = require("@hapi/boom");
 
@@ -24,6 +25,9 @@ let isConnected = false;
 let connectedPhone = null;
 let isStarting = false;
 
+// Store de mensagens em memória para responder a solicitações de retry (Signal E2EE)
+const messageStore = new Map();
+
 const logger = pino({ level: process.env.LOG_LEVEL || "warn" });
 
 function formatPhoneNumber(jidOrId) {
@@ -38,9 +42,10 @@ function formatPhoneNumber(jidOrId) {
 }
 
 /**
- * Resolve o JID canônico e oficial registrado na Meta para o número de destino.
- * No Brasil (DDI 55), celulares possuem 9 dígitos (13 dígitos com DDI e DDD: 55 + DDD + 9xxxxxxxx).
- * O método sock.onWhatsApp() consulta os servidores da Meta e confirma o JID ativo.
+ * Resolve o JID canônico e oficial para o número de destino.
+ * No Brasil (DDI 55), celulares modernos operam obrigatoriamente com 9 dígitos (13 dígitos: 55 + DDD + 9xxxxxxxx).
+ * A Meta armazena aliases legados de 12 dígitos, mas o envio DEVE ser feito para o JID moderno de 13 dígitos
+ * para que o WhatsApp do celular do cliente decifre o texto sem ficar preso em "Aguardando mensagem".
  */
 async function resolveCanonicalJid(targetPhone) {
   if (!sock || !isConnected) {
@@ -60,61 +65,41 @@ async function resolveCanonicalJid(targetPhone) {
     return { jid: targetPhone, exists: true };
   }
 
-  const candidates = [];
-
-  // Gera variação com e sem o 9º dígito para o Brasil
+  // Celulares no Brasil (DDI 55 + DDD 2 dígitos + 9 dígitos começando com 9 = 13 dígitos)
   if (digits.startsWith("55")) {
     const ddd = digits.slice(2, 4);
     const rest = digits.slice(4);
 
     if (digits.length === 13 && rest.startsWith("9")) {
-      // 1º candidato: formato moderno com 9 (prioritário)
-      candidates.push(digits);
-      // 2º candidato: formato legado de 12 dígitos sem o 9
-      candidates.push(`55${ddd}${rest.slice(1)}`);
-    } else if (digits.length === 12) {
-      // Se veio sem o 9, testar primeiro COM o 9 (padrão Brasil) e depois sem
-      candidates.push(`55${ddd}9${rest}`);
-      candidates.push(digits);
-    } else {
-      candidates.push(digits);
-    }
-  } else {
-    candidates.push(digits);
-  }
-
-  console.log(`[WHATSAPP] Validando número na Meta via onWhatsApp. Candidatos:`, candidates);
-
-  try {
-    const checkResults = await sock.onWhatsApp(...candidates);
-    console.log(`[WHATSAPP] Resultado da verificação da Meta:`, checkResults);
-
-    if (Array.isArray(checkResults) && checkResults.length > 0) {
-      // Prioridade 1: se encontrou com o 9º dígito (13 dígitos) e exists=true
-      const withNineResult = checkResults.find(
-        (r) => r && r.exists && r.jid && r.jid.split("@")[0].replace(/\D/g, "").length === 13
-      );
-      if (withNineResult) {
-        console.log(`[WHATSAPP] ✅ JID canônico oficial identificado na Meta (com 9º dígito): ${withNineResult.jid}`);
-        return { jid: withNineResult.jid, exists: true };
+      const canonicalJid = `${digits}@s.whatsapp.net`;
+      const legacyWithoutNine = `55${ddd}${rest.slice(1)}`;
+      try {
+        const checkResults = await sock.onWhatsApp(digits, legacyWithoutNine);
+        console.log(`[WHATSAPP] Verificação de celular na Meta (${digits}):`, checkResults);
+        const exists = Array.isArray(checkResults) && checkResults.some((r) => r && r.exists);
+        console.log(`[WHATSAPP] ✅ JID de celular brasileiro definido: ${canonicalJid} (ativo: ${exists})`);
+        return { jid: canonicalJid, exists };
+      } catch (err) {
+        console.warn(`[WHATSAPP] Aviso ao verificar onWhatsApp (${err.message}). Prosseguindo com ${canonicalJid}`);
+        return { jid: canonicalJid, exists: true };
       }
-
-      // Prioridade 2: qualquer outro registro ativo retornado pela Meta
-      const active = checkResults.find((r) => r && r.exists && r.jid);
-      if (active) {
-        console.log(`[WHATSAPP] ✅ JID canônico oficial identificado na Meta: ${active.jid}`);
-        return { jid: active.jid, exists: true };
+    } else if (digits.length === 12 && !rest.startsWith("9")) {
+      // Pode ser telefone fixo comercial (8 dígitos locais) ou celular antigo informado sem o 9
+      // Se for celular (primeiro dígito entre 6 e 9), converte para o formato com 9
+      const firstLocalDigit = rest.charAt(0);
+      if (parseInt(firstLocalDigit, 10) >= 6) {
+        const withNineDigits = `55${ddd}9${rest}`;
+        const canonicalJid = `${withNineDigits}@s.whatsapp.net`;
+        console.log(`[WHATSAPP] Celular informado sem o 9º dígito. Normalizado para: ${canonicalJid}`);
+        return { jid: canonicalJid, exists: true };
       }
     }
-  } catch (lookupErr) {
-    console.warn(`[WHATSAPP] Aviso ao consultar onWhatsApp (${lookupErr.message}). Prosseguindo com fallback.`);
   }
 
-  // Fallback: garante prioridade do número completo com 9 dígitos
-  const preferredDigits = candidates[0] || digits;
-  const fallbackJid = preferredDigits.includes("@s.whatsapp.net") ? preferredDigits : `${preferredDigits}@s.whatsapp.net`;
-  console.log(`[WHATSAPP] Usando JID fallback: ${fallbackJid}`);
-  return { jid: fallbackJid, exists: false };
+  // Fallback padrão para outros números e internacionais
+  const standardJid = digits.includes("@s.whatsapp.net") ? digits : `${digits}@s.whatsapp.net`;
+  console.log(`[WHATSAPP] Usando JID padrão: ${standardJid}`);
+  return { jid: standardJid, exists: true };
 }
 
 async function startWhatsApp() {
@@ -127,7 +112,10 @@ async function startWhatsApp() {
 
     sock = makeWASocket({
       version,
-      auth: state,
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, logger),
+      },
       logger,
       printQRInTerminal: false,
       connectTimeoutMs: 60000,
@@ -135,9 +123,32 @@ async function startWhatsApp() {
       keepAliveIntervalMs: 25000,
       generateHighQualityLinkPreview: false,
       browser: ["Icthus Comunicação Visual", "Chrome", "1.0.0"],
+      syncFullHistory: false,
+      markOnlineOnConnect: true,
+      getMessage: async (key) => {
+        if (key && key.id && messageStore.has(key.id)) {
+          const stored = messageStore.get(key.id);
+          console.log(`[WHATSAPP] 🔄 Reenviando mensagem para retry de descriptografia (E2EE): ${key.id}`);
+          return stored;
+        }
+        return undefined;
+      },
     });
 
     sock.ev.on("creds.update", saveCreds);
+
+    // Registra mensagens para responder a retries de descriptografia
+    sock.ev.on("messages.upsert", async ({ messages }) => {
+      for (const msg of messages) {
+        if (msg.key?.id && msg.message) {
+          messageStore.set(msg.key.id, msg.message);
+          if (messageStore.size > 1000) {
+            const first = messageStore.keys().next().value;
+            messageStore.delete(first);
+          }
+        }
+      }
+    });
 
     sock.ev.on("connection.update", async (update) => {
       const { connection, lastDisconnect, qr } = update;
@@ -295,14 +306,24 @@ const server = http.createServer(async (req, res) => {
 
         let sentResult;
         if (mediaUrl) {
-          sentResult = await sock.sendMessage(jid, {
+          const payload = {
             image: { url: mediaUrl },
             caption: message,
-          });
+          };
+          sentResult = await sock.sendMessage(jid, payload);
+          if (sentResult?.key?.id) {
+            messageStore.set(sentResult.key.id, {
+              imageMessage: { caption: message, url: mediaUrl },
+            });
+          }
         } else {
-          sentResult = await sock.sendMessage(jid, {
-            text: message,
-          });
+          const payload = { text: message };
+          sentResult = await sock.sendMessage(jid, payload);
+          if (sentResult?.key?.id) {
+            messageStore.set(sentResult.key.id, {
+              conversation: message,
+            });
+          }
         }
 
         console.log(`[WHATSAPP] Mensagem enviada com sucesso para ${jid} (verificado Meta: ${exists}, autoEnvio: ${isSelf}). ID: ${sentResult?.key?.id}`);
