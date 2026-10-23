@@ -31,22 +31,23 @@ export async function POST(req: NextRequest, { params }: Params) {
       );
     }
 
+    // Prioridade de telefone: se há cliente cadastrado com whatsapp, prioriza; senão usa o telefone do contato
     const recipientPhone =
-      lead.contactPhone ||
       lead.customer?.whatsapp ||
+      lead.contactPhone ||
       lead.customer?.phone;
 
     if (!recipientPhone) {
       return NextResponse.json(
         {
           success: false,
-          error: "Nenhum telefone de WhatsApp cadastrado para este contato.",
+          error: "Nenhum telefone de WhatsApp cadastrado para este contato ou cliente.",
         },
         { status: 400 }
       );
     }
 
-    // Normalização do número para envio
+    // Normalização estrita do número para padrão E.164 com DDI 55
     const cleanPhone = recipientPhone.replace(/\D/g, "");
     const formattedPhone = cleanPhone.startsWith("55")
       ? cleanPhone
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const baseUrl = `${protocol}://${host}`;
 
     const budgetId = lead.budgetCode ? `[${lead.budgetCode}]` : "";
-    const clientName = lead.contactName || lead.customer?.tradeName || "Cliente";
+    const clientName = lead.contactName || lead.customer?.tradeName || lead.customer?.fullName || "Cliente";
 
     let message = "";
     let documentUrl = "";
@@ -79,22 +80,33 @@ export async function POST(req: NextRequest, { params }: Params) {
     )}`;
 
     let wacliSuccess = false;
+    let wacliResult: any = null;
+    let wacliError: string | null = null;
+
     try {
-      await sendWhatsAppMessage({
+      wacliResult = await sendWhatsAppMessage({
         to: formattedPhone,
         message,
       });
-      wacliSuccess = true;
+      wacliSuccess = Boolean(wacliResult?.success);
+      if (!wacliSuccess) {
+        wacliError = wacliResult?.error || "Serviço de WhatsApp não concluiu o envio.";
+      }
     } catch (err: any) {
       console.warn(
         "[WhatsApp Dispatch] Falha no envio via WACLI (usando wa.me fallback):",
         err?.message
       );
+      wacliError = err?.message || "Falha de conexão com o microserviço do WhatsApp.";
     }
 
     return NextResponse.json({
       success: true,
       wacliSuccess,
+      wacliError,
+      isSelf: wacliResult?.isSelf || false,
+      resolvedJid: wacliResult?.resolvedJid,
+      clientName,
       waMeUrl,
       recipientPhone: formattedPhone,
       message,

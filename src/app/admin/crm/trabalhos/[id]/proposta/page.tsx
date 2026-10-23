@@ -3,6 +3,7 @@
 import React, { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   Printer,
@@ -20,6 +21,7 @@ import {
   Truck,
   Paintbrush,
   User,
+  ExternalLink,
 } from "lucide-react";
 
 interface Props {
@@ -28,11 +30,13 @@ interface Props {
 
 export default function PropostaComercialPage({ params }: Props) {
   const { id } = use(params);
+  const { toast } = useToast();
   const [lead, setLead] = useState<any>(null);
   const [settings, setSettings] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
+  const [manualWaMeUrl, setManualWaMeUrl] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
@@ -65,6 +69,7 @@ export default function PropostaComercialPage({ params }: Props) {
   const handleDispatchWhatsApp = async () => {
     try {
       setIsSendingWhatsApp(true);
+      setStatusMsg("");
       const res = await fetch(`/api/v1/crm/leads/${id}/dispatch-whatsapp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -72,15 +77,33 @@ export default function PropostaComercialPage({ params }: Props) {
       });
       const data = await res.json();
       if (data.success) {
-        setStatusMsg("Proposta disparada com sucesso via WhatsApp!");
+        const destPhone = data.recipientPhone ? `+${data.recipientPhone}` : (lead?.contactPhone || "");
+        if (data.wacliSuccess) {
+          const successMsg = `Proposta comercial disparada com sucesso via WhatsApp para ${data.clientName || "cliente"} (${destPhone})!`;
+          setStatusMsg(successMsg);
+          toast.success(successMsg, "Envio Automático Concluído", 6500);
+
+          if (data.isSelf) {
+            toast.info(
+              "Atenção: O número do cliente destinatário é o mesmo que está pareado na plataforma.",
+              "Envio para Número Conectado",
+              5000
+            );
+          }
+        } else {
+          const warnMsg = `O robô não conseguiu entregar via WhatsApp (${data.wacliError || "serviço desconectado"}). Você pode abrir manualmente no WhatsApp Web pelo botão ao lado.`;
+          setStatusMsg(warnMsg);
+          toast.warning(warnMsg, "Envio Automático Indisponível", 7000);
+        }
+
         if (data.waMeUrl) {
-          window.open(data.waMeUrl, "_blank");
+          setManualWaMeUrl(data.waMeUrl);
         }
       } else {
-        alert(data.error || "Falha ao disparar mensagem");
+        toast.error(data.error || "Falha ao disparar mensagem", "Falha no Envio");
       }
-    } catch (err: any) {
-      alert("Erro ao conectar com o serviço de envio");
+    } catch {
+      toast.error("Erro ao conectar com o serviço de envio.", "Falha de Conexão");
     } finally {
       setIsSendingWhatsApp(false);
     }
@@ -154,6 +177,18 @@ export default function PropostaComercialPage({ params }: Props) {
             <Share2 className="w-4 h-4" />
             <span>Disparar WhatsApp</span>
           </Button>
+
+          {manualWaMeUrl && (
+            <a
+              href={manualWaMeUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 text-xs font-bold transition-all shadow-xs"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Abrir WhatsApp Web</span>
+            </a>
+          )}
         </div>
       </div>
 

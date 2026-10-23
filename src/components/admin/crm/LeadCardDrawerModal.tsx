@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { ClientSearchAutocomplete, SearchedClient } from "@/components/admin/crm/ClientSearchAutocomplete";
 
 export interface KanbanTagItem {
@@ -158,7 +159,9 @@ export function LeadCardDrawerModal({
   onOpenContactDetails,
 }: LeadCardDrawerModalProps) {
   const [data, setData] = useState<LeadDetailFull | null>(null);
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [lastWaMeUrl, setLastWaMeUrl] = useState<string | null>(null);
 
   // Edição de Título
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -355,19 +358,35 @@ export function LeadCardDrawerModal({
       });
       const resData = await res.json();
       if (resData.success) {
-        setDispatchFeedback(
-          isBudget
-            ? "Orçamento enviado com sucesso via WhatsApp!"
-            : "Contrato enviado com sucesso via WhatsApp!"
-        );
+        const destPhone = resData.recipientPhone ? `+${resData.recipientPhone}` : (data?.contactPhone || "");
+        const docName = isBudget ? "Orçamento" : "Contrato";
+
+        if (resData.wacliSuccess) {
+          const successMsg = `${docName} enviado com sucesso via WhatsApp para ${resData.clientName || "o cliente"} (${destPhone})!`;
+          setDispatchFeedback(successMsg);
+          toast.success(successMsg, "Disparo Automático Concluído", 6500);
+
+          if (resData.isSelf) {
+            toast.info(
+              "Atenção: O telefone do destinatário é o mesmo pareado na plataforma.",
+              "Envio para Número Conectado",
+              5000
+            );
+          }
+        } else {
+          const warnMsg = `O robô não conseguiu entregar via WhatsApp (${resData.wacliError || "serviço desconectado"}). Você pode abrir manualmente no WhatsApp Web abaixo.`;
+          setDispatchFeedback(warnMsg);
+          toast.warning(warnMsg, "Envio Automático Indisponível", 7000);
+        }
+
         if (resData.waMeUrl) {
-          window.open(resData.waMeUrl, "_blank");
+          setLastWaMeUrl(resData.waMeUrl);
         }
       } else {
-        alert(resData.error || "Falha no disparo via WhatsApp.");
+        toast.error(resData.error || "Falha no disparo via WhatsApp.", "Falha no Envio");
       }
     } catch {
-      alert("Erro ao disparar mensagem para o cliente.");
+      toast.error("Erro ao disparar mensagem para o cliente.", "Falha de Rede");
     } finally {
       if (isBudget) setIsDispatchingBudget(false);
       else setIsDispatchingContract(false);
@@ -933,9 +952,9 @@ export function LeadCardDrawerModal({
                           setInfoForm((prev) => ({
                             ...prev,
                             customerId: client.id,
-                            contactName: prev.contactName || client.displayName || client.tradeName || client.fullName || "",
-                            contactPhone: prev.contactPhone || client.whatsapp || client.phone || "",
-                            contactEmail: prev.contactEmail || client.email || "",
+                            contactName: client.displayName || client.tradeName || client.fullName || prev.contactName || "",
+                            contactPhone: client.whatsapp || client.phone || prev.contactPhone || "",
+                            contactEmail: client.email || prev.contactEmail || "",
                           }));
                         } else {
                           setInfoForm((prev) => ({ ...prev, customerId: null }));
@@ -1645,6 +1664,16 @@ export function LeadCardDrawerModal({
               </span>
               <div className="space-y-2">
 
+                {/* Indicador do Destinatário */}
+                <div className="px-2.5 py-1.5 rounded-xl bg-zinc-100 dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.06] flex items-center justify-between text-[11px]">
+                  <span className="text-zinc-500 font-medium flex items-center gap-1">
+                    <Phone className="w-3 h-3 text-[#FF650F]" /> Destinatário:
+                  </span>
+                  <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                    {data?.customer?.whatsapp || data?.contactPhone || data?.customer?.phone || "Sem telefone"}
+                  </span>
+                </div>
+
                 {/* Feedback de Disparo */}
                 {dispatchFeedback && (
                   <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold flex items-center gap-1.5">
@@ -1676,6 +1705,19 @@ export function LeadCardDrawerModal({
                   <FileCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   <span>Disparar Contrato p/ Assinatura</span>
                 </Button>
+
+                {/* Opção Manual / Contingência */}
+                {lastWaMeUrl && (
+                  <a
+                    href={lastWaMeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center justify-center gap-1.5 transition-colors py-0.5 hover:underline"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    <span>Abrir manualmente no WhatsApp Web</span>
+                  </a>
+                )}
 
                 {/* Abrir Proposta em PDF */}
                 <a

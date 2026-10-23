@@ -16,6 +16,7 @@ export interface WACLiResult {
   mode: "http" | "cli" | "mock_dev";
   resolvedJid?: string;
   verified?: boolean;
+  isSelf?: boolean;
   error?: string;
 }
 
@@ -74,6 +75,7 @@ export async function sendWhatsAppMessage({
         mode: "http",
         resolvedJid: data.resolvedJid,
         verified: data.verified,
+        isSelf: data.isSelf,
       };
     } else if (data?.error) {
       return {
