@@ -234,9 +234,8 @@ export function LeadCardDrawerModal({
         setData(json.lead);
         setTitleValue(json.lead.title);
         setNotesValue(json.lead.notes || "");
-        setDueDateInput(
-          json.lead.dueDate ? new Date(json.lead.dueDate).toISOString().split("T")[0] : ""
-        );
+        const rawDueDate = json.lead.dueDate ? new Date(json.lead.dueDate) : null;
+        setDueDateInput(rawDueDate && !isNaN(rawDueDate.getTime()) ? rawDueDate.toISOString().split("T")[0] : "");
         setInfoForm({
           contactName: json.lead.contactName || "",
           contactPhone: json.lead.contactPhone || "",
@@ -727,11 +726,13 @@ export function LeadCardDrawerModal({
   };
 
   // Cálculos de Status de Prazo
+  const leadDueDateObj = data?.dueDate ? new Date(data.dueDate) : null;
+  const isLeadDateValid = leadDueDateObj && !isNaN(leadDueDateObj.getTime());
   const isOverdue =
-    data?.dueDate && !data.isCompleted && new Date(data.dueDate).getTime() < Date.now();
+    isLeadDateValid && !data?.isCompleted && leadDueDateObj.getTime() < Date.now();
   const isDueToday =
-    data?.dueDate &&
-    new Date(data.dueDate).toDateString() === new Date().toDateString();
+    isLeadDateValid &&
+    leadDueDateObj.toDateString() === new Date().toDateString();
 
   return (
     <div
@@ -841,7 +842,7 @@ export function LeadCardDrawerModal({
                     Etiquetas
                   </span>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    {data.tags.map(({ tag }) => (
+                    {(data.tags || []).filter((t) => t && t.tag).map(({ tag }) => (
                       <span
                         key={tag.id}
                         className="px-2.5 py-1 rounded-full text-xs font-bold text-white shadow-sm flex items-center gap-1"
@@ -1221,8 +1222,9 @@ export function LeadCardDrawerModal({
             {/* SEÇÃO 2: CHECKLISTS COM BARRA DE PROGRESSO */}
             <div className="space-y-4">
               {data?.checklists?.map((cl) => {
-                const total = cl.items.length;
-                const completed = cl.items.filter((i) => i.isCompleted).length;
+                const itemsList = cl.items || [];
+                const total = itemsList.length;
+                const completed = itemsList.filter((i) => i?.isCompleted).length;
                 const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
                 const isAllDone = total > 0 && completed === total;
 
@@ -1267,7 +1269,7 @@ export function LeadCardDrawerModal({
 
                     {/* Itens da Checklist */}
                     <div className="space-y-1.5 pt-1">
-                      {cl.items.map((item) => (
+                      {itemsList.map((item) => (
                         <div
                           key={item.id}
                           className="flex items-center justify-between p-2 rounded-xl hover:bg-zinc-50 dark:hover:bg-white/[0.03] transition-colors group"
@@ -1453,7 +1455,7 @@ export function LeadCardDrawerModal({
                 {data?.comments?.map((com) => (
                   <div key={com.id} className="flex gap-3 items-start">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#FF650F] to-[#FFA05E] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
-                      {com.authorName.charAt(0).toUpperCase()}
+                      {(com.authorName || "U").charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 p-3 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] space-y-1 shadow-sm">
                       <div className="flex items-center justify-between text-[11px]">
@@ -1502,7 +1504,7 @@ export function LeadCardDrawerModal({
                     </span>
                     <div className="space-y-1 max-h-40 overflow-y-auto no-scrollbar">
                       {allTags.map((tag) => {
-                        const isAssigned = data?.tags?.some((t) => t.tag.id === tag.id);
+                        const isAssigned = (data?.tags || []).some((t) => t?.tag?.id === tag.id);
                         return (
                           <button
                             key={tag.id}

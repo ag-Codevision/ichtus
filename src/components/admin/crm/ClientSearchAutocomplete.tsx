@@ -135,12 +135,12 @@ export function ClientSearchAutocomplete({
         <div className="p-3 rounded-2xl bg-orange-500/[0.04] dark:bg-orange-500/[0.08] border border-orange-500/20 flex items-center justify-between gap-3 animate-in fade-in duration-200">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-[#FF650F] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
-              {selectedClient.displayName.charAt(0).toUpperCase()}
+              {(selectedClient.displayName || "C").charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <h4 className="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                  {selectedClient.displayName}
+                  {selectedClient.displayName || "Cliente"}
                 </h4>
                 <span className="text-[10px] font-semibold px-2 py-0.2 rounded-full bg-orange-500/10 text-[#FF650F] shrink-0">
                   {selectedClient.type === "CUSTOMER" ? "Cliente" : selectedClient.type}

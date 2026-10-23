@@ -11,8 +11,9 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * Formatação de moeda no padrão brasileiro (BRL)
  */
-export function formatCurrency(value: number | string): string {
-  const numericValue = typeof value === "string" ? parseFloat(value) : value;
+export function formatCurrency(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "R$ 0,00";
+  const numericValue = typeof value === "string" ? parseFloat(value) : Number(value);
   if (isNaN(numericValue)) return "R$ 0,00";
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -21,29 +22,39 @@ export function formatCurrency(value: number | string): string {
 }
 
 /**
- * Formatação de data no padrão brasileiro
+ * Formatação de data no padrão brasileiro com proteção contra datas inválidas
  */
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "-";
-  const d = typeof date === "string" ? new Date(date) : date;
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(d);
+  try {
+    const d = typeof date === "string" ? new Date(date) : date;
+    if (!(d instanceof Date) || isNaN(d.getTime())) return "-";
+    return new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(d);
+  } catch {
+    return "-";
+  }
 }
 
 /**
- * Formatação de data com hora no padrão brasileiro
+ * Formatação de data com hora no padrão brasileiro com proteção contra datas inválidas
  */
 export function formatDateTime(date: Date | string | null | undefined): string {
   if (!date) return "-";
-  const d = typeof date === "string" ? new Date(date) : date;
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(d);
+  try {
+    const d = typeof date === "string" ? new Date(date) : date;
+    if (!(d instanceof Date) || isNaN(d.getTime())) return "-";
+    return new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(d);
+  } catch {
+    return "-";
+  }
 }

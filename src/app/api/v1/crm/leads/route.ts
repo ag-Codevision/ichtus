@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { LeadSource, PriorityLevel } from "@prisma/client";
-import { sendWhatsAppMessage, WhatsAppTemplates } from "@/lib/whatsapp/wacli";
+import { sendWhatsAppMessage } from "@/lib/whatsapp/wacli";
 import { generateNextBudgetCode } from "@/lib/crm/budget-code";
+import { generateBudgetPDF } from "@/lib/documents/budget-pdf-generator";
 
 /**
  * GET /api/v1/crm/leads
@@ -81,7 +82,7 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/v1/crm/leads
- * Criação de um novo lead (via formulário do site ou cadastro manual pelo admin)
+ * Criação de um novo serviço/lead + Geração automática de Orçamento em PDF + Envio via WhatsApp opcional
  */
 export async function POST(req: NextRequest) {
   try {
@@ -105,6 +106,7 @@ export async function POST(req: NextRequest) {
       columnId,
       scheduledVisitDate,
       dueDate,
+      sendWhatsApp = false,
     } = body;
 
     if (!contactName || !contactPhone) {
@@ -114,7 +116,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Se columnId não for especificado, busca a primeira coluna ("Novo Lead")
+    // Se columnId não for especificado, busca a primeira coluna ("Novo Lead" / primeiro campo)
     let targetColumnId = columnId;
     if (!targetColumnId) {
       const firstCol = await prisma.kanbanColumn.findFirst({
@@ -136,6 +138,9 @@ export async function POST(req: NextRequest) {
       where: { columnId: targetColumnId },
     });
 
+    const parsedDueDate = dueDate ? new Date(dueDate) : null;
+    const safeDueDate = parsedDueDate && !isNaN(parsedDueDate.getTime()) ? parsedDueDate : null;
+
     const lead = await prisma.lead.create({
       data: {
         budgetCode: finalBudgetCode,
@@ -153,7 +158,7 @@ export async function POST(req: NextRequest) {
         estimatedValue: estimatedValue ? Number(estimatedValue) : null,
         priority,
         notes: notes || null,
-        dueDate: dueDate ? new Date(dueDate) : null,
+        dueDate: safeDueDate,
         columnId: targetColumnId,
         orderInColumn: leadsInCol,
       },
@@ -162,6 +167,101 @@ export async function POST(req: NextRequest) {
         helper: true,
       },
     });
+
+    // 1. Gera automaticamente o Orçamento em PDF profissional da Ícthus
+    let pdfResult = null;
+    let createdDocument = null;
+    try {
+      pdfResult = await generateBudgetPDF({
+        budgetCode: finalBudgetCode,
+        title: lead.title,
+        contactName: lead.contactName,
+        contactPhone: lead.contactPhone,
+        contactEmail: lead.contactEmail,
+        clientTradeName: lead.customer?.tradeName || lead.customer?.companyName || lead.customer?.fullName,
+        clientAddress: lead.customer?.city ? `${lead.customer.city} - ${lead.customer.state || "PR"}` : null,
+        estimatedValue: lead.estimatedValue ? Number(lead.estimatedValue) : null,
+        priority: lead.priority,
+        dueDate: safeDueDate,
+        notes: lead.notes,
+        voltage: lead.voltage,
+        tools: lead.tools,
+        paintDetails: lead.paintDetails,
+        freightDetails: lead.freightDetails,
+        helperName: lead.helper?.fullName || lead.helper?.tradeName,
+        createdAt: lead.createdAt,
+      });
+
+      // 2. Registra o documento na tabela de Documentos com categoria "ORCAMENTO"
+      createdDocument = await prisma.document.create({
+        data: {
+          code: finalBudgetCode,
+          title: `Orçamento [${finalBudgetCode}] — ${lead.title}`,
+          category: "ORCAMENTO",
+          fileUrl: pdfResult.fileUrl,
+          fileSize: pdfResult.fileSize,
+          customerId: lead.customerId || null,
+          leadId: lead.id,
+          clientName: lead.customer?.tradeName || lead.contactName,
+          clientPhone: lead.contactPhone,
+          clientEmail: lead.contactEmail,
+          totalAmount: lead.estimatedValue ? Number(lead.estimatedValue) : null,
+          status: "GERADO",
+          sentViaWhatsapp: false,
+          metadata: {
+            voltage: lead.voltage,
+            tools: lead.tools,
+            paintDetails: lead.paintDetails,
+            freightDetails: lead.freightDetails,
+          },
+        },
+      });
+
+      // Registra também como anexo no Lead para consulta rápida no card
+      await prisma.leadAttachment.create({
+        data: {
+          leadId: lead.id,
+          fileName: pdfResult.fileName,
+          fileUrl: pdfResult.fileUrl,
+          fileType: "PDF",
+          fileSize: pdfResult.fileSize,
+        },
+      }).catch((e) => console.warn("Aviso ao vincular anexo ao lead:", e));
+    } catch (pdfErr) {
+      console.error("[CRM] Falha ao gerar documento de orçamento em PDF:", pdfErr);
+    }
+
+    // 3. Se o switch de envio via WhatsApp estiver ligado:
+    let whatsappSent = false;
+    if (sendWhatsApp && pdfResult) {
+      try {
+        const greetingMsg = `Olá, *${contactName}*! Tudo bem? 🤝\n\nAqui é da equipe técnica da *Ícthus Comunicação Visual*.\n\nElaboramos o seu *Orçamento Oficial [${finalBudgetCode}]* com todas as especificações do seu projeto: *${lead.title}*.\n\nSegue em anexo o documento detalhado em PDF para sua conferência e aprovação. Qualquer dúvida, estamos à inteira disposição!`;
+        
+        const wppRes = await sendWhatsAppMessage({
+          to: contactPhone,
+          message: greetingMsg,
+          documentUrl: pdfResult.fileUrl,
+          fileName: pdfResult.fileName,
+          mimetype: "application/pdf",
+        });
+
+        if (wppRes.success) {
+          whatsappSent = true;
+          if (createdDocument) {
+            await prisma.document.update({
+              where: { id: createdDocument.id },
+              data: {
+                sentViaWhatsapp: true,
+                status: "ENVIADO_WHATSAPP",
+                sentAt: new Date(),
+              },
+            });
+          }
+        }
+      } catch (wppErr) {
+        console.warn("[CRM] Aviso ao disparar WhatsApp automático:", wppErr);
+      }
+    }
 
     // Se o lead solicitou agendamento de visita técnica na criação:
     let appointment = null;
@@ -177,30 +277,22 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Notificação imediata via WACLI (WhatsApp)
-    try {
-      const msg = `Olá, *${contactName}*! 👋\n\nRecebemos sua solicitação de orçamento na *Glessios Comunicação Visual*. Nossa equipe técnica de engenharia de fachadas já está analisando suas informações e entrará em contato em breve.\n\nQualquer dúvida adicional, estamos à disposição por este canal!`;
-      await sendWhatsAppMessage({
-        to: contactPhone,
-        message: msg,
-      });
-    } catch (wppErr) {
-      console.warn("[CRM] Falha silenciosa no envio de WhatsApp de boas-vindas:", wppErr);
-    }
-
     return NextResponse.json(
       {
         success: true,
-        message: "Lead cadastrado com sucesso no funil comercial!",
+        message: "Serviço cadastrado com sucesso no funil comercial!",
         lead,
+        document: createdDocument,
+        pdfUrl: pdfResult?.fileUrl || null,
+        whatsappSent,
         appointment,
       },
       { status: 201 }
     );
   } catch (error: any) {
-    console.error("[CRM API] Erro ao criar lead:", error);
+    console.error("[CRM API] Erro ao criar serviço/lead:", error);
     return NextResponse.json(
-      { success: false, error: "Falha ao registrar novo lead", details: error?.message },
+      { success: false, error: "Falha ao registrar novo serviço", details: error?.message },
       { status: 500 }
     );
   }

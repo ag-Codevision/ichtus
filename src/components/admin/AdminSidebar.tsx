@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { appMotion } from "@/lib/motion";
 import {
   LayoutDashboard,
+  FileText,
   Kanban,
   Calendar,
   Layers,
@@ -94,6 +95,13 @@ export function AdminSidebar({
       href: "/admin/financeiro",
       icon: DollarSign,
       active: pathname.startsWith("/admin/financeiro"),
+    },
+    {
+      label: "Documentos",
+      description: "Orçamentos, PDFs & Propostas",
+      href: "/admin/documentos",
+      icon: FileText,
+      active: pathname.startsWith("/admin/documentos"),
     },
   ];
 

@@ -27,16 +27,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }
 
     // Coluna fixa de Produção não pode ser renomeada
-    const isProductionCol = existing.name.trim().toLowerCase() === "produção" || 
-                           existing.name.trim().toLowerCase() === "producao" || 
-                           existing.isSystem;
-
-    if (isProductionCol && name !== undefined && name.trim().toLowerCase() !== existing.name.trim().toLowerCase()) {
-      return NextResponse.json(
-        { success: false, error: "A coluna fixa 'Produção' não pode ser renomeada." },
-        { status: 400 }
-      );
-    }
+    // Coluna fixa de produção não deve perder sua identificação
+    const isProductionCol = existing.name.trim().toLowerCase().includes("produção") || 
+                           existing.name.trim().toLowerCase().includes("producao");
 
     const updated = await prisma.kanbanColumn.update({
       where: { id },
@@ -85,12 +78,13 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       );
     }
 
-    // Coluna fixa de Produção não pode ser excluída
-    if (column.name.trim().toLowerCase() === "produção" || 
-        column.name.trim().toLowerCase() === "producao" || 
-        column.isSystem) {
+    // Apenas a coluna "Em Produção" é bloqueada contra exclusão
+    const isProductionCol = column.name.trim().toLowerCase().includes("produção") || 
+                           column.name.trim().toLowerCase().includes("producao");
+
+    if (isProductionCol) {
       return NextResponse.json(
-        { success: false, error: "A coluna 'Produção' é fixa da esteira fabril e não pode ser excluída." },
+        { success: false, error: "A coluna 'Em Produção' é a esteira oficial da fábrica e não pode ser excluída." },
         { status: 400 }
       );
     }

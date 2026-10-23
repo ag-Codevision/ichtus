@@ -8,6 +8,9 @@ export interface WACLiSendOptions {
   to: string; // Número com código do país e DDD, ex: "5541999998888" ou "41999998888"
   message: string;
   mediaUrl?: string;
+  documentUrl?: string;
+  fileName?: string;
+  mimetype?: string;
 }
 
 export interface WACLiResult {
@@ -40,6 +43,9 @@ export async function sendWhatsAppMessage({
   to,
   message,
   mediaUrl,
+  documentUrl,
+  fileName,
+  mimetype,
 }: WACLiSendOptions): Promise<WACLiResult> {
   const targetNumber = normalizePhoneNumber(to);
   const sysSettings = getSystemSettings();
@@ -60,6 +66,9 @@ export async function sendWhatsAppMessage({
         to: targetNumber,
         message,
         mediaUrl,
+        documentUrl,
+        fileName,
+        mimetype,
       }),
       signal: controller.signal,
     });

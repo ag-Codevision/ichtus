@@ -335,7 +335,7 @@ const server = http.createServer(async (req, res) => {
     req.on("end", async () => {
       try {
         const body = JSON.parse(bodyData || "{}");
-        const { to, message, mediaUrl } = body;
+        const { to, message, mediaUrl, documentUrl, fileName, mimetype } = body;
 
         if (!to || !message) {
           res.writeHead(400, { "Content-Type": "application/json" });
@@ -375,7 +375,38 @@ const server = http.createServer(async (req, res) => {
         }
 
         let sentResult;
-        if (mediaUrl) {
+        if (documentUrl) {
+          let docBuffer;
+          if (documentUrl.startsWith("http://") || documentUrl.startsWith("https://")) {
+            const fetchRes = await fetch(documentUrl);
+            docBuffer = Buffer.from(await fetchRes.arrayBuffer());
+          } else if (fs.existsSync(documentUrl)) {
+            docBuffer = fs.readFileSync(documentUrl);
+          } else {
+            const rootRel = path.resolve(process.cwd(), "..", documentUrl.replace(/^\//, ""));
+            const currRel = path.resolve(process.cwd(), documentUrl.replace(/^\//, ""));
+            const pubRel = path.resolve(process.cwd(), "public", documentUrl.replace(/^\//, ""));
+            const parentPubRel = path.resolve(process.cwd(), "..", "public", documentUrl.replace(/^\//, ""));
+            if (fs.existsSync(rootRel)) docBuffer = fs.readFileSync(rootRel);
+            else if (fs.existsSync(currRel)) docBuffer = fs.readFileSync(currRel);
+            else if (fs.existsSync(pubRel)) docBuffer = fs.readFileSync(pubRel);
+            else if (fs.existsSync(parentPubRel)) docBuffer = fs.readFileSync(parentPubRel);
+            else throw new Error("Documento não encontrado no caminho: " + documentUrl);
+          }
+          const payload = {
+            document: docBuffer,
+            mimetype: mimetype || "application/pdf",
+            fileName: fileName || "Orcamento_Icthus.pdf",
+            caption: message,
+          };
+          sentResult = await sock.sendMessage(jid, payload);
+          if (sentResult?.key?.id) {
+            messageStore.set(
+              sentResult.key.id,
+              sentResult.message || { documentMessage: { caption: message, fileName: fileName || "Orcamento_Icthus.pdf" } }
+            );
+          }
+        } else if (mediaUrl) {
           const payload = {
             image: { url: mediaUrl },
             caption: message,

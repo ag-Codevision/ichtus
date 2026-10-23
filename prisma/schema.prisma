@@ -211,6 +211,7 @@ model Customer {
   assistedLeads         Lead[]                 @relation("LeadHelper")
   stockItems            StockItem[]
   financialTransactions FinancialTransaction[]
+  documents             Document[]
 
   @@map("customers")
 }
@@ -271,6 +272,7 @@ model Lead {
   attachments     LeadAttachment[]
   comments        LeadComment[]
   serviceOrders   ServiceOrder[]
+  documents       Document[]
 
   @@map("leads")
 }
@@ -379,6 +381,9 @@ model ServiceOrder {
   invoices         Invoice[]
   appointments     Appointment[]
   stockMovements   StockMovement[]
+  documents        Document[]
+  productionColumnId String?
+  productionColumn ProductionColumn? @relation(fields: [productionColumnId], references: [id], onDelete: SetNull)
 
   @@map("service_orders")
 }
@@ -589,4 +594,55 @@ model Notification {
   createdAt       DateTime  @default(now())
 
   @@map("notifications")
+}
+
+
+// ====================================================
+// DOCUMENTOS COMERCIAIS & ORCAMENTOS
+// ====================================================
+
+model Document {
+  id              String        @id @default(cuid())
+  code            String?
+  title           String
+  category        String        @default("ORCAMENTO")
+  fileUrl         String
+  fileSize        Int?
+  customerId      String?
+  customer        Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  leadId          String?
+  lead            Lead?         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  serviceOrderId  String?
+  serviceOrder    ServiceOrder? @relation(fields: [serviceOrderId], references: [id], onDelete: SetNull)
+  clientName      String
+  clientPhone     String?
+  clientEmail     String?
+  totalAmount     Decimal?      @db.Decimal(12, 2)
+  status          String        @default("GERADO")
+  sentViaWhatsapp Boolean       @default(false)
+  sentAt          DateTime?
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("documents")
+}
+
+// ====================================================
+// COLUNAS DINAMICAS DA LINHA DE PRODUCAO (CRUD)
+// ====================================================
+
+model ProductionColumn {
+  id            String         @id @default(cuid())
+  name          String
+  order         Int
+  color         String?
+  stageKey      String?
+  isSystem      Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  serviceOrders ServiceOrder[]
+
+  @@map("production_columns")
 }

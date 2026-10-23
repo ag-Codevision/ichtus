@@ -174,9 +174,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         });
 
         const isProductionCol = targetCol && (
-          targetCol.name.trim().toLowerCase() === "produção" ||
-          targetCol.name.trim().toLowerCase() === "producao" ||
-          targetCol.isSystem
+          targetCol.name.trim().toLowerCase().includes("produção") ||
+          targetCol.name.trim().toLowerCase().includes("producao")
         );
 
         if (isProductionCol) {
@@ -252,6 +251,13 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             });
             console.log(`🏭 Ordem de Serviço ${osCode} criada automaticamente para o Trabalho ${id}`);
           }
+        } else {
+          // Regra solicitada: Ao remover o card da coluna Em Produção no Funil Kanban,
+          // o card deixa de existir automaticamente na Linha de Produção.
+          await prisma.serviceOrder.deleteMany({
+            where: { leadId: id },
+          });
+          console.log(`🏭 Ordem de Serviço vinculada ao Lead ${id} removida da Linha de Produção.`);
         }
       } catch (triggerErr) {
         console.warn("[CRM] Aviso ao disparar criação automática na Linha de Produção:", triggerErr);

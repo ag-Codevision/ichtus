@@ -1,5 +1,6 @@
 "use client";
 
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -122,6 +123,7 @@ export default function KanbanPage() {
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
   const [isNewLeadModalOpen, setIsNewLeadModalOpen] = useState(false);
+  const [sendWhatsAppViaModal, setSendWhatsAppViaModal] = useState(false);
   const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
 
   // Estados de CRUD de Colunas / Campos do Kanban
@@ -501,12 +503,13 @@ export default function KanbanPage() {
       const res = await fetch("/api/v1/crm/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newLeadForm),
+        body: JSON.stringify({ ...newLeadForm, sendWhatsApp: sendWhatsAppViaModal }),
       });
       const data = await res.json();
       if (data.success) {
         setIsNewLeadModalOpen(false);
         setSelectedClientForNewLead(null);
+        setSendWhatsAppViaModal(false);
         setNewLeadForm({
           title: "",
           contactName: "",
@@ -588,7 +591,7 @@ export default function KanbanPage() {
             className="flex items-center gap-1.5 text-xs font-bold rounded-full shadow-sm"
           >
             <Plus className="w-4 h-4" />
-            <span>Nova Oportunidade</span>
+            <span>Serviço</span>
           </Button>
         </div>
       </div>
@@ -760,14 +763,16 @@ export default function KanbanPage() {
                           >
                             <Edit2 className="w-3 h-3" />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteColumn(col)}
-                            title="Excluir campo"
-                            className="p-1 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-500/10"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
+                          {!(col.name.trim().toLowerCase().includes("produção") || col.name.trim().toLowerCase().includes("producao")) && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteColumn(col)}
+                              title="Excluir campo"
+                              className="p-1 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-500/10"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -921,11 +926,14 @@ export default function KanbanPage() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.04] dark:border-white/[0.06] shrink-0">
               <div>
                 <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FF650F]">
-                  Funil de Vendas
+                  CRM Comercial
                 </span>
                 <h3 className="text-lg font-black text-zinc-900 dark:text-white tracking-tight">
-                  Nova Oportunidade
+                  Novo Serviço
                 </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Cadastre o serviço e gere seu orçamento em PDF na hora.
+                </p>
               </div>
               <button
                 type="button"
@@ -1049,6 +1057,34 @@ export default function KanbanPage() {
                 </div>
               </div>
 
+              {/* Chave liga/desliga para Envio do Orçamento via WhatsApp */}
+              <div className="p-3.5 rounded-2xl bg-emerald-500/[0.08] dark:bg-emerald-500/[0.12] border border-emerald-500/30 flex items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                    <MessageCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    Enviar Orçamento via WhatsApp
+                  </span>
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                    Dispara o documento de orçamento PDF para o telefone do cliente após salvar.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={sendWhatsAppViaModal}
+                  onClick={() => setSendWhatsAppViaModal(!sendWhatsAppViaModal)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    sendWhatsAppViaModal ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-700"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                      sendWhatsAppViaModal ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
               <div>
                 <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
                   Observações & Briefing
@@ -1076,7 +1112,7 @@ export default function KanbanPage() {
                   variant="primary"
                   className="rounded-full px-5 text-xs font-bold"
                 >
-                  Adicionar ao Funil
+                  Salvar Serviço & Gerar Orçamento
                 </Button>
               </div>
             </form>
@@ -1198,7 +1234,8 @@ export default function KanbanPage() {
       {/* ======================================================== */}
       {/* MODAL: O VERSO DO CARTÃO ESTILO TRELLO (CENTRAL TAREFA)  */}
       {/* ======================================================== */}
-      <LeadCardDrawerModal
+      <ErrorBoundary fallbackTitle="Não foi possível exibir os detalhes deste card">
+        <LeadCardDrawerModal
         leadId={selectedCardLeadId}
         isOpen={isCardModalOpen}
         onClose={() => {
@@ -1213,6 +1250,7 @@ export default function KanbanPage() {
           setIsDetailsOpen(true);
         }}
       />
+      </ErrorBoundary>
 
       {/* MODAL: FICHA 360º DO CONTATO (CASO CLIQUE DENTRO DO CARD) */}
       <ContactDetailsSheet
