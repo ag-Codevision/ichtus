@@ -56,6 +56,7 @@ interface Lead {
     fullName: string | null;
     type: string;
     whatsapp: string | null;
+    phone?: string | null;
     email: string | null;
     city: string | null;
   } | null;
@@ -66,6 +67,12 @@ interface Lead {
   dueDate: string | null;
   isCompleted: boolean;
   coverImage: string | null;
+  budgetCode?: string | null;
+  helperId?: string | null;
+  voltage?: string | null;
+  tools?: string[];
+  paintDetails?: string | null;
+  freightDetails?: string | null;
   tags?: { tag: { id: string; name: string; color: string } }[];
   checklists?: { id: string; title: string; items: { id: string; isCompleted: boolean }[] }[];
   attachments?: { id: string; fileName: string; fileUrl: string; fileType: string; isCover: boolean }[];
@@ -149,6 +156,34 @@ export default function KanbanPage() {
 
   // Cliente selecionado no Seletor Inteligente para nova oportunidade
   const [selectedClientForNewLead, setSelectedClientForNewLead] = useState<SearchedClient | null>(null);
+
+  // Estados de Edição do Serviço (CRUD do Card)
+  const [isEditLeadModalOpen, setIsEditLeadModalOpen] = useState(false);
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
+  const [selectedClientForEditLead, setSelectedClientForEditLead] = useState<SearchedClient | null>(null);
+  const [isSavingEditLead, setIsSavingEditLead] = useState(false);
+  const [editLeadForm, setEditLeadForm] = useState({
+    title: "",
+    columnId: "",
+    contactName: "",
+    contactPhone: "",
+    contactEmail: "",
+    customerId: "",
+    estimatedValue: "",
+    priority: "MEDIUM" as "LOW" | "MEDIUM" | "HIGH" | "URGENT",
+    dueDate: "",
+    notes: "",
+    budgetCode: "",
+    helperId: "",
+    voltage: "110V",
+    tools: [] as string[],
+    paintDetails: "",
+    freightDetails: "",
+  });
+
+  // Estados de Exclusão do Serviço (CRUD do Card)
+  const [leadToDelete, setLeadToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [isDeletingLeadDirect, setIsDeletingLeadDirect] = useState(false);
 
   const [newLeadForm, setNewLeadForm] = useState({
     title: "",
@@ -497,6 +532,120 @@ export default function KanbanPage() {
     }
   };
 
+  const handleOpenEditLead = (lead: Lead) => {
+    setEditingLeadId(lead.id);
+    const rawDueDate = lead.dueDate ? new Date(lead.dueDate) : null;
+    const safeDueDate = rawDueDate && !isNaN(rawDueDate.getTime()) ? rawDueDate.toISOString().split("T")[0] : "";
+
+    setEditLeadForm({
+      title: lead.title || "",
+      columnId: lead.columnId || (columns[0]?.id || ""),
+      contactName: lead.contactName || "",
+      contactPhone: lead.contactPhone || "",
+      contactEmail: lead.contactEmail || "",
+      customerId: lead.customerId || "",
+      estimatedValue: lead.estimatedValue != null ? String(lead.estimatedValue) : "",
+      priority: lead.priority || "MEDIUM",
+      dueDate: safeDueDate,
+      notes: lead.notes || "",
+      budgetCode: lead.budgetCode || "",
+      helperId: lead.helperId || "",
+      voltage: lead.voltage || "110V",
+      tools: Array.isArray(lead.tools) ? lead.tools : [],
+      paintDetails: lead.paintDetails || "",
+      freightDetails: lead.freightDetails || "",
+    });
+
+    if (lead.customer) {
+      setSelectedClientForEditLead({
+        id: lead.customer.id,
+        displayName:
+          lead.customer.tradeName ||
+          lead.customer.fullName ||
+          lead.customer.companyName ||
+          lead.contactName,
+        tradeName: lead.customer.tradeName,
+        companyName: lead.customer.companyName,
+        fullName: lead.customer.fullName,
+        type: lead.customer.type || "CLIENT",
+        personType: "LEGAL",
+        documentNumber: null,
+        phone: lead.customer.phone || null,
+        whatsapp: lead.customer.whatsapp || null,
+        email: lead.customer.email || null,
+        city: lead.customer.city || null,
+        state: null,
+        status: "ACTIVE",
+      });
+    } else {
+      setSelectedClientForEditLead(null);
+    }
+
+    setIsEditLeadModalOpen(true);
+  };
+
+  const handleOpenEditLeadById = (leadId: string) => {
+    for (const col of columns) {
+      const found = col.leads.find((l) => l.id === leadId);
+      if (found) {
+        handleOpenEditLead(found);
+        return;
+      }
+    }
+  };
+
+  const handleSaveEditLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLeadId) return;
+    setIsSavingEditLead(true);
+    try {
+      const res = await fetch(`/api/v1/crm/leads/${editingLeadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...editLeadForm,
+          estimatedValue: editLeadForm.estimatedValue ? parseFloat(editLeadForm.estimatedValue) : null,
+          dueDate: editLeadForm.dueDate || null,
+          customerId: editLeadForm.customerId || null,
+          helperId: editLeadForm.helperId || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsEditLeadModalOpen(false);
+        setEditingLeadId(null);
+        fetchKanban();
+      } else {
+        alert("Erro ao salvar serviço: " + (data.error || "Tente novamente"));
+      }
+    } catch {
+      alert("Falha de rede ao tentar atualizar o serviço.");
+    } finally {
+      setIsSavingEditLead(false);
+    }
+  };
+
+  const handleConfirmDeleteLead = async () => {
+    if (!leadToDelete) return;
+    setIsDeletingLeadDirect(true);
+    try {
+      const res = await fetch(`/api/v1/crm/leads/${leadToDelete.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLeadToDelete(null);
+        fetchKanban();
+      } else {
+        alert("Erro ao excluir serviço: " + (data.error || ""));
+      }
+    } catch {
+      alert("Falha ao comunicar com o servidor para exclusão.");
+    } finally {
+      setIsDeletingLeadDirect(false);
+    }
+  };
+
   const handleCreateLead = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -817,9 +966,36 @@ export default function KanbanPage() {
                                     {lead.customer?.tradeName || lead.customer?.companyName || lead.customer?.fullName || lead.contactName}
                                   </p>
                                 </div>
-                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${priorityInfo.className}`}>
-                                  {priorityInfo.label}
-                                </span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${priorityInfo.className}`}>
+                                    {priorityInfo.label}
+                                  </span>
+                                  {/* Botoes de Acao Rapida do Card */}
+                                  <div className="flex items-center gap-0.5">
+                                    <button
+                                      type="button"
+                                      title="Editar Serviço"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenEditLead(lead);
+                                      }}
+                                      className="w-6 h-6 rounded-lg bg-zinc-200/70 hover:bg-[#FF650F] hover:text-white text-zinc-600 dark:bg-white/10 dark:text-zinc-300 flex items-center justify-center transition-colors shadow-2xs"
+                                    >
+                                      <Edit2 className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      title="Excluir Serviço"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setLeadToDelete({ id: lead.id, title: lead.title });
+                                      }}
+                                      className="w-6 h-6 rounded-lg bg-zinc-200/70 hover:bg-red-600 hover:text-white text-zinc-600 dark:bg-white/10 dark:text-zinc-300 flex items-center justify-center transition-colors shadow-2xs"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </div>
                               </div>
 
                               <div className="flex items-center justify-between text-xs pt-1">
@@ -1232,6 +1408,344 @@ export default function KanbanPage() {
       )}
 
       {/* ======================================================== */}
+      {/* MODAL: EDITAR SERVIÇO (CRUD DO CARD NO KANBAN)          */}
+      {/* ======================================================== */}
+      {isEditLeadModalOpen && (
+        <div
+          className="fixed inset-0 z-[85] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setIsEditLeadModalOpen(false)}
+        >
+          <div
+            className="w-full sm:max-w-xl max-h-[92vh] sm:max-h-[88vh] bg-white dark:bg-[#18191E] rounded-t-[32px] sm:rounded-3xl border-t sm:border border-black/[0.08] dark:border-white/[0.08] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex flex-col items-center pt-2 sm:hidden shrink-0">
+              <div className="w-10 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
+            </div>
+
+            <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.04] dark:border-white/[0.06] shrink-0">
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FF650F]">
+                  Edição de Serviço
+                </span>
+                <h3 className="text-lg font-black text-zinc-900 dark:text-white tracking-tight flex items-center gap-2">
+                  <Edit2 className="w-5 h-5 text-[#FF650F]" />
+                  <span>Editar Informações do Serviço</span>
+                </h3>
+                {editLeadForm.budgetCode && (
+                  <span className="text-xs font-mono font-bold text-zinc-500">
+                    ID Orçamento: [{editLeadForm.budgetCode}]
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditLeadModalOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditLead} className="p-6 space-y-4 overflow-y-auto max-h-[72vh] no-scrollbar">
+              <div>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Título do Serviço / Oportunidade *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Fachada ACM Loja Conceito"
+                  value={editLeadForm.title}
+                  onChange={(e) => setEditLeadForm({ ...editLeadForm, title: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                />
+              </div>
+
+              {/* Seletor de Coluna do Funil */}
+              <div>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Etapa no Funil Kanban
+                </label>
+                <select
+                  value={editLeadForm.columnId}
+                  onChange={(e) => setEditLeadForm({ ...editLeadForm, columnId: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                >
+                  {columns.map((col) => (
+                    <option key={col.id} value={col.id}>
+                      {col.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Seletor Inteligente de Cliente */}
+              <div>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Cliente Vinculado (CRM)
+                </label>
+                <ClientSearchAutocomplete
+                  selectedClient={selectedClientForEditLead}
+                  onSelectClient={(client) => {
+                    setSelectedClientForEditLead(client);
+                    if (client) {
+                      setEditLeadForm((prev) => ({
+                        ...prev,
+                        customerId: client.id,
+                        contactName: client.displayName,
+                        contactPhone: client.whatsapp || client.phone || prev.contactPhone,
+                        contactEmail: client.email || prev.contactEmail,
+                      }));
+                    } else {
+                      setEditLeadForm((prev) => ({
+                        ...prev,
+                        customerId: "",
+                      }));
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Nome do Contato *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Nome do cliente"
+                    value={editLeadForm.contactName}
+                    onChange={(e) => setEditLeadForm({ ...editLeadForm, contactName: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    WhatsApp / Telefone *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="(41) 99999-9999"
+                    value={editLeadForm.contactPhone}
+                    onChange={(e) => setEditLeadForm({ ...editLeadForm, contactPhone: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    E-mail do Cliente
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="cliente@exemplo.com"
+                    value={editLeadForm.contactEmail}
+                    onChange={(e) => setEditLeadForm({ ...editLeadForm, contactEmail: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Valor Estimado (R$)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={editLeadForm.estimatedValue}
+                    onChange={(e) => setEditLeadForm({ ...editLeadForm, estimatedValue: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Prioridade
+                  </label>
+                  <select
+                    value={editLeadForm.priority}
+                    onChange={(e) => setEditLeadForm({ ...editLeadForm, priority: e.target.value as any })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  >
+                    <option value="LOW">Baixa</option>
+                    <option value="MEDIUM">Média</option>
+                    <option value="HIGH">Alta</option>
+                    <option value="URGENT">Urgente</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Data de Entrega (Prazo)
+                  </label>
+                  <input
+                    type="date"
+                    value={editLeadForm.dueDate}
+                    onChange={(e) => setEditLeadForm({ ...editLeadForm, dueDate: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+              </div>
+
+              {/* Especificações Técnicas de Instalação */}
+              <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.06] dark:border-white/[0.08] space-y-3">
+                <span className="text-xs font-bold text-zinc-900 dark:text-white block uppercase tracking-wide">
+                  Especificações Técnicas de Campo
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                      Voltagem do Local
+                    </label>
+                    <select
+                      value={editLeadForm.voltage}
+                      onChange={(e) => setEditLeadForm({ ...editLeadForm, voltage: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18191E] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    >
+                      <option value="110V">110V</option>
+                      <option value="220V">220V</option>
+                      <option value="Bivolt">Bivolt</option>
+                      <option value="Sem elétrica">Sem elétrica</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                      Ajudante Auxiliar
+                    </label>
+                    <select
+                      value={editLeadForm.helperId}
+                      onChange={(e) => setEditLeadForm({ ...editLeadForm, helperId: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18191E] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    >
+                      <option value="">Nenhum ajudante</option>
+                      {serviceProviders.map((prov) => (
+                        <option key={prov.id} value={prov.id}>
+                          {prov.tradeName || prov.fullName || prov.companyName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                      Especificação de Tinta
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Esmalte sintético preto fosco"
+                      value={editLeadForm.paintDetails}
+                      onChange={(e) => setEditLeadForm({ ...editLeadForm, paintDetails: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18191E] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                      Frete / Logística
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Frete próprio com entrega em Curitiba"
+                      value={editLeadForm.freightDetails}
+                      onChange={(e) => setEditLeadForm({ ...editLeadForm, freightDetails: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#18191E] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Observações & Briefing
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Detalhes sobre medidas, cores e prazos..."
+                  value={editLeadForm.notes}
+                  onChange={(e) => setEditLeadForm({ ...editLeadForm, notes: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditLeadModalOpen(false)}
+                  className="rounded-full px-4 text-xs font-bold"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isLoading={isSavingEditLead}
+                  className="rounded-full px-5 text-xs font-bold"
+                >
+                  Salvar Alterações
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: CONFIRMAR EXCLUSÃO DE SERVIÇO (CRUD DIRETO)      */}
+      {/* ======================================================== */}
+      {leadToDelete && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150"
+          onClick={() => setLeadToDelete(null)}
+        >
+          <div
+            className="w-full max-w-sm bg-white dark:bg-[#18191E] rounded-3xl p-6 border border-black/10 dark:border-white/10 shadow-2xl space-y-4 text-center animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-600 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-zinc-900 dark:text-white">
+                Excluir este serviço?
+              </h3>
+              <p className="text-xs text-zinc-500 mt-1.5 leading-relaxed">
+                Tem certeza que deseja remover o serviço <strong className="text-zinc-900 dark:text-white">&quot;{leadToDelete.title}&quot;</strong>? Esta ação excluirá permanentemente o card do funil e todos os documentos vinculados.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2.5 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => setLeadToDelete(null)}
+                className="rounded-xl px-4 text-xs font-bold"
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                type="button"
+                isLoading={isDeletingLeadDirect}
+                onClick={handleConfirmDeleteLead}
+                className="rounded-xl px-4 text-xs font-bold bg-red-600 hover:bg-red-700 text-white border-0"
+              >
+                Sim, Excluir
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
       {/* MODAL: O VERSO DO CARTÃO ESTILO TRELLO (CENTRAL TAREFA)  */}
       {/* ======================================================== */}
       <ErrorBoundary fallbackTitle="Não foi possível exibir os detalhes deste card">
@@ -1245,6 +1759,7 @@ export default function KanbanPage() {
         onLeadUpdated={fetchKanban}
         columns={columns.map((c) => ({ id: c.id, name: c.name, color: c.color }))}
         onConvertToOS={handleConvertToOS}
+        onOpenEditLead={(leadId) => handleOpenEditLeadById(leadId)}
         onOpenContactDetails={(contactId) => {
           setSelectedContactId(contactId);
           setIsDetailsOpen(true);

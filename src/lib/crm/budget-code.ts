@@ -41,5 +41,24 @@ export async function generateNextBudgetCode(): Promise<string> {
   const mm = String(now.getMonth() + 1).padStart(2, "0");
   const yy = String(now.getFullYear()).slice(-2);
 
-  return `${nextSeq} ${dd} ${mm} ${yy}`;
+  let candidateCode = `${nextSeq} ${dd} ${mm} ${yy}`;
+
+  // Garante unicidade absoluta no banco para evitar erro P2002
+  let isUnique = false;
+  let attempts = 0;
+  while (!isUnique && attempts < 100) {
+    const existing = await prisma.lead.findUnique({
+      where: { budgetCode: candidateCode },
+      select: { id: true },
+    });
+    if (!existing) {
+      isUnique = true;
+    } else {
+      nextSeq++;
+      candidateCode = `${nextSeq} ${dd} ${mm} ${yy}`;
+      attempts++;
+    }
+  }
+
+  return candidateCode;
 }

@@ -68,7 +68,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     if (!lead) {
       return NextResponse.json(
-        { success: false, error: "Oportunidade não encontrada." },
+        { success: false, error: "Serviço não encontrado." },
         { status: 404 }
       );
     }
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest, { params }: Params) {
   } catch (error: any) {
     console.error("[CRM API] Erro ao buscar detalhes da oportunidade:", error);
     return NextResponse.json(
-      { success: false, error: "Falha ao consultar oportunidade." },
+      { success: false, error: "Falha ao consultar serviço." },
       { status: 500 }
     );
   }
@@ -132,18 +132,26 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     if (contractContent !== undefined) dataToUpdate.contractContent = contractContent;
     if (columnId !== undefined) dataToUpdate.columnId = columnId;
     if (orderInColumn !== undefined) dataToUpdate.orderInColumn = Number(orderInColumn);
-    if (title !== undefined) dataToUpdate.title = title;
-    if (contactName !== undefined) dataToUpdate.contactName = contactName;
-    if (contactPhone !== undefined) dataToUpdate.contactPhone = contactPhone;
-    if (contactEmail !== undefined) dataToUpdate.contactEmail = contactEmail;
+    if (title !== undefined) dataToUpdate.title = title?.trim() || "Serviço sem título";
+    if (contactName !== undefined) dataToUpdate.contactName = contactName?.trim() || "";
+    if (contactPhone !== undefined) dataToUpdate.contactPhone = contactPhone?.trim() || "";
+    if (contactEmail !== undefined) dataToUpdate.contactEmail = contactEmail?.trim() || null;
     if (customerId !== undefined) dataToUpdate.customerId = customerId || null;
-    if (estimatedValue !== undefined)
-      dataToUpdate.estimatedValue = estimatedValue !== null ? Number(estimatedValue) : null;
+    if (estimatedValue !== undefined) {
+      dataToUpdate.estimatedValue =
+        estimatedValue !== null && estimatedValue !== "" ? Number(estimatedValue) : null;
+    }
     if (priority !== undefined) dataToUpdate.priority = priority;
     if (source !== undefined) dataToUpdate.source = source;
     if (notes !== undefined) dataToUpdate.notes = notes;
-    if (dueDate !== undefined)
-      dataToUpdate.dueDate = dueDate ? new Date(dueDate) : null;
+    if (dueDate !== undefined) {
+      if (!dueDate) {
+        dataToUpdate.dueDate = null;
+      } else {
+        const d = new Date(dueDate);
+        dataToUpdate.dueDate = isNaN(d.getTime()) ? null : d;
+      }
+    }
     if (isCompleted !== undefined) dataToUpdate.isCompleted = Boolean(isCompleted);
     if (coverImage !== undefined) dataToUpdate.coverImage = coverImage;
     if (assignedToId !== undefined) dataToUpdate.assignedToId = assignedToId;
@@ -165,7 +173,30 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       },
     });
 
-    
+    // Sincroniza metadados do documento gerado se existir
+    try {
+      const existingDoc = await prisma.document.findFirst({
+        where: { leadId: id, category: "ORCAMENTO" },
+      });
+      if (existingDoc) {
+        await prisma.document.update({
+          where: { id: existingDoc.id },
+          data: {
+            title: updatedLead.title,
+            clientName:
+              updatedLead.customer?.tradeName ||
+              updatedLead.customer?.fullName ||
+              updatedLead.contactName,
+            clientPhone: updatedLead.customer?.whatsapp || updatedLead.contactPhone,
+            clientEmail: updatedLead.customer?.email || updatedLead.contactEmail,
+            totalAmount: updatedLead.estimatedValue ? Number(updatedLead.estimatedValue) : null,
+          },
+        });
+      }
+    } catch (docErr) {
+      console.warn("[CRM] Aviso ao sincronizar documento de orçamento:", docErr);
+    }
+
     // Gatilho automático para Linha de Produção ao arrastar para coluna "Produção"
     if (columnId !== undefined) {
       try {
@@ -173,10 +204,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           where: { id: columnId },
         });
 
-        const isProductionCol = targetCol && (
-          targetCol.name.trim().toLowerCase().includes("produção") ||
-          targetCol.name.trim().toLowerCase().includes("producao")
-        );
+        const isProductionCol =
+          targetCol &&
+          (targetCol.name.trim().toLowerCase().includes("produção") ||
+            targetCol.name.trim().toLowerCase().includes("producao"));
 
         if (isProductionCol) {
           const existingSO = await prisma.serviceOrder.findFirst({
@@ -214,9 +245,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             const osCode = `OS-${currentYear}-${String(osCount + 1).padStart(4, "0")}`;
             const val = updatedLead.estimatedValue ? Number(updatedLead.estimatedValue) : 0;
 
-            const toolsList = Array.isArray(updatedLead.tools) && updatedLead.tools.length > 0
-              ? `\n\n🔧 Ferramentas & Recursos: ${updatedLead.tools.join(", ")}`
-              : "";
+            const toolsList =
+              Array.isArray(updatedLead.tools) && updatedLead.tools.length > 0
+                ? `\n\n🔧 Ferramentas & Recursos: ${updatedLead.tools.join(", ")}`
+                : "";
             const voltStr = updatedLead.voltage ? `\n⚡ Voltagem: ${updatedLead.voltage}` : "";
             const paintStr = updatedLead.paintDetails ? `\n🎨 Tinta: ${updatedLead.paintDetails}` : "";
             const freightStr = updatedLead.freightDetails ? `\n🚚 Frete: ${updatedLead.freightDetails}` : "";
@@ -252,8 +284,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
             console.log(`🏭 Ordem de Serviço ${osCode} criada automaticamente para o Trabalho ${id}`);
           }
         } else {
-          // Regra solicitada: Ao remover o card da coluna Em Produção no Funil Kanban,
-          // o card deixa de existir automaticamente na Linha de Produção.
+          // Ao remover da coluna Em Produção, remove automaticamente da Linha de Produção
           await prisma.serviceOrder.deleteMany({
             where: { leadId: id },
           });
@@ -263,7 +294,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         console.warn("[CRM] Aviso ao disparar criação automática na Linha de Produção:", triggerErr);
       }
     }
-  
+
     return NextResponse.json({
       success: true,
       lead: updatedLead,
@@ -271,7 +302,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   } catch (error: any) {
     console.error("[CRM API] Erro ao atualizar lead:", error);
     return NextResponse.json(
-      { success: false, error: "Falha ao atualizar dados do lead", details: error?.message },
+      { success: false, error: "Falha ao atualizar dados do serviço", details: error?.message },
       { status: 500 }
     );
   }
@@ -279,23 +310,63 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
 /**
  * DELETE /api/v1/crm/leads/[id]
- * Remove um lead do sistema
+ * Remove um serviço/lead do sistema com limpeza segura de todas as dependências
  */
 export async function DELETE(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
+
+    // 1. Remove documentos vinculados na tabela Document
+    await prisma.document.deleteMany({
+      where: { leadId: id },
+    });
+
+    // 2. Remove ordens de serviço vinculadas
+    await prisma.serviceOrder.deleteMany({
+      where: { leadId: id },
+    });
+
+    // 3. Remove etiquetas vinculadas
+    await prisma.leadTagAssignment.deleteMany({
+      where: { leadId: id },
+    });
+
+    // 4. Remove checklists e seus itens
+    const checklists = await prisma.leadChecklist.findMany({
+      where: { leadId: id },
+      select: { id: true },
+    });
+    if (checklists.length > 0) {
+      await prisma.leadChecklistItem.deleteMany({
+        where: { checklistId: { in: checklists.map((c) => c.id) } },
+      });
+      await prisma.leadChecklist.deleteMany({
+        where: { leadId: id },
+      });
+    }
+
+    // 5. Remove anexos e comentários
+    await prisma.leadAttachment.deleteMany({
+      where: { leadId: id },
+    });
+
+    await prisma.leadComment.deleteMany({
+      where: { leadId: id },
+    });
+
+    // 6. Remove o lead com segurança
     await prisma.lead.delete({
       where: { id },
     });
 
     return NextResponse.json({
       success: true,
-      message: "Oportunidade removida com sucesso.",
+      message: "Serviço excluído com sucesso.",
     });
   } catch (error: any) {
-    console.error("[CRM API] Erro ao excluir lead:", error);
+    console.error("[CRM API] Erro ao excluir serviço:", error);
     return NextResponse.json(
-      { success: false, error: "Falha ao excluir oportunidade." },
+      { success: false, error: "Falha ao excluir serviço.", details: error?.message },
       { status: 500 }
     );
   }

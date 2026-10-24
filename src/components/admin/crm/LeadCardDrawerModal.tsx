@@ -147,6 +147,7 @@ interface LeadCardDrawerModalProps {
   columns: { id: string; name: string; color: string | null }[];
   onConvertToOS?: (leadId: string) => void;
   onOpenContactDetails?: (contactId: string) => void;
+  onOpenEditLead?: (leadId: string) => void;
 }
 
 export function LeadCardDrawerModal({
@@ -157,6 +158,7 @@ export function LeadCardDrawerModal({
   columns,
   onConvertToOS,
   onOpenContactDetails,
+  onOpenEditLead,
 }: LeadCardDrawerModalProps) {
   const [data, setData] = useState<LeadDetailFull | null>(null);
   const { toast } = useToast();
@@ -818,13 +820,41 @@ export function LeadCardDrawerModal({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-white/[0.06] hover:bg-zinc-200 dark:hover:bg-white/[0.1] text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center transition-colors shrink-0"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              title="Editar Serviço Completo"
+              onClick={() => {
+                if (onOpenEditLead && leadId) {
+                  onClose();
+                  onOpenEditLead(leadId);
+                } else {
+                  setIsEditingInfo(true);
+                }
+              }}
+              className="px-3 py-1.5 rounded-full bg-orange-500/10 hover:bg-orange-500/20 text-[#FF650F] text-xs font-bold flex items-center gap-1.5 border border-orange-500/20 transition-colors"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Editar</span>
+            </button>
+
+            <button
+              type="button"
+              title="Excluir Serviço"
+              onClick={() => setIsDeleteConfirmOpen(true)}
+              className="p-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 flex items-center justify-center transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-white/[0.06] hover:bg-zinc-200 dark:hover:bg-white/[0.1] text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center transition-colors shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* CORPO DO CARTÃO DIVIDIDO EM 2 COLUNAS (ESTILO TRELLO) */}
@@ -1155,6 +1185,90 @@ export function LeadCardDrawerModal({
                         ? "Prospecção Ativa"
                         : "Outros"}
                     </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* SEÇÃO: ESPECIFICAÇÕES TÉCNICAS DE CAMPO & LOGÍSTICA (ÍCTHUS) */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-sm space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-black/[0.04] dark:border-white/[0.05]">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
+                  <Wrench className="w-4 h-4 text-[#FF650F]" />
+                  <span>Especificações Técnicas & Campo</span>
+                </h3>
+                {onOpenEditLead && leadId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenEditLead(leadId);
+                    }}
+                    className="text-[11px] font-bold text-zinc-500 hover:text-[#FF650F] flex items-center gap-1 transition-colors"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                    <span>Editar Especificações</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04] space-y-0.5">
+                  <span className="text-[10px] font-semibold text-zinc-400 block uppercase flex items-center gap-1">
+                    <Zap className="w-3 h-3 text-amber-500" />
+                    Voltagem
+                  </span>
+                  <span className="text-xs font-bold text-zinc-900 dark:text-white block">
+                    {data?.voltage || "Não especificado"}
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04] space-y-0.5">
+                  <span className="text-[10px] font-semibold text-zinc-400 block uppercase flex items-center gap-1">
+                    <User className="w-3 h-3 text-blue-500" />
+                    Ajudante Auxiliar
+                  </span>
+                  <span className="text-xs font-bold text-zinc-900 dark:text-white block truncate">
+                    {data?.helper?.tradeName || data?.helper?.fullName || data?.helper?.companyName || "Nenhum"}
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04] space-y-0.5">
+                  <span className="text-[10px] font-semibold text-zinc-400 block uppercase flex items-center gap-1">
+                    <Paintbrush className="w-3 h-3 text-purple-500" />
+                    Especificação de Tinta
+                  </span>
+                  <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 block truncate">
+                    {data?.paintDetails || "Padrão"}
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04] space-y-0.5">
+                  <span className="text-[10px] font-semibold text-zinc-400 block uppercase flex items-center gap-1">
+                    <Truck className="w-3 h-3 text-emerald-500" />
+                    Frete / Logística
+                  </span>
+                  <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 block truncate">
+                    {data?.freightDetails || "Sem frete"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Ferramentas & Recursos */}
+              {Array.isArray(data?.tools) && data.tools.length > 0 && (
+                <div className="pt-2 border-t border-black/[0.04] dark:border-white/[0.05] space-y-1.5">
+                  <span className="text-[10px] font-bold text-zinc-400 block uppercase">
+                    Ferramentas & Recursos de Campo ({data.tools.length})
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {data.tools.map((t, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06] text-[11px] font-medium text-zinc-800 dark:text-zinc-200"
+                      >
+                        {t}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}
