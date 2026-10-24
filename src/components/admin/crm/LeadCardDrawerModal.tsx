@@ -36,6 +36,7 @@ import {
   Truck,
   Paintbrush,
   FileCheck,
+  Eye,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -148,6 +149,7 @@ interface LeadCardDrawerModalProps {
   onConvertToOS?: (leadId: string) => void;
   onOpenContactDetails?: (contactId: string) => void;
   onOpenEditLead?: (leadId: string) => void;
+  onViewBudgetDocument?: (leadId: string) => void;
 }
 
 export function LeadCardDrawerModal({
@@ -159,6 +161,7 @@ export function LeadCardDrawerModal({
   onConvertToOS,
   onOpenContactDetails,
   onOpenEditLead,
+  onViewBudgetDocument,
 }: LeadCardDrawerModalProps) {
   const [data, setData] = useState<LeadDetailFull | null>(null);
   const { toast } = useToast();
@@ -771,8 +774,21 @@ export function LeadCardDrawerModal({
             
               {/* ID do Orçamento Sequencial Inteligente */}
               {data?.budgetCode && (
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-500/10 text-[#FF650F] border border-orange-500/20 text-[11px] font-mono font-black">
-                  <span>ID Orçamento: [{data.budgetCode}]</span>
+                <div className="flex items-center gap-2">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-500/10 text-[#FF650F] border border-orange-500/20 text-[11px] font-mono font-black">
+                    <span>ID Orçamento: [{data.budgetCode}]</span>
+                  </div>
+                  {onViewBudgetDocument && (
+                    <button
+                      type="button"
+                      onClick={() => onViewBudgetDocument(data.id)}
+                      title="Visualizar documento de orçamento gerado (PDF)"
+                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-orange-500/10 hover:bg-[#FF650F] text-[#FF650F] hover:text-white text-[11px] font-semibold border border-orange-500/20 transition-all cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Ver PDF</span>
+                    </button>
+                  )}
                 </div>
               )}
 

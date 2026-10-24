@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { generateBudgetPDF } from "@/lib/documents/budget-pdf-generator";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -173,28 +174,79 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       },
     });
 
-    // Sincroniza metadados do documento gerado se existir
+    // Sincroniza metadados e regera o PDF do orçamento se já existir ou se tiver budgetCode
     try {
       const existingDoc = await prisma.document.findFirst({
         where: { leadId: id, category: "ORCAMENTO" },
       });
-      if (existingDoc) {
-        await prisma.document.update({
-          where: { id: existingDoc.id },
-          data: {
-            title: updatedLead.title,
-            clientName:
-              updatedLead.customer?.tradeName ||
-              updatedLead.customer?.fullName ||
-              updatedLead.contactName,
-            clientPhone: updatedLead.customer?.whatsapp || updatedLead.contactPhone,
-            clientEmail: updatedLead.customer?.email || updatedLead.contactEmail,
-            totalAmount: updatedLead.estimatedValue ? Number(updatedLead.estimatedValue) : null,
-          },
+
+      const effectiveBudgetCode = updatedLead.budgetCode || existingDoc?.code;
+
+      if (effectiveBudgetCode) {
+        const pdfResult = await generateBudgetPDF({
+          budgetCode: effectiveBudgetCode,
+          title: updatedLead.title,
+          contactName: updatedLead.contactName,
+          contactPhone: updatedLead.contactPhone,
+          contactEmail: updatedLead.contactEmail,
+          clientTradeName:
+            updatedLead.customer?.tradeName ||
+            updatedLead.customer?.companyName ||
+            updatedLead.customer?.fullName,
+          clientAddress: updatedLead.customer?.city
+            ? `${updatedLead.customer.city} - ${updatedLead.customer.state || "PR"}`
+            : null,
+          estimatedValue: updatedLead.estimatedValue ? Number(updatedLead.estimatedValue) : null,
+          priority: updatedLead.priority,
+          dueDate: updatedLead.dueDate,
+          notes: updatedLead.notes,
+          voltage: updatedLead.voltage,
+          tools: updatedLead.tools,
+          paintDetails: updatedLead.paintDetails,
+          freightDetails: updatedLead.freightDetails,
+          helperName: updatedLead.helper?.fullName || updatedLead.helper?.tradeName,
+          createdAt: updatedLead.createdAt,
         });
+
+        if (existingDoc) {
+          await prisma.document.update({
+            where: { id: existingDoc.id },
+            data: {
+              code: effectiveBudgetCode,
+              title: `Orçamento [${effectiveBudgetCode}] — ${updatedLead.title}`,
+              fileUrl: pdfResult.fileUrl,
+              fileSize: pdfResult.fileSize,
+              clientName:
+                updatedLead.customer?.tradeName ||
+                updatedLead.customer?.fullName ||
+                updatedLead.contactName,
+              clientPhone: updatedLead.customer?.whatsapp || updatedLead.contactPhone,
+              clientEmail: updatedLead.customer?.email || updatedLead.contactEmail,
+              totalAmount: updatedLead.estimatedValue ? Number(updatedLead.estimatedValue) : null,
+            },
+          });
+        } else {
+          await prisma.document.create({
+            data: {
+              code: effectiveBudgetCode,
+              title: `Orçamento [${effectiveBudgetCode}] — ${updatedLead.title}`,
+              category: "ORCAMENTO",
+              fileUrl: pdfResult.fileUrl,
+              fileSize: pdfResult.fileSize,
+              customerId: updatedLead.customerId || null,
+              leadId: updatedLead.id,
+              clientName: updatedLead.customer?.tradeName || updatedLead.contactName,
+              clientPhone: updatedLead.contactPhone,
+              clientEmail: updatedLead.contactEmail,
+              totalAmount: updatedLead.estimatedValue ? Number(updatedLead.estimatedValue) : null,
+              status: "GERADO",
+              sentViaWhatsapp: false,
+            },
+          });
+        }
       }
     } catch (docErr) {
-      console.warn("[CRM] Aviso ao sincronizar documento de orçamento:", docErr);
+      console.warn("[CRM] Aviso ao regerar/sincronizar documento de orçamento:", docErr);
     }
 
     // Gatilho automático para Linha de Produção ao arrastar para coluna "Produção"

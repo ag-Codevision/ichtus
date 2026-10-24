@@ -23,6 +23,9 @@ import {
   ChevronRight,
   Trash2,
   Edit2,
+  Eye,
+  Download,
+  ExternalLink,
   ArrowLeft,
   ArrowRight,
   Palette,
@@ -183,7 +186,15 @@ export default function KanbanPage() {
 
   // Estados de Exclusão do Serviço (CRUD do Card)
   const [leadToDelete, setLeadToDelete] = useState<{ id: string; title: string } | null>(null);
-  const [isDeletingLeadDirect, setIsDeletingLeadDirect] = useState(false);
+    const [isDeletingLeadDirect, setIsDeletingLeadDirect] = useState(false);
+
+  // Visualizador de PDF de Orçamento
+  const [previewBudgetDoc, setPreviewBudgetDoc] = useState<{
+    title: string;
+    fileUrl: string;
+    code?: string | null;
+  } | null>(null);
+  const [isLoadingBudgetDoc, setIsLoadingBudgetDoc] = useState(false);
 
   const [newLeadForm, setNewLeadForm] = useState({
     title: "",
@@ -529,6 +540,28 @@ export default function KanbanPage() {
       alert("Falha na comunicação com o servidor.");
     } finally {
       setConvertingLeadId(null);
+    }
+  };
+
+  const handleViewLeadBudgetDocument = async (leadId: string | null, fallbackBudgetCode?: string | null) => {
+    if (!leadId) return;
+    setIsLoadingBudgetDoc(true);
+    try {
+      const res = await fetch(`/api/v1/crm/leads/${leadId}/budget-document`);
+      const data = await res.json();
+      if (data.success && data.document) {
+        setPreviewBudgetDoc({
+          title: data.document.title,
+          fileUrl: data.document.fileUrl,
+          code: data.document.code,
+        });
+      } else {
+        alert(data.error || "Não foi possível carregar o documento de orçamento.");
+      }
+    } catch {
+      alert("Falha na comunicação ao tentar carregar o documento.");
+    } finally {
+      setIsLoadingBudgetDoc(false);
     }
   };
 
@@ -972,6 +1005,17 @@ export default function KanbanPage() {
                                   </span>
                                   {/* Botoes de Acao Rapida do Card */}
                                   <div className="flex items-center gap-0.5">
+                                    <button
+                                      type="button"
+                                      title="Visualizar Orçamento em PDF"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleViewLeadBudgetDocument(lead.id, lead.budgetCode);
+                                      }}
+                                      className="w-6 h-6 rounded-lg bg-zinc-200/70 hover:bg-[#FF650F] hover:text-white text-zinc-600 dark:bg-white/10 dark:text-zinc-300 flex items-center justify-center transition-colors shadow-2xs"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                    </button>
                                     <button
                                       type="button"
                                       title="Editar Serviço"
@@ -1433,9 +1477,23 @@ export default function KanbanPage() {
                   <span>Editar Informações do Serviço</span>
                 </h3>
                 {editLeadForm.budgetCode && (
-                  <span className="text-xs font-mono font-bold text-zinc-500">
-                    ID Orçamento: [{editLeadForm.budgetCode}]
-                  </span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs font-mono font-bold text-zinc-500">
+                      ID Orçamento: [{editLeadForm.budgetCode}]
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleViewLeadBudgetDocument(editingLeadId, editLeadForm.budgetCode)}
+                      title="Visualizar documento de orçamento gerado (PDF)"
+                      className="p-1 rounded-md bg-orange-500/10 hover:bg-[#FF650F] text-[#FF650F] hover:text-white transition-all border border-orange-500/20 cursor-pointer flex items-center justify-center"
+                    >
+                      {isLoadingBudgetDoc ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Eye className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
                 )}
               </div>
               <button
@@ -1760,6 +1818,7 @@ export default function KanbanPage() {
         columns={columns.map((c) => ({ id: c.id, name: c.name, color: c.color }))}
         onConvertToOS={handleConvertToOS}
         onOpenEditLead={(leadId) => handleOpenEditLeadById(leadId)}
+        onViewBudgetDocument={(leadId) => handleViewLeadBudgetDocument(leadId)}
         onOpenContactDetails={(contactId) => {
           setSelectedContactId(contactId);
           setIsDetailsOpen(true);
@@ -1792,6 +1851,77 @@ export default function KanbanPage() {
           <Plus className="w-6 h-6 stroke-[2.5]" />
         </button>
       </div>
+      {/* ======================================================== */}
+      {/* MODAL: PREVIEW DO PDF DO ORÇAMENTO (VISUALIZADOR)       */}
+      {/* ======================================================== */}
+      {previewBudgetDoc && (
+        <div
+          className="fixed inset-0 z-[130] flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setPreviewBudgetDoc(null)}
+        >
+          <div
+            className="w-full max-w-4xl h-[90vh] bg-white dark:bg-[#18191E] rounded-3xl border border-black/10 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.06] dark:border-white/[0.08] shrink-0">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FF650F] bg-orange-500/10 px-2.5 py-0.5 rounded-md border border-orange-500/20">
+                    Documento Oficial
+                  </span>
+                  {previewBudgetDoc.code && (
+                    <span className="text-xs font-mono font-bold text-zinc-500">
+                      [{previewBudgetDoc.code}]
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-base font-bold text-zinc-900 dark:text-white truncate">
+                  {previewBudgetDoc.title}
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewBudgetDoc.fileUrl}
+                  download
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Baixar PDF"
+                  className="p-2 rounded-xl bg-zinc-100 dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline">Baixar</span>
+                </a>
+                <a
+                  href={previewBudgetDoc.fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Abrir em Nova Guia"
+                  className="p-2 rounded-xl bg-zinc-100 dark:bg-white/[0.08] text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span className="hidden sm:inline">Nova Guia</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewBudgetDoc(null)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 w-full bg-zinc-100 dark:bg-zinc-900 overflow-hidden">
+              <iframe
+                src={`${previewBudgetDoc.fileUrl}#toolbar=1`}
+                className="w-full h-full border-0"
+                title="Visualizador do Orçamento em PDF"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
