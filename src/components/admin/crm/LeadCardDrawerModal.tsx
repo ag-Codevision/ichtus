@@ -32,6 +32,10 @@ import {
   Building2,
   Share2,
   Zap,
+  Smile,
+  AtSign,
+  Cloud,
+  HardDrive,
   Wrench,
   Truck,
   Paintbrush,
@@ -42,6 +46,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ClientSearchAutocomplete, SearchedClient } from "@/components/admin/crm/ClientSearchAutocomplete";
+import { RichTextEditor } from "@/components/admin/crm/RichTextEditor";
 
 export interface KanbanTagItem {
   id: string;
@@ -187,6 +192,20 @@ export function LeadCardDrawerModal({
   const [newChecklistTitle, setNewChecklistTitle] = useState("");
   const [newItemInputs, setNewItemInputs] = useState<{ [checklistId: string]: string }>({});
 
+  // Gestão de Anexos em Nuvem (Google Drive, OneDrive, Dropbox)
+  const [cloudAttachmentTab, setCloudAttachmentTab] = useState<"GOOGLE_DRIVE" | "ONEDRIVE" | "DROPBOX" | "LINK">("GOOGLE_DRIVE");
+  const [cloudUrlInput, setCloudUrlInput] = useState("");
+  const [cloudTitleInput, setCloudTitleInput] = useState("");
+  const [isSavingCloudLink, setIsSavingCloudLink] = useState(false);
+
+  // Timeline Unificada de Atividades e Comentários
+  const [timelineItems, setTimelineItems] = useState<any[]>([]);
+  const [showOnlyComments, setShowOnlyComments] = useState(false);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const quickEmojis = ["👍", "❤️", "🚀", "🔧", "📐", "✅", "⚠️", "💬", "📦", "🎨", "👏", "💰"];
+  const teamMembers = ["Administrador", "Marcio", "Engenharia & Projetos", "Comercial Ícthus", "Produção CNC", "Equipe de Instalação"];
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+
   // Gestão de Anexos
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [linkForm, setLinkForm] = useState({ fileName: "", fileUrl: "" });
@@ -238,6 +257,17 @@ export function LeadCardDrawerModal({
       if (json.success && json.lead) {
         setData(json.lead);
         setTitleValue(json.lead.title);
+    // Carrega histórico e atividades
+    try {
+      const actRes = await fetch(`/api/v1/crm/leads/${leadId}/activities`);
+      const actJson = await actRes.json();
+      if (actJson.success && actJson.timeline) {
+        setTimelineItems(actJson.timeline);
+      }
+    } catch (actErr) {
+      console.warn("Aviso ao carregar timeline:", actErr);
+    }
+
         setNotesValue(json.lead.notes || "");
         const rawDueDate = json.lead.dueDate ? new Date(json.lead.dueDate) : null;
         setDueDateInput(rawDueDate && !isNaN(rawDueDate.getTime()) ? rawDueDate.toISOString().split("T")[0] : "");
@@ -640,6 +670,38 @@ export function LeadCardDrawerModal({
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  // Salvar Link em Nuvem
+  const handleSaveCloudAttachment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cloudUrlInput.trim() || !leadId) return;
+    setIsSavingCloudLink(true);
+    try {
+      const res = await fetch(`/api/v1/crm/leads/${leadId}/attachments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName: cloudTitleInput.trim() || cloudUrlInput.trim(),
+          fileUrl: cloudUrlInput.trim(),
+          fileType: cloudAttachmentTab,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setCloudUrlInput("");
+        setCloudTitleInput("");
+        setIsLinkModalOpen(false);
+        fetchLeadDetails();
+        onLeadUpdated();
+      } else {
+        alert(json.error || "Falha ao salvar link.");
+      }
+    } catch {
+      alert("Erro ao comunicar com o servidor.");
+    } finally {
+      setIsSavingCloudLink(false);
     }
   };
 
@@ -1290,33 +1352,32 @@ export function LeadCardDrawerModal({
               )}
             </div>
 
-            {/* SEÇÃO 1: DESCRIÇÃO DETALHADA / BRIEFING */}
+            {/* SEÇÃO 1: DESCRIÇÃO DETALHADA / BRIEFING COM TEXTO FORMATADO */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
                   <FileText className="w-4 h-4 text-[#FF650F]" />
-                  <span>Descrição & Briefing Técnico</span>
+                  <span>Descrição & Escopo do Trabalho (Texto Formatado)</span>
                 </h3>
                 {!isEditingNotes && (
                   <button
                     type="button"
                     onClick={() => setIsEditingNotes(true)}
-                    className="text-[11px] font-bold text-zinc-500 hover:text-[#FF650F] flex items-center gap-1"
+                    className="text-[11px] font-bold text-zinc-500 hover:text-[#FF650F] flex items-center gap-1 transition-colors"
                   >
                     <Edit2 className="w-3 h-3" />
-                    <span>Editar</span>
+                    <span>Editar Descrição</span>
                   </button>
                 )}
               </div>
 
               {isEditingNotes ? (
-                <div className="space-y-2">
-                  <textarea
-                    rows={4}
+                <div className="space-y-2.5">
+                  <RichTextEditor
                     value={notesValue}
-                    onChange={(e) => setNotesValue(e.target.value)}
-                    placeholder="Adicione informações detalhadas sobre medidas, especificações técnicas, cores e prazos..."
-                    className="w-full p-3.5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    onChange={setNotesValue}
+                    placeholder="Adicione escopo, regras, medidas, links técnicos e detalhes da montagem..."
+                    minRows={5}
                   />
                   <div className="flex items-center gap-2">
                     <Button size="sm" onClick={handleSaveNotes} className="rounded-xl text-xs font-bold">
@@ -1338,11 +1399,17 @@ export function LeadCardDrawerModal({
               ) : (
                 <div
                   onClick={() => setIsEditingNotes(true)}
-                  className="p-3.5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 min-h-[60px] cursor-pointer hover:border-black/20 dark:hover:border-white/20 transition-colors whitespace-pre-wrap"
+                  className="p-3.5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 min-h-[60px] cursor-pointer hover:border-black/20 dark:hover:border-white/20 transition-colors"
                 >
-                  {data?.notes || (
-                    <span className="text-zinc-400 italic">
-                      Nenhuma descrição adicionada. Clique para adicionar detalhes...
+                  {data?.notes ? (
+                    <RichTextEditor
+                      value={data.notes}
+                      onChange={() => {}}
+                      className="border-0 bg-transparent shadow-none p-0"
+                    />
+                  ) : (
+                    <span className="text-zinc-400 italic text-xs">
+                      Nenhuma descrição adicionada. Clique para adicionar detalhes, escopo ou instruções...
                     </span>
                   )}
                 </div>
@@ -1379,15 +1446,15 @@ export function LeadCardDrawerModal({
                       </button>
                     </div>
 
-                    {/* Barra de Progresso Estilo Trello */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[11px] font-mono font-bold">
-                        <span className="text-zinc-400">{percentage}%</span>
-                        <span className={isAllDone ? "text-emerald-600" : "text-zinc-500"}>
-                          {completed}/{total}
+                    {/* Barra de Progresso com Porcentagem em Destaque Estilo Trello */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-mono font-bold">
+                        <span className="text-sm font-black text-[#FF650F]">{percentage}%</span>
+                        <span className={isAllDone ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-zinc-500"}>
+                          {completed}/{total} concluídos
                         </span>
                       </div>
-                      <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-white/[0.06] overflow-hidden">
+                      <div className="w-full h-2.5 rounded-full bg-zinc-100 dark:bg-white/[0.06] overflow-hidden p-0.5">
                         <div
                           className={`h-full transition-all duration-300 rounded-full ${
                             isAllDone ? "bg-emerald-500" : "bg-[#FF650F]"
@@ -1458,13 +1525,26 @@ export function LeadCardDrawerModal({
               })}
             </div>
 
-            {/* SEÇÃO 3: ANEXOS (ARQUIVOS, IMAGENS E LINKS) */}
+            {/* SEÇÃO 3: ANEXOS (ARQUIVOS, GOOGLE DRIVE, ONEDRIVE, DROPBOX) */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
                   <Paperclip className="w-4 h-4 text-[#FF650F]" />
-                  <span>Anexos & Documentos ({data?.attachments?.length || 0})</span>
+                  <span>Anexos & Nuvem ({data?.attachments?.length || 0})</span>
                 </h3>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCloudAttachmentTab("GOOGLE_DRIVE");
+                      setIsLinkModalOpen(true);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-[#FF650F] text-xs font-bold flex items-center gap-1.5 border border-orange-500/20 transition-colors"
+                  >
+                    <Cloud className="w-3.5 h-3.5" />
+                    <span>Vincular Nuvem</span>
+                  </button>
+                </div>
               </div>
 
               {data?.attachments && data.attachments.length > 0 ? (
@@ -1488,8 +1568,20 @@ export function LeadCardDrawerModal({
                           <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-600 flex items-center justify-center shrink-0">
                             <FileText className="w-5 h-5" />
                           </div>
+                        ) : att.fileType === "GOOGLE_DRIVE" ? (
+                          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0" title="Google Drive">
+                            <Cloud className="w-5 h-5" />
+                          </div>
+                        ) : att.fileType === "ONEDRIVE" ? (
+                          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0" title="OneDrive">
+                            <HardDrive className="w-5 h-5" />
+                          </div>
+                        ) : att.fileType === "DROPBOX" ? (
+                          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0" title="Dropbox">
+                            <Cloud className="w-5 h-5" />
+                          </div>
                         ) : (
-                          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
+                          <div className="w-10 h-10 rounded-xl bg-zinc-500/10 text-zinc-600 dark:text-zinc-300 flex items-center justify-center shrink-0">
                             <LinkIcon className="w-5 h-5" />
                           </div>
                         )}
@@ -1551,57 +1643,188 @@ export function LeadCardDrawerModal({
               )}
             </div>
 
-            {/* SEÇÃO 4: ÁREA DE COMENTÁRIOS E HISTÓRICO */}
+            {/* SEÇÃO 4: FEED CRONOLÓGICO DE ATIVIDADES & COMENTÁRIOS */}
             <div className="space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-[#FF650F]" />
-                <span>Atividades & Comentários</span>
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-[#FF650F]" />
+                  <span>Atividades & Comentários</span>
+                </h3>
+                {/* Filtro: Mostrar Tudo vs Apenas Comentários */}
+                <div className="flex items-center gap-1 bg-zinc-100 dark:bg-white/[0.06] p-0.5 rounded-xl text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setShowOnlyComments(false)}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                      !showOnlyComments
+                        ? "bg-white dark:bg-[#18191E] text-zinc-900 dark:text-white shadow-xs"
+                        : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                    }`}
+                  >
+                    Tudo ({timelineItems.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowOnlyComments(true)}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                      showOnlyComments
+                        ? "bg-white dark:bg-[#18191E] text-zinc-900 dark:text-white shadow-xs"
+                        : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                    }`}
+                  >
+                    Comentários ({data?.comments?.length || 0})
+                  </button>
+                </div>
+              </div>
 
-              {/* Caixa de Novo Comentário */}
-              <form onSubmit={handleAddComment} className="space-y-2">
+              {/* Caixa de Novo Comentário com Emojis e Menções */}
+              <form onSubmit={handleAddComment} className="space-y-2 p-3.5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.08] dark:border-white/[0.08] shadow-xs">
                 <textarea
                   rows={2}
                   value={commentInput}
-                  onChange={(e) => setCommentInput(e.target.value)}
-                  placeholder="Escreva um comentário ou atualização sobre esta oportunidade..."
-                  className="w-full p-3 rounded-2xl bg-white dark:bg-[#18191E] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCommentInput(val);
+                    const lastWord = val.split(/\s+/).pop() || "";
+                    if (lastWord.startsWith("@")) {
+                      setMentionQuery(lastWord.substring(1));
+                    } else {
+                      setMentionQuery(null);
+                    }
+                  }}
+                  placeholder="Escreva um comentário, mencione com @usuário ou adicione instruções..."
+                  className="w-full bg-transparent border-0 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none resize-none no-scrollbar"
                 />
-                <div className="flex justify-end">
+
+                {/* Dropdown de Sugestões de Menção (@) */}
+                {mentionQuery !== null && (
+                  <div className="p-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 flex flex-wrap gap-1 animate-in fade-in duration-100">
+                    <span className="text-[10px] text-zinc-400 font-bold block w-full">Mencionar colega:</span>
+                    {teamMembers
+                      .filter((m) => m.toLowerCase().includes(mentionQuery.toLowerCase()))
+                      .map((member) => (
+                        <button
+                          key={member}
+                          type="button"
+                          onClick={() => {
+                            const words = commentInput.split(/\s+/);
+                            words.pop();
+                            words.push(`@${member} `);
+                            setCommentInput(words.join(" "));
+                            setMentionQuery(null);
+                          }}
+                          className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-orange-500/10 hover:bg-[#FF650F] text-[#FF650F] hover:text-white transition-colors"
+                        >
+                          @{member}
+                        </button>
+                      ))}
+                  </div>
+                )}
+
+                {/* Barra Inferior da Caixa de Comentário */}
+                <div className="flex items-center justify-between pt-1 border-t border-black/[0.04] dark:border-white/[0.05]">
+                  <div className="flex items-center gap-1">
+                    {/* Botão de Emojis */}
+                    <button
+                      type="button"
+                      onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
+                      title="Inserir Emoji"
+                      className="p-1.5 rounded-lg text-zinc-500 hover:text-[#FF650F] hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors"
+                    >
+                      <Smile className="w-4 h-4" />
+                    </button>
+
+                    {/* Botão de Menção */}
+                    <button
+                      type="button"
+                      onClick={() => setCommentInput((prev) => prev + " @")}
+                      title="Mencionar membro da equipe (@)"
+                      className="p-1.5 rounded-lg text-zinc-500 hover:text-[#FF650F] hover:bg-black/[0.04] dark:hover:bg-white/[0.05] transition-colors"
+                    >
+                      <AtSign className="w-4 h-4" />
+                    </button>
+
+                    {/* Seletor Rápido de Emojis */}
+                    {isEmojiPickerOpen && (
+                      <div className="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-[#121316] rounded-xl border border-black/5 dark:border-white/5 animate-in fade-in duration-100">
+                        {quickEmojis.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => {
+                              setCommentInput((prev) => prev + emoji);
+                              setIsEmojiPickerOpen(false);
+                            }}
+                            className="p-1 text-sm hover:scale-125 transition-transform"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <Button
                     type="submit"
                     size="sm"
                     isLoading={isSubmittingComment}
                     disabled={!commentInput.trim()}
-                    className="rounded-xl text-xs font-bold px-4"
+                    className="rounded-xl text-xs font-bold px-4 h-8"
                   >
                     Salvar Comentário
                   </Button>
                 </div>
               </form>
 
-              {/* Linha do Tempo dos Comentários */}
-              <div className="space-y-3 pt-2">
-                {data?.comments?.map((com) => (
-                  <div key={com.id} className="flex gap-3 items-start">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#FF650F] to-[#FFA05E] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
-                      {(com.authorName || "U").charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 p-3 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] space-y-1 shadow-sm">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-bold text-zinc-900 dark:text-white">
-                          {com.authorName}
-                        </span>
-                        <span className="text-zinc-400 font-mono">
-                          {formatDate(com.createdAt)}
+              {/* Feed Cronológico Unificado */}
+              <div className="space-y-2.5 pt-1">
+                {(showOnlyComments
+                  ? timelineItems.filter((i) => i.itemType === "COMMENT")
+                  : timelineItems
+                ).map((item) => {
+                  if (item.itemType === "ACTIVITY") {
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-2.5 py-1.5 px-3 rounded-xl bg-zinc-100/60 dark:bg-white/[0.02] border border-black/[0.02] dark:border-white/[0.03] text-xs text-zinc-500"
+                      >
+                        <Clock className="w-3.5 h-3.5 text-[#FF650F] shrink-0" />
+                        <span className="font-bold text-zinc-700 dark:text-zinc-300">{item.userName}</span>
+                        <span className="text-zinc-600 dark:text-zinc-400">{item.content}</span>
+                        <span className="text-[10px] font-mono text-zinc-400 ml-auto shrink-0">
+                          {formatDate(item.createdAt)}
                         </span>
                       </div>
-                      <p className="text-xs text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
-                        {com.content}
-                      </p>
+                    );
+                  }
+
+                  return (
+                    <div key={item.id} className="flex gap-3 items-start">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#FF650F] to-[#FFA05E] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
+                        {(item.userName || "U").charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 p-3 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] space-y-1 shadow-xs">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-bold text-zinc-900 dark:text-white">
+                            {item.userName}
+                          </span>
+                          <span className="text-zinc-400 font-mono">
+                            {formatDate(item.createdAt)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">
+                          {item.content}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
+
+                {timelineItems.length === 0 && (
+                  <p className="text-xs text-zinc-400 italic text-center py-3">
+                    Nenhuma atividade ou comentário registrado ainda.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -1978,56 +2201,135 @@ export function LeadCardDrawerModal({
         </div>
       )}
 
-      {/* MODAL SECUNDÁRIO: INSERIR LINK EXTERNO */}
+      {/* MODAL SECUNDÁRIO: ANEXAR LINK OU NUVEM */}
       {isLinkModalOpen && (
         <div
-          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150"
           onClick={() => setIsLinkModalOpen(false)}
         >
           <div
-            className="w-full max-w-sm bg-white dark:bg-[#18191E] rounded-3xl p-5 border border-black/[0.08] dark:border-white/[0.08] shadow-2xl space-y-4"
+            className="w-full max-w-md bg-white dark:bg-[#18191E] rounded-3xl p-6 border border-black/[0.08] dark:border-white/[0.08] shadow-2xl space-y-4 animate-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <h4 className="font-bold text-sm text-zinc-900 dark:text-white">
-                Anexar Link Externo
-              </h4>
+              <div>
+                <h4 className="font-bold text-base text-zinc-900 dark:text-white flex items-center gap-2">
+                  <Cloud className="w-5 h-5 text-blue-500" />
+                  <span>Anexar Arquivo ou Nuvem</span>
+                </h4>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Integre pastas ou links do Google Drive, OneDrive, Dropbox ou Web
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsLinkModalOpen(false)}
-                className="text-zinc-400 hover:text-zinc-600"
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-white p-1 rounded-lg"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleAddExternalLink} className="space-y-3">
+            {/* Abas dos Provedores de Nuvem */}
+            <div className="grid grid-cols-4 gap-1.5 p-1 bg-zinc-100 dark:bg-black/30 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setCloudAttachmentTab("GOOGLE_DRIVE")}
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-bold flex flex-col items-center gap-1 transition-all ${
+                  cloudAttachmentTab === "GOOGLE_DRIVE"
+                    ? "bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                }`}
+              >
+                <Cloud className="w-3.5 h-3.5" />
+                <span>Drive</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCloudAttachmentTab("ONEDRIVE")}
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-bold flex flex-col items-center gap-1 transition-all ${
+                  cloudAttachmentTab === "ONEDRIVE"
+                    ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                }`}
+              >
+                <Cloud className="w-3.5 h-3.5" />
+                <span>OneDrive</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCloudAttachmentTab("DROPBOX")}
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-bold flex flex-col items-center gap-1 transition-all ${
+                  cloudAttachmentTab === "DROPBOX"
+                    ? "bg-white dark:bg-zinc-800 text-sky-600 dark:text-sky-400 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                }`}
+              >
+                <HardDrive className="w-3.5 h-3.5" />
+                <span>Dropbox</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCloudAttachmentTab("LINK")}
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-bold flex flex-col items-center gap-1 transition-all ${
+                  cloudAttachmentTab === "LINK"
+                    ? "bg-white dark:bg-zinc-800 text-amber-600 dark:text-amber-400 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                }`}
+              >
+                <LinkIcon className="w-3.5 h-3.5" />
+                <span>Link Web</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCloudAttachment} className="space-y-3 pt-1">
               <div>
                 <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  URL do Link *
+                  {cloudAttachmentTab === "GOOGLE_DRIVE" && "Link de Compartilhamento do Google Drive *"}
+                  {cloudAttachmentTab === "ONEDRIVE" && "Link de Compartilhamento do OneDrive *"}
+                  {cloudAttachmentTab === "DROPBOX" && "Link de Compartilhamento do Dropbox *"}
+                  {cloudAttachmentTab === "LINK" && "URL do Link / Arquivo *"}
                 </label>
                 <input
                   type="url"
                   required
-                  placeholder="https://drive.google.com/..."
-                  value={linkForm.fileUrl}
-                  onChange={(e) => setLinkForm({ ...linkForm, fileUrl: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border text-xs"
+                  placeholder={
+                    cloudAttachmentTab === "GOOGLE_DRIVE"
+                      ? "https://drive.google.com/file/d/..."
+                      : cloudAttachmentTab === "ONEDRIVE"
+                      ? "https://1drv.ms/... ou https://onedrive.live.com/..."
+                      : cloudAttachmentTab === "DROPBOX"
+                      ? "https://www.dropbox.com/scl/..."
+                      : "https://exemplo.com/documento.pdf"
+                  }
+                  value={cloudUrlInput}
+                  onChange={(e) => setCloudUrlInput(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs focus:outline-none focus:ring-2 focus:ring-[#FF650F]"
                 />
               </div>
+
               <div>
                 <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Título do Link (Opcional)
+                  Título ou Nome de Exibição (Opcional)
                 </label>
                 <input
                   type="text"
-                  placeholder="Ex: Pasta do Google Drive"
-                  value={linkForm.fileName}
-                  onChange={(e) => setLinkForm({ ...linkForm, fileName: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border text-xs"
+                  placeholder={
+                    cloudAttachmentTab === "GOOGLE_DRIVE"
+                      ? "Ex: Pasta de Briefing e Logotipos"
+                      : cloudAttachmentTab === "ONEDRIVE"
+                      ? "Ex: Projeto Arquitetônico Completo"
+                      : cloudAttachmentTab === "DROPBOX"
+                      ? "Ex: Fotos da Fachada em Alta Resolução"
+                      : "Ex: Apresentação Institucional"
+                  }
+                  value={cloudTitleInput}
+                  onChange={(e) => setCloudTitleInput(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs focus:outline-none focus:ring-2 focus:ring-[#FF650F]"
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-1">
+
+              <div className="flex justify-end gap-2 pt-2">
                 <Button
                   size="sm"
                   variant="outline"
@@ -2037,14 +2339,19 @@ export function LeadCardDrawerModal({
                 >
                   Cancelar
                 </Button>
-                <Button size="sm" type="submit" className="rounded-xl text-xs font-bold">
-                  Anexar Link
+                <Button
+                  size="sm"
+                  type="submit"
+                  isLoading={isSavingCloudLink}
+                  className="rounded-xl text-xs font-bold bg-[#FF650F] hover:bg-[#e0580c] text-white"
+                >
+                  Salvar Anexo
                 </Button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </div>
+</div>
   );
 }

@@ -107,6 +107,9 @@ export async function POST(req: NextRequest) {
       scheduledVisitDate,
       dueDate,
       sendWhatsApp = false,
+      initialChecklist,
+      initialAttachments = [],
+      userName,
     } = body;
 
     if (!contactName || !contactPhone) {
@@ -167,6 +170,63 @@ export async function POST(req: NextRequest) {
         helper: true,
       },
     });
+    // Registra atividade inicial de criação no histórico do cartão
+    await prisma.leadActivity.create({
+      data: {
+        leadId: lead.id,
+        type: "CREATED",
+        content: `Serviço criado no funil comercial com ID de Orçamento [${finalBudgetCode}]`,
+        userName: userName || "Equipe Icthus",
+      },
+    }).catch((e) => console.warn("Aviso ao registrar atividade inicial:", e));
+
+    // Se houver checklist inicial configurada
+    if (initialChecklist && initialChecklist.title) {
+      try {
+        const createdChecklist = await prisma.leadChecklist.create({
+          data: {
+            leadId: lead.id,
+            title: initialChecklist.title,
+            order: 0,
+          },
+        });
+        if (Array.isArray(initialChecklist.items) && initialChecklist.items.length > 0) {
+          await prisma.leadChecklistItem.createMany({
+            data: initialChecklist.items.map((itemTitle: string, idx: number) => ({
+              checklistId: createdChecklist.id,
+              title: itemTitle.trim(),
+              order: idx,
+              isCompleted: false,
+            })),
+          });
+        }
+      } catch (chkErr) {
+        console.warn("Aviso ao criar checklist inicial:", chkErr);
+      }
+    }
+
+    // Se houver anexos/links iniciais (Google Drive, OneDrive, etc.)
+    if (Array.isArray(initialAttachments) && initialAttachments.length > 0) {
+      try {
+        for (const att of initialAttachments) {
+          if (att.fileUrl) {
+            await prisma.leadAttachment.create({
+              data: {
+                leadId: lead.id,
+                fileName: att.fileName || att.fileUrl,
+                fileUrl: att.fileUrl,
+                fileType: att.fileType || "LINK",
+                isExternalLink: true,
+                isCover: false,
+              },
+            });
+          }
+        }
+      } catch (attErr) {
+        console.warn("Aviso ao criar anexos iniciais:", attErr);
+      }
+    }
+
 
     // 1. Gera automaticamente o Orçamento em PDF profissional da Ícthus
     let pdfResult = null;

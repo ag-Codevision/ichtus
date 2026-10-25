@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { ClientSearchAutocomplete, SearchedClient } from "@/components/admin/crm/ClientSearchAutocomplete";
 import { LeadCardDrawerModal } from "@/components/admin/crm/LeadCardDrawerModal";
+import { LeadCreateCardModal } from "@/components/admin/crm/LeadCreateCardModal";
 import { ContactDetailsSheet } from "@/components/admin/crm/ContactDetailsSheet";
 
 interface Lead {
@@ -1018,10 +1019,11 @@ export default function KanbanPage() {
                                     </button>
                                     <button
                                       type="button"
-                                      title="Editar Serviço"
+                                      title="Editar Serviço (Estilo Trello)"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        handleOpenEditLead(lead);
+                                        setSelectedCardLeadId(lead.id);
+                                        setIsCardModalOpen(true);
                                       }}
                                       className="w-6 h-6 rounded-lg bg-zinc-200/70 hover:bg-[#FF650F] hover:text-white text-zinc-600 dark:bg-white/10 dark:text-zinc-300 flex items-center justify-center transition-colors shadow-2xs"
                                     >
@@ -1128,217 +1130,18 @@ export default function KanbanPage() {
       </div>
 
       {/* ======================================================== */}
-      {/* MODAL: NOVA OPORTUNIDADE DO KANBAN COM VÍNCULO AO CRM    */}
+      {/* MODAL: NOVO SERVIÇO ESTILO TRELLO COM VÍNCULO AO CRM    */}
       {/* ======================================================== */}
-      {isNewLeadModalOpen && (
-        <div
-          className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setIsNewLeadModalOpen(false)}
-        >
-          <div
-            className="w-full sm:max-w-md max-h-[92vh] sm:max-h-[85vh] bg-white dark:bg-[#18191E] rounded-t-[32px] sm:rounded-3xl border-t sm:border border-black/[0.08] dark:border-white/[0.08] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="w-full flex flex-col items-center pt-2 sm:hidden shrink-0">
-              <div className="w-10 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
-            </div>
-
-            <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.04] dark:border-white/[0.06] shrink-0">
-              <div>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FF650F]">
-                  CRM Comercial
-                </span>
-                <h3 className="text-lg font-black text-zinc-900 dark:text-white tracking-tight">
-                  Novo Serviço
-                </h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Cadastre o serviço e gere seu orçamento em PDF na hora.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsNewLeadModalOpen(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateLead} className="p-6 space-y-4 overflow-y-auto max-h-[70vh] no-scrollbar">
-              <div>
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Título do Projeto / Oportunidade *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: Fachada ACM Loja Conceito"
-                  value={newLeadForm.title}
-                  onChange={(e) => setNewLeadForm({ ...newLeadForm, title: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                />
-              </div>
-
-              {/* Seletor Inteligente de Cliente */}
-              <div>
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Cliente Vinculado (CRM)
-                </label>
-                <ClientSearchAutocomplete
-                  selectedClient={selectedClientForNewLead}
-                  onSelectClient={(client) => {
-                    setSelectedClientForNewLead(client);
-                    if (client) {
-                      setNewLeadForm((prev) => ({
-                        ...prev,
-                        customerId: client.id,
-                        contactName: client.displayName,
-                        contactPhone: client.whatsapp || client.phone || prev.contactPhone,
-                        contactEmail: client.email || prev.contactEmail,
-                      }));
-                    } else {
-                      setNewLeadForm((prev) => ({
-                        ...prev,
-                        customerId: "",
-                      }));
-                    }
-                  }}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Nome do Contato *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="João Silva"
-                    value={newLeadForm.contactName}
-                    onChange={(e) => setNewLeadForm({ ...newLeadForm, contactName: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    WhatsApp / Telefone *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="(41) 99999-9999"
-                    value={newLeadForm.contactPhone}
-                    onChange={(e) => setNewLeadForm({ ...newLeadForm, contactPhone: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Valor Estimado (R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="4500.00"
-                    value={newLeadForm.estimatedValue}
-                    onChange={(e) => setNewLeadForm({ ...newLeadForm, estimatedValue: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Prioridade
-                  </label>
-                  <select
-                    value={newLeadForm.priority}
-                    onChange={(e) => setNewLeadForm({ ...newLeadForm, priority: e.target.value as any })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  >
-                    <option value="LOW">Baixa</option>
-                    <option value="MEDIUM">Média</option>
-                    <option value="HIGH">Alta</option>
-                    <option value="URGENT">Urgente</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Data de Entrega (Prazo)
-                  </label>
-                  <input
-                    type="date"
-                    value={newLeadForm.dueDate}
-                    onChange={(e) => setNewLeadForm({ ...newLeadForm, dueDate: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
-                </div>
-              </div>
-
-              {/* Chave liga/desliga para Envio do Orçamento via WhatsApp */}
-              <div className="p-3.5 rounded-2xl bg-emerald-500/[0.08] dark:bg-emerald-500/[0.12] border border-emerald-500/30 flex items-center justify-between gap-3">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-                    <MessageCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    Enviar Orçamento via WhatsApp
-                  </span>
-                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                    Dispara o documento de orçamento PDF para o telefone do cliente após salvar.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={sendWhatsAppViaModal}
-                  onClick={() => setSendWhatsAppViaModal(!sendWhatsAppViaModal)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    sendWhatsAppViaModal ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-700"
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                      sendWhatsAppViaModal ? "translate-x-5" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Observações & Briefing
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Detalhes sobre medidas, cores e prazos..."
-                  value={newLeadForm.notes}
-                  onChange={(e) => setNewLeadForm({ ...newLeadForm, notes: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsNewLeadModalOpen(false)}
-                  className="rounded-full px-4 text-xs font-bold"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="rounded-full px-5 text-xs font-bold"
-                >
-                  Salvar Serviço & Gerar Orçamento
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <LeadCreateCardModal
+        isOpen={isNewLeadModalOpen}
+        onClose={() => setIsNewLeadModalOpen(false)}
+        onSuccess={() => {
+          setIsNewLeadModalOpen(false);
+          fetchKanban();
+        }}
+        columns={columns.map((c) => ({ id: c.id, name: c.name, color: c.color }))}
+        serviceProviders={serviceProviders}
+      />
 
       {/* ======================================================== */}
       {/* MODAL: NOVO / EDITAR CAMPO DO FUNIL                      */}

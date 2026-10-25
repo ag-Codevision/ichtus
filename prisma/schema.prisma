@@ -271,6 +271,7 @@ model Lead {
   checklists      LeadChecklist[]
   attachments     LeadAttachment[]
   comments        LeadComment[]
+  activities      LeadActivity[]
   serviceOrders   ServiceOrder[]
   documents       Document[]
 
@@ -349,6 +350,19 @@ model LeadComment {
 
   @@map("lead_comments")
 }
+
+model LeadActivity {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type      String   // "CREATED", "STAGE_CHANGE", "FIELD_UPDATE", "CHECKLIST", "ATTACHMENT", "COMMENT"
+  content   String   @db.Text
+  userName  String?  // Nome de quem executou a ação
+  createdAt DateTime @default(now())
+
+  @@map("lead_activities")
+}
+
 
 // ====================================================
 // ORDENS DE SERVIÇO & FLUXO DE PRODUÇÃO INDUSTRIAL

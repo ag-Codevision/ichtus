@@ -8,8 +8,20 @@ interface Params {
 }
 
 /**
+ * Detecta o provedor com base na URL
+ */
+function detectLinkProvider(url: string): string {
+  const lower = url.toLowerCase();
+  if (lower.includes("drive.google.com") || lower.includes("docs.google.com")) return "GOOGLE_DRIVE";
+  if (lower.includes("onedrive") || lower.includes("sharepoint.com") || lower.includes("1drv.ms")) return "ONEDRIVE";
+  if (lower.includes("dropbox.com")) return "DROPBOX";
+  if (lower.includes("figma.com")) return "FIGMA";
+  return "LINK";
+}
+
+/**
  * POST /api/v1/crm/leads/[id]/attachments
- * Realiza upload de arquivos ou registra links externos para o lead
+ * Realiza upload de arquivos ou registra links externos para o lead (Google Drive, OneDrive, Dropbox, etc.)
  */
 export async function POST(req: NextRequest, { params }: Params) {
   try {
@@ -19,7 +31,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     // 1. Se for link externo (JSON)
     if (contentType.includes("application/json")) {
       const body = await req.json();
-      const { fileName, fileUrl } = body;
+      const { fileName, fileUrl, fileType, userName } = body;
 
       if (!fileUrl) {
         return NextResponse.json(
@@ -28,16 +40,38 @@ export async function POST(req: NextRequest, { params }: Params) {
         );
       }
 
+      const finalFileType = fileType || detectLinkProvider(fileUrl);
+      const safeTitle = fileName || fileUrl;
+
       const attachment = await prisma.leadAttachment.create({
         data: {
           leadId: id,
-          fileName: fileName || fileUrl,
+          fileName: safeTitle,
           fileUrl,
-          fileType: "LINK",
+          fileType: finalFileType,
           isExternalLink: true,
           isCover: false,
         },
       });
+
+      // Registra atividade no feed
+      const providerLabels: Record<string, string> = {
+        GOOGLE_DRIVE: "Google Drive",
+        ONEDRIVE: "Microsoft OneDrive",
+        DROPBOX: "Dropbox",
+        FIGMA: "Figma",
+        LINK: "Link Externo",
+      };
+      const label = providerLabels[finalFileType] || "Link";
+
+      await prisma.leadActivity.create({
+        data: {
+          leadId: id,
+          type: "ATTACHMENT",
+          content: `Anexou um link do ${label}: "${safeTitle}"`,
+          userName: userName || "Equipe",
+        },
+      }).catch((e) => console.warn("Aviso ao registrar atividade de anexo:", e));
 
       return NextResponse.json({
         success: true,
@@ -49,6 +83,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const isCover = formData.get("isCover") === "true";
+    const userName = (formData.get("userName") as string) || "Equipe";
 
     if (!file) {
       return NextResponse.json(
@@ -103,14 +138,24 @@ export async function POST(req: NextRequest, { params }: Params) {
       },
     });
 
+    // Registra atividade no feed
+    await prisma.leadActivity.create({
+      data: {
+        leadId: id,
+        type: "ATTACHMENT",
+        content: `Carregou o arquivo "${file.name}"`,
+        userName,
+      },
+    }).catch((e) => console.warn("Aviso ao registrar atividade de anexo:", e));
+
     return NextResponse.json({
       success: true,
       attachment,
     });
   } catch (error: any) {
-    console.error("[CRM Attachments API] Erro ao anexar arquivo:", error);
+    console.error("[CRM Attachment API] Erro ao anexar arquivo:", error);
     return NextResponse.json(
-      { success: false, error: error?.message ? `Falha ao processar anexo: ${error.message}` : "Falha ao enviar anexo." },
+      { success: false, error: "Falha ao processar anexo." },
       { status: 500 }
     );
   }

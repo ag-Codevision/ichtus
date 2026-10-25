@@ -64,6 +64,9 @@ export async function GET(req: NextRequest, { params }: Params) {
         comments: {
           orderBy: { createdAt: "asc" },
         },
+        activities: {
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
 
@@ -171,6 +174,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         },
         attachments: true,
         comments: { orderBy: { createdAt: "asc" } },
+        activities: { orderBy: { createdAt: "desc" } },
       },
     });
 
@@ -247,6 +251,28 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       }
     } catch (docErr) {
       console.warn("[CRM] Aviso ao regerar/sincronizar documento de orçamento:", docErr);
+    }
+
+    // Registra atividade de movimentação de coluna
+    if (columnId !== undefined) {
+      try {
+        const destCol = await prisma.kanbanColumn.findUnique({
+          where: { id: columnId },
+          select: { name: true },
+        });
+        if (destCol) {
+          await prisma.leadActivity.create({
+            data: {
+              leadId: id,
+              type: "STAGE_CHANGE",
+              content: `Moveu este cartão para "${destCol.name}"`,
+              userName: body.userName || "Equipe",
+            },
+          });
+        }
+      } catch (err) {
+        console.warn("[CRM] Aviso ao registrar atividade de movimentação:", err);
+      }
     }
 
     // Gatilho automático para Linha de Produção ao arrastar para coluna "Produção"
@@ -403,6 +429,10 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     });
 
     await prisma.leadComment.deleteMany({
+      where: { leadId: id },
+    });
+
+    await prisma.leadActivity.deleteMany({
       where: { leadId: id },
     });
 
