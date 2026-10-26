@@ -24,12 +24,15 @@ import {
   HardDrive,
   Cloud,
   Clock,
+  Boxes,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ClientSearchAutocomplete, SearchedClient } from "@/components/admin/crm/ClientSearchAutocomplete";
 import { RichTextEditor } from "@/components/admin/crm/RichTextEditor";
 import { ServiceCategoriesModal, ServiceCategoryData } from "@/components/admin/crm/ServiceCategoriesModal";
 import { ResourcesSelector } from "@/components/admin/crm/ResourcesSelector";
+import { ServiceMaterialsTable, ServiceMaterialItem } from "@/components/admin/crm/ServiceMaterialsTable";
+import { ServiceAttachmentsSection } from "@/components/admin/crm/ServiceAttachmentsSection";
 import { getDueDateStatus } from "@/lib/due-date-status";
 
 interface KanbanColumnSimple {
@@ -77,6 +80,9 @@ export function LeadCreateCardModal({
   const [subcategoryId, setSubcategoryId] = useState("");
   const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
 
+  // Materiais & Insumos do Serviço (Estoque)
+  const [materials, setMaterials] = useState<ServiceMaterialItem[]>([]);
+
   // Especificações Técnicas de Campo
   const [voltage, setVoltage] = useState("110V");
   const [helperId, setHelperId] = useState("");
@@ -92,12 +98,9 @@ export function LeadCreateCardModal({
   ]);
   const [newItemInput, setNewItemInput] = useState("");
 
-  // Anexos em Nuvem Iniciais
+  // Anexos (Arquivos Locais Drag-and-Drop + Links em Nuvem)
+  const [localFiles, setLocalFiles] = useState<File[]>([]);
   const [cloudLinks, setCloudLinks] = useState<{ fileName: string; fileUrl: string; fileType: string }[]>([]);
-  const [newLinkUrl, setNewLinkUrl] = useState("");
-  const [newLinkTitle, setNewLinkTitle] = useState("");
-  const [newLinkProvider, setNewLinkProvider] = useState<"GOOGLE_DRIVE" | "ONEDRIVE" | "DROPBOX" | "LINK">("GOOGLE_DRIVE");
-  const [isAddingLink, setIsAddingLink] = useState(false);
 
   // Loading
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -113,6 +116,7 @@ export function LeadCreateCardModal({
     setSelectedClient(null);
     setCategoryId("");
     setSubcategoryId("");
+    setMaterials([]);
     setEstimatedValue("");
     setPriority("MEDIUM");
     setDueDate("");
@@ -129,10 +133,8 @@ export function LeadCreateCardModal({
       "Coletar fotos e detalhes da fachada",
     ]);
     setNewItemInput("");
+    setLocalFiles([]);
     setCloudLinks([]);
-    setNewLinkUrl("");
-    setNewLinkTitle("");
-    setIsAddingLink(false);
   };
 
   const fetchCategories = async () => {
@@ -168,26 +170,6 @@ export function LeadCreateCardModal({
     setChecklistItems(checklistItems.filter((_, i) => i !== idx));
   };
 
-  // Links em Nuvem
-  const handleAddCloudLink = () => {
-    if (!newLinkUrl.trim()) return;
-    setCloudLinks([
-      ...cloudLinks,
-      {
-        fileName: newLinkTitle.trim() || newLinkUrl.trim(),
-        fileUrl: newLinkUrl.trim(),
-        fileType: newLinkProvider,
-      },
-    ]);
-    setNewLinkUrl("");
-    setNewLinkTitle("");
-    setIsAddingLink(false);
-  };
-
-  const handleRemoveCloudLink = (idx: number) => {
-    setCloudLinks(cloudLinks.filter((_, i) => i !== idx));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !contactName.trim() || !contactPhone.trim()) {
@@ -206,6 +188,7 @@ export function LeadCreateCardModal({
         customerId: selectedClient?.id || null,
         categoryId: categoryId || null,
         subcategoryId: subcategoryId || null,
+        materials,
         source,
         estimatedValue: estimatedValue ? parseFloat(estimatedValue) : null,
         priority,
@@ -231,7 +214,22 @@ export function LeadCreateCardModal({
       });
 
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data.lead) {
+        // Se houver arquivos locais selecionados via drag-and-drop, envia para a API do lead criado
+        if (localFiles.length > 0) {
+          try {
+            const formData = new FormData();
+            localFiles.forEach((file) => formData.append("files", file));
+            formData.append("userName", "Equipe Icthus");
+            await fetch(`/api/v1/crm/leads/${data.lead.id}/attachments`, {
+              method: "POST",
+              body: formData,
+            });
+          } catch (uploadErr) {
+            console.warn("Aviso ao fazer upload de arquivos anexados:", uploadErr);
+          }
+        }
+
         resetForm();
         onSuccess(data.lead?.id);
         onClose();
@@ -284,17 +282,15 @@ export function LeadCreateCardModal({
               </div>
             </div>
 
-            {/* Título do Card */}
-            <div>
-              <input
-                type="text"
-                required
-                placeholder="Ex: Fachada em ACM Loja Conceito - Letreiro Luminoso"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full text-lg sm:text-xl font-black text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/60 border border-black/10 dark:border-white/10 px-3.5 py-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF650F]"
-              />
-            </div>
+            {/* Título do Cartão em Destaque */}
+            <input
+              type="text"
+              required
+              placeholder="Nome do Serviço (ex: Fachada Loja Principal ACM + Letras Caixa LED)..."
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full text-lg sm:text-xl font-black bg-transparent border-b-2 border-transparent hover:border-black/10 dark:hover:border-white/10 focus:border-[#FF650F] text-zinc-900 dark:text-white focus:outline-none transition-colors px-1 py-0.5 placeholder:text-zinc-400 font-sans"
+            />
           </div>
 
           <button
@@ -312,7 +308,83 @@ export function LeadCreateCardModal({
           {/* COLUNA ESQUERDA: CONTEÚDO PRINCIPAL (8 COLUNAS)         */}
           {/* ======================================================== */}
           <div className="lg:col-span-8 space-y-6">
-            {/* Bloco: Categoria & Subcategoria */}
+
+            {/* BLOCO 1: DADOS DA OPORTUNIDADE & CONTATO (PRIMEIRO BLOCO APÓS O TÍTULO) */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-sm space-y-4">
+              <div className="pb-2 border-b border-black/[0.04] dark:border-white/[0.05]">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
+                  <User className="w-4 h-4 text-[#FF650F]" />
+                  <span>Dados da Oportunidade & Contato</span>
+                </h3>
+              </div>
+
+              {/* Seletor Inteligente de Cliente */}
+              <div>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Cliente Vinculado (CRM)
+                </label>
+                <ClientSearchAutocomplete
+                  selectedClient={selectedClient}
+                  onSelectClient={(client) => {
+                    setSelectedClient(client);
+                    if (client) {
+                      setContactName(client.displayName);
+                      if (client.whatsapp || client.phone) {
+                        setContactPhone(client.whatsapp || client.phone || "");
+                      }
+                      if (client.email) {
+                        setContactEmail(client.email);
+                      }
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Nome do Contato *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Nome do responsável"
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    WhatsApp / Telefone *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="(41) 99999-9999"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    E-mail
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="email@cliente.com"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* BLOCO 2: CATEGORIA & SUBCATEGORIA (LOGO ABAIXO DE DADOS DA OPORTUNIDADE & CONTATO) */}
             <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-sm space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-black/[0.04] dark:border-white/[0.05]">
                 <label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
@@ -378,78 +450,13 @@ export function LeadCreateCardModal({
               </div>
             </div>
 
-            {/* Bloco: Dados da Oportunidade & Contato */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-sm space-y-4">
-              <div className="pb-2 border-b border-black/[0.04] dark:border-white/[0.05]">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
-                  <User className="w-4 h-4 text-[#FF650F]" />
-                  <span>Dados da Oportunidade & Contato</span>
-                </h3>
-              </div>
+            {/* BLOCO 3: MATERIAIS & INSUMOS DO SERVIÇO (ACIMA DE ESPECIFICAÇÕES TÉCNICAS) */}
+            <ServiceMaterialsTable
+              materials={materials}
+              onChange={setMaterials}
+            />
 
-              {/* Seletor Inteligente de Cliente */}
-              <div>
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Cliente Vinculado (CRM)
-                </label>
-                <ClientSearchAutocomplete
-                  selectedClient={selectedClient}
-                  onSelectClient={(client) => {
-                    setSelectedClient(client);
-                    if (client) {
-                      setContactName(client.displayName);
-                      setContactPhone(client.whatsapp || client.phone || contactPhone);
-                      setContactEmail(client.email || contactEmail);
-                    }
-                  }}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Nome do Contato *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Responsável da obra / cliente"
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    WhatsApp / Telefone *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="(41) 99999-9999"
-                    value={contactPhone}
-                    onChange={(e) => setContactPhone(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    E-mail
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="contato@empresa.com"
-                    value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Bloco: Especificações Técnicas de Instalação (Ícthus) */}
+            {/* BLOCO 4: ESPECIFICAÇÕES TÉCNICAS DE INSTALAÇÃO & CAMPO (ÍCTHUS) */}
             <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-sm space-y-4">
               <div className="pb-2 border-b border-black/[0.04] dark:border-white/[0.05]">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
@@ -543,7 +550,7 @@ export function LeadCreateCardModal({
               </div>
             </div>
 
-            {/* Bloco: Descrição Rica com Toolbar */}
+            {/* BLOCO 5: DESCRIÇÃO RICA COM TOOLBAR */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
@@ -559,28 +566,33 @@ export function LeadCreateCardModal({
               />
             </div>
 
-            {/* Bloco: Checklists Iniciais */}
+            {/* BLOCO 6: CHECKLIST INICIAL ESTILO TRELLO */}
             <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-sm space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-black/[0.04] dark:border-white/[0.05]">
-                <div className="flex items-center gap-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
                   <CheckSquare className="w-4 h-4 text-[#FF650F]" />
-                  <input
-                    type="text"
-                    value={checklistTitle}
-                    onChange={(e) => setChecklistTitle(e.target.value)}
-                    className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white bg-transparent border-0 focus:outline-none focus:underline"
-                  />
-                </div>
-                <span className="text-[11px] font-mono font-bold text-zinc-400">
-                  {checklistItems.length} subtarefas iniciais
+                  <span>Checklist Inicial</span>
+                </h3>
+                <span className="text-xs text-zinc-400 font-mono">
+                  {checklistItems.length} {checklistItems.length === 1 ? "item" : "itens"}
                 </span>
               </div>
 
-              {/* Lista de Itens */}
+              <input
+                type="text"
+                value={checklistTitle}
+                onChange={(e) => setChecklistTitle(e.target.value)}
+                placeholder="Título da Checklist"
+                className="w-full text-xs font-bold px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+              />
+
               <div className="space-y-1.5">
                 {checklistItems.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04]">
-                    <span className="text-xs text-zinc-800 dark:text-zinc-200">{item}</span>
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04] text-xs"
+                  >
+                    <span className="text-zinc-800 dark:text-zinc-200">{item}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveChecklistItem(idx)}
@@ -592,11 +604,10 @@ export function LeadCreateCardModal({
                 ))}
               </div>
 
-              {/* Adicionar Novo Item */}
               <div className="flex items-center gap-2 pt-1">
                 <input
                   type="text"
-                  placeholder="+ Adicionar subtarefa de checklist..."
+                  placeholder="Novo item na checklist..."
                   value={newItemInput}
                   onChange={(e) => setNewItemInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddChecklistItem())}
@@ -615,101 +626,14 @@ export function LeadCreateCardModal({
               </div>
             </div>
 
-            {/* Bloco: Anexos Iniciais em Nuvem */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-sm space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-black/[0.04] dark:border-white/[0.05]">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
-                  <Cloud className="w-4 h-4 text-[#FF650F]" />
-                  <span>Anexos em Nuvem (Google Drive, OneDrive, Dropbox)</span>
-                </h3>
-                {!isAddingLink && (
-                  <button
-                    type="button"
-                    onClick={() => setIsAddingLink(true)}
-                    className="text-[11px] font-bold text-[#FF650F] hover:underline flex items-center gap-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Adicionar Link</span>
-                  </button>
-                )}
-              </div>
+            {/* BLOCO 7: ANEXOS (ARQUIVOS LOCAIS COM DRAG-AND-DROP + LINKS EM NUVEM) */}
+            <ServiceAttachmentsSection
+              localFiles={localFiles}
+              onLocalFilesChange={setLocalFiles}
+              cloudLinks={cloudLinks}
+              onCloudLinksChange={setCloudLinks}
+            />
 
-              {isAddingLink && (
-                <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 space-y-2.5">
-                  <div className="grid grid-cols-4 gap-1 p-1 bg-white dark:bg-black/20 rounded-lg">
-                    {(["GOOGLE_DRIVE", "ONEDRIVE", "DROPBOX", "LINK"] as const).map((prov) => (
-                      <button
-                        key={prov}
-                        type="button"
-                        onClick={() => setNewLinkProvider(prov)}
-                        className={`py-1 text-[10px] font-bold rounded ${
-                          newLinkProvider === prov
-                            ? "bg-[#FF650F] text-white shadow-xs"
-                            : "text-zinc-500 hover:text-zinc-800 dark:hover:text-white"
-                        }`}
-                      >
-                        {prov === "GOOGLE_DRIVE" ? "Drive" : prov === "ONEDRIVE" ? "OneDrive" : prov === "DROPBOX" ? "Dropbox" : "Web"}
-                      </button>
-                    ))}
-                  </div>
-
-                  <input
-                    type="url"
-                    placeholder="URL de compartilhamento..."
-                    value={newLinkUrl}
-                    onChange={(e) => setNewLinkUrl(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-lg bg-white dark:bg-[#18191E] border text-xs"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Título amigável (ex: Pasta de Fotos da Fachada)..."
-                    value={newLinkTitle}
-                    onChange={(e) => setNewLinkTitle(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-lg bg-white dark:bg-[#18191E] border text-xs"
-                  />
-                  <div className="flex justify-end gap-2">
-                    <Button size="sm" variant="outline" type="button" onClick={() => setIsAddingLink(false)} className="rounded-lg text-xs">
-                      Cancelar
-                    </Button>
-                    <Button size="sm" type="button" onClick={handleAddCloudLink} className="rounded-lg text-xs bg-[#FF650F] text-white">
-                      Anexar
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Lista de Links Adicionados */}
-              {cloudLinks.length > 0 ? (
-                <div className="space-y-1.5">
-                  {cloudLinks.map((link, idx) => (
-                    <div
-                      key={idx}
-                      className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.04] dark:border-white/[0.05] flex items-center justify-between gap-2"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-500/10 text-[#FF650F]">
-                          {link.fileType}
-                        </span>
-                        <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                          {link.fileName}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveCloudLink(idx)}
-                        className="text-zinc-400 hover:text-red-500 p-1"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-zinc-400 italic">
-                  Nenhum arquivo ou link em nuvem adicionado ainda.
-                </p>
-              )}
-            </div>
           </div>
 
           {/* ======================================================== */}
@@ -737,6 +661,9 @@ export function LeadCreateCardModal({
                     className="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono font-bold text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                   />
                 </div>
+                <p className="text-[10px] text-zinc-400 mt-1">
+                  * Este é o valor oficial que constará no Documento de Orçamento.
+                </p>
               </div>
 
               <div>
@@ -748,39 +675,33 @@ export function LeadCreateCardModal({
                   onChange={(e) => setPriority(e.target.value as "LOW" | "MEDIUM" | "HIGH" | "URGENT")}
                   className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                 >
-                  <option value="LOW">🟢 Baixa</option>
-                  <option value="MEDIUM">🟡 Média</option>
-                  <option value="HIGH">🟠 Alta</option>
-                  <option value="URGENT">🔴 Urgente</option>
+                  <option value="LOW">Baixa</option>
+                  <option value="MEDIUM">Média</option>
+                  <option value="HIGH">Alta</option>
+                  <option value="URGENT">Urgente</option>
                 </select>
               </div>
 
-              {/* Data de Entrega com Contagem Regressiva e Cores Dinâmicas */}
               <div>
-                <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 block mb-1">
-                  Data Limite de Entrega
+                <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 block mb-1 flex items-center justify-between">
+                  <span>Data de Entrega / Prazo</span>
+                  {dueStatus && (
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${dueStatus.badgeClass}`}>
+                      {dueStatus.label}
+                    </span>
+                  )}
                 </label>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                 />
-                {dueStatus && (
-                  <div className="mt-2">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] ${dueStatus.badgeClass}`}
-                    >
-                      <Clock className="w-3 h-3 shrink-0" />
-                      <span>{dueStatus.label}</span>
-                    </span>
-                  </div>
-                )}
               </div>
 
               <div>
                 <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 block mb-1">
-                  Origem do Contato
+                  Canal de Origem
                 </label>
                 <select
                   value={source}
@@ -789,70 +710,77 @@ export function LeadCreateCardModal({
                 >
                   <option value="WEBSITE_FORM">Formulário do Site</option>
                   <option value="WHATSAPP">WhatsApp Direto</option>
-                  <option value="REFERRAL">Indicação / Boca a Boca</option>
-                  <option value="INSTAGRAM">Instagram</option>
-                  <option value="GOOGLE_ADS">Google Ads</option>
-                  <option value="OUTBOUND">Prospecção Ativa</option>
+                  <option value="INDICATION">Indicação</option>
+                  <option value="PHONE">Telefone</option>
                   <option value="OTHER">Outros</option>
                 </select>
               </div>
-            </div>
 
-            {/* Switch WhatsApp do Orçamento */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                  <MessageCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  Enviar Orçamento no WhatsApp
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setSendWhatsApp(!sendWhatsApp)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    sendWhatsApp ? "bg-emerald-600" : "bg-zinc-300 dark:bg-zinc-700"
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                      sendWhatsApp ? "translate-x-5" : "translate-x-0"
-                    }`}
-                  />
-                </button>
+              {/* Chave Switch: Enviar Orçamento por WhatsApp */}
+              <div className="pt-3 border-t border-black/[0.04] dark:border-white/[0.05]">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <div className="relative inline-flex items-center h-5 rounded-full w-9 shrink-0 mt-0.5">
+                    <input
+                      type="checkbox"
+                      checked={sendWhatsApp}
+                      onChange={(e) => setSendWhatsApp(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-zinc-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#FF650F]" />
+                  </div>
+                  <div className="text-xs">
+                    <span className="font-bold text-zinc-900 dark:text-white block">
+                      Enviar Orçamento via WhatsApp
+                    </span>
+                    <span className="text-[11px] text-zinc-500">
+                      Dispara automaticamente o PDF do orçamento pelo WhatsApp para o número cadastrado.
+                    </span>
+                  </div>
+                </label>
               </div>
-              <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 leading-relaxed">
-                Ao salvar, gera o documento em PDF e dispara automaticamente para o cliente.
-              </p>
             </div>
 
-            {/* Botões Finais de Ação */}
-            <div className="pt-2 flex items-center gap-2">
+            {/* Botões de Ação */}
+            <div className="space-y-2 pt-2">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full h-11 rounded-2xl bg-[#FF650F] hover:bg-[#e0580c] text-white font-bold text-sm shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
+              >
+                {isSubmitting ? (
+                  <span>Criando Serviço...</span>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    <span>Criar Serviço</span>
+                  </>
+                )}
+              </Button>
+
               <Button
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="flex-1 rounded-2xl py-2.5 text-xs font-bold"
+                disabled={isSubmitting}
+                className="w-full h-10 rounded-2xl border-black/10 dark:border-white/10 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.05]"
               >
                 Cancelar
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                isLoading={isSubmitting}
-                className="flex-2 rounded-2xl py-2.5 text-xs font-bold shadow-md bg-[#FF650F] hover:bg-[#e0580c] text-white"
-              >
-                Criar Serviço & Gerar Orçamento
               </Button>
             </div>
           </div>
         </form>
+      </div>
 
-        {/* MODAL SECUNDÁRIO: GERENCIAR CATEGORIAS E SUBCATEGORIAS */}
+      {/* Modal de Gestão de Categorias */}
+      {isCategoriesModalOpen && (
         <ServiceCategoriesModal
           isOpen={isCategoriesModalOpen}
           onClose={() => setIsCategoriesModalOpen(false)}
-          onCategoriesChanged={fetchCategories}
+          onCategoriesChanged={() => {
+            fetchCategories();
+          }}
         />
-      </div>
+      )}
     </div>
   );
 }

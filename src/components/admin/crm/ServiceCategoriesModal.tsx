@@ -36,6 +36,7 @@ interface ServiceCategoriesModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCategoriesChanged?: () => void;
+  onCategoriesUpdated?: (updatedList?: any) => void;
 }
 
 const PRESET_COLORS = [

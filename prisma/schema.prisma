@@ -249,6 +249,7 @@ model Lead {
   subcategory     ServiceSubcategory?  @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
   voltage         String?       // Voltagem do Local: "110V" ou "220V"
   tools           String[]      @default([]) // Ferramentas & Recursos Necessários
+  materials       Json?         @default("[]") // Insumos e Materiais do Estoque
   paintDetails    String?       // Especificação de Tinta
   freightDetails  String?       // Detalhes de Frete
   proposalContent String?       @db.Text // Conteúdo dinâmico da Proposta

@@ -50,6 +50,8 @@ import { RichTextEditor } from "@/components/admin/crm/RichTextEditor";
 import { ServiceCategoriesModal, ServiceCategoryData } from "@/components/admin/crm/ServiceCategoriesModal";
 import { ResourcesSelector } from "@/components/admin/crm/ResourcesSelector";
 import { getDueDateStatus } from "@/lib/due-date-status";
+import { ServiceMaterialsTable, ServiceMaterialItem } from "@/components/admin/crm/ServiceMaterialsTable";
+import { ServiceAttachmentsSection } from "@/components/admin/crm/ServiceAttachmentsSection";
 
 export interface KanbanTagItem {
   id: string;
@@ -140,6 +142,7 @@ export interface LeadDetailFull {
   } | null;
   voltage?: string | null;
   tools?: string[];
+  materials?: ServiceMaterialItem[] | any;
   paintDetails?: string | null;
   freightDetails?: string | null;
   proposalContent?: string | null;
@@ -176,6 +179,7 @@ export function LeadCardDrawerModal({
   onViewBudgetDocument,
 }: LeadCardDrawerModalProps) {
   const [data, setData] = useState<LeadDetailFull | null>(null);
+  const [materials, setMaterials] = useState<ServiceMaterialItem[]>([]);
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [lastWaMeUrl, setLastWaMeUrl] = useState<string | null>(null);
@@ -285,6 +289,7 @@ export function LeadCardDrawerModal({
       const json = await res.json();
       if (json.success && json.lead) {
         setData(json.lead);
+        setMaterials(Array.isArray(json.lead.materials) ? json.lead.materials : []);
         setTitleValue(json.lead.title);
     // Carrega histórico e atividades
     try {
@@ -383,6 +388,12 @@ export function LeadCardDrawerModal({
         .catch((e) => console.warn("Aviso ao carregar prestadores:", e));
     }
   }, [isOpen]);
+
+  const handleUpdateMaterials = (newMaterials: ServiceMaterialItem[]) => {
+    setMaterials(newMaterials);
+    setData((prev) => (prev ? { ...prev, materials: newMaterials } : null));
+    handleUpdateLeadField({ materials: newMaterials });
+  };
 
   const handleUpdateLeadField = async (payload: any) => {
     if (!leadId) return;
@@ -942,135 +953,42 @@ export function LeadCardDrawerModal({
           {/* COLUNA ESQUERDA: CONTEÚDO PRINCIPAL (8 COLUNAS)         */}
           {/* ======================================================== */}
           <div className="lg:col-span-8 space-y-6">
-            {/* Linha de Metadados: Categoria, Subcategoria, Etiquetas, Prazo e Cliente */}
-            <div className="flex flex-wrap items-center gap-4">
-              {/* Categoria & Subcategoria */}
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
-                    Categoria do Serviço
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setIsCategoriesModalOpen(true)}
-                    className="text-[10px] text-[#FF650F] font-bold hover:underline"
-                  >
-                    (Gerenciar)
-                  </button>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <select
-                    value={data?.categoryId || ""}
-                    onChange={(e) => {
-                      const newCatId = e.target.value || null;
-                      handleUpdateLeadField({ categoryId: newCatId, subcategoryId: null });
-                    }}
-                    className="px-2.5 py-1 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-white/[0.08] text-zinc-800 dark:text-white border-0 cursor-pointer focus:ring-2 focus:ring-[#FF650F]"
-                  >
-                    <option value="">Sem Categoria</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* Subcategoria */}
-                  {data?.categoryId && (
-                    <select
-                      value={data?.subcategoryId || ""}
-                      onChange={(e) => {
-                        handleUpdateLeadField({ subcategoryId: e.target.value || null });
-                      }}
-                      className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-zinc-100 dark:bg-white/[0.08] text-zinc-800 dark:text-white border-0 cursor-pointer focus:ring-2 focus:ring-[#FF650F]"
+            {/* Chips de Contexto no Topo: Etiquetas e Prazo */}
+            {((data?.tags && data.tags.length > 0) || data?.dueDate) && (
+              <div className="flex flex-wrap items-center gap-2 pb-1">
+                {data?.dueDate && (() => {
+                  const dueStatus = getDueDateStatus(data.dueDate);
+                  return (
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-xs ${
+                        dueStatus?.badgeClass ||
+                        "bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300"
+                      }`}
                     >
-                      <option value="">Sem Subcategoria</option>
-                      {(
-                        categories.find((c) => c.id === data.categoryId)?.subcategories || []
-                      ).map((sub) => (
-                        <option key={sub.id} value={sub.id}>
-                          {sub.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              </div>
-              {/* Etiquetas */}
-              {data?.tags && data.tags.length > 0 && (
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
-                    Etiquetas
-                  </span>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {(data.tags || []).filter((t) => t && t.tag).map(({ tag }) => (
-                      <span
-                        key={tag.id}
-                        className="px-2.5 py-1 rounded-full text-xs font-bold text-white shadow-sm flex items-center gap-1"
-                        style={{ backgroundColor: tag.color }}
-                      >
-                        <Tag className="w-3 h-3" />
-                        <span>{tag.name}</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Prazo de Entrega com Cores Dinâmicas e Contagem Regressiva */}
-              {data?.dueDate && (() => {
-                const dueStatus = getDueDateStatus(data.dueDate);
-                return (
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
-                      Data de Entrega
+                      <Clock className="w-3.5 h-3.5 shrink-0" />
+                      <span>{formatDate(data.dueDate)}</span>
+                      {dueStatus && (
+                        <>
+                          <span className="opacity-50">•</span>
+                          <span>{dueStatus.label}</span>
+                        </>
+                      )}
                     </span>
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 ${
-                          dueStatus?.badgeClass ||
-                          "bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300"
-                        }`}
-                      >
-                        <Clock className="w-3.5 h-3.5 shrink-0" />
-                        <span>{formatDate(data.dueDate)}</span>
-                        {dueStatus && (
-                          <>
-                            <span className="opacity-50">•</span>
-                            <span className="font-black">{dueStatus.label}</span>
-                          </>
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
 
-              {/* Cliente Vinculado */}
-              {data?.customer && (
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
-                    Cliente Vinculado (CRM)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (data.customer?.id && onOpenContactDetails) {
-                        onClose();
-                        onOpenContactDetails(data.customer.id);
-                      }
-                    }}
-                    className="px-3 py-1 rounded-full bg-orange-500/10 text-[#FF650F] hover:bg-orange-500/20 text-xs font-bold flex items-center gap-1.5 border border-orange-500/20 transition-colors"
+                {(data?.tags || []).filter((t) => t && t.tag).map(({ tag }) => (
+                  <span
+                    key={tag.id}
+                    className="px-2.5 py-1 rounded-full text-xs font-bold text-white shadow-xs flex items-center gap-1"
+                    style={{ backgroundColor: tag.color }}
                   >
-                    <User className="w-3.5 h-3.5" />
-                    <span>
-                      {data.customer.tradeName || data.customer.fullName || data.customer.companyName}
-                    </span>
-                    <ExternalLink className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
-            </div>
+                    <Tag className="w-3 h-3" />
+                    <span>{tag.name}</span>
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* SEÇÃO: DADOS DA OPORTUNIDADE & CONTATO (DIRETAMENTE NO CORPO DO CARD) */}
             <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-sm space-y-4">
@@ -1180,6 +1098,80 @@ export function LeadCardDrawerModal({
                 </div>
               </div>
             </div>
+
+            {/* BLOCO 2: CATEGORIA & SUBCATEGORIA DO SERVIÇO (LOGO ABAIXO DE DADOS DA OPORTUNIDADE & CONTATO) */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-sm space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-black/[0.04] dark:border-white/[0.05]">
+                <label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-[#FF650F]" />
+                  <span>Categoria & Subcategoria do Serviço</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsCategoriesModalOpen(true)}
+                  className="text-[11px] font-bold text-[#FF650F] hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Gerenciar Categorias</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 block mb-1">
+                    Categoria Principal
+                  </label>
+                  <select
+                    value={data?.categoryId || ""}
+                    onChange={(e) => {
+                      const newCatId = e.target.value || null;
+                      handleUpdateLeadField({ categoryId: newCatId, subcategoryId: null });
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F] cursor-pointer"
+                  >
+                    <option value="">Selecione uma Categoria...</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 block mb-1">
+                    Subcategoria
+                  </label>
+                  <select
+                    value={data?.subcategoryId || ""}
+                    onChange={(e) => {
+                      handleUpdateLeadField({ subcategoryId: e.target.value || null });
+                    }}
+                    disabled={!data?.categoryId}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">
+                      {!data?.categoryId
+                        ? "Escolha uma categoria primeiro"
+                        : (categories.find((c) => c.id === data.categoryId)?.subcategories || []).length === 0
+                        ? "Sem subcategorias cadastradas"
+                        : "Selecione a Subcategoria..."}
+                    </option>
+                    {(categories.find((c) => c.id === data?.categoryId)?.subcategories || []).map((sub) => (
+                      <option key={sub.id} value={sub.id}>
+                        {sub.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* BLOCO 3: MATERIAIS & INSUMOS DO SERVIÇO (ACIMA DE ESPECIFICAÇÕES TÉCNICAS) */}
+            <ServiceMaterialsTable
+              materials={materials}
+              onChange={handleUpdateMaterials}
+            />
 
             {/* SEÇÃO: ESPECIFICAÇÕES TÉCNICAS DE INSTALAÇÃO & CAMPO (ÍCTHUS) */}
             <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-sm space-y-4">
@@ -1418,123 +1410,19 @@ export function LeadCardDrawerModal({
               })}
             </div>
 
-            {/* SEÇÃO 3: ANEXOS (ARQUIVOS, GOOGLE DRIVE, ONEDRIVE, DROPBOX) */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
-                  <Paperclip className="w-4 h-4 text-[#FF650F]" />
-                  <span>Anexos & Nuvem ({data?.attachments?.length || 0})</span>
-                </h3>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCloudAttachmentTab("GOOGLE_DRIVE");
-                      setIsLinkModalOpen(true);
-                    }}
-                    className="px-2.5 py-1 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-[#FF650F] text-xs font-bold flex items-center gap-1.5 border border-orange-500/20 transition-colors"
-                  >
-                    <Cloud className="w-3.5 h-3.5" />
-                    <span>Vincular Nuvem</span>
-                  </button>
-                </div>
-              </div>
-
-              {data?.attachments && data.attachments.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {data.attachments.map((att) => (
-                    <div
-                      key={att.id}
-                      className="p-3 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between gap-3 shadow-sm hover:border-orange-500/30 transition-all"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {att.fileType === "IMAGE" ? (
-                          <div className="w-12 h-12 rounded-xl bg-zinc-100 overflow-hidden shrink-0">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={att.fileUrl}
-                              alt={att.fileName}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : att.fileType === "PDF" ? (
-                          <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-600 flex items-center justify-center shrink-0">
-                            <FileText className="w-5 h-5" />
-                          </div>
-                        ) : att.fileType === "GOOGLE_DRIVE" ? (
-                          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0" title="Google Drive">
-                            <Cloud className="w-5 h-5" />
-                          </div>
-                        ) : att.fileType === "ONEDRIVE" ? (
-                          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0" title="OneDrive">
-                            <HardDrive className="w-5 h-5" />
-                          </div>
-                        ) : att.fileType === "DROPBOX" ? (
-                          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0" title="Dropbox">
-                            <Cloud className="w-5 h-5" />
-                          </div>
-                        ) : (
-                          <div className="w-10 h-10 rounded-xl bg-zinc-500/10 text-zinc-600 dark:text-zinc-300 flex items-center justify-center shrink-0">
-                            <LinkIcon className="w-5 h-5" />
-                          </div>
-                        )}
-
-                        <div className="min-w-0">
-                          <a
-                            href={att.fileUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs font-bold text-zinc-900 dark:text-white hover:text-[#FF650F] truncate block"
-                          >
-                            {att.fileName}
-                          </a>
-                          <span className="text-[10px] text-zinc-400 font-mono">
-                            {formatDate(att.createdAt)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        {att.fileType === "IMAGE" && (
-                          <button
-                            type="button"
-                            onClick={() => handleToggleCover(att)}
-                            title={att.isCover ? "Remover como capa" : "Tornar capa do cartão"}
-                            className={`p-1.5 rounded-lg transition-colors ${
-                              att.isCover
-                                ? "bg-[#FF650F] text-white"
-                                : "text-zinc-400 hover:text-[#FF650F] hover:bg-orange-500/10"
-                            }`}
-                          >
-                            <Star className="w-3.5 h-3.5 fill-current" />
-                          </button>
-                        )}
-                        <a
-                          href={att.fileUrl}
-                          download
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteAttachment(att.id)}
-                          className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-4 rounded-2xl bg-white dark:bg-[#18191E] border border-dashed border-black/10 dark:border-white/10 text-center text-xs text-zinc-400">
-                  Nenhum arquivo ou link anexado ainda.
-                </div>
-              )}
-            </div>
+            {/* SEÇÃO: ANEXOS (ARQUIVOS LOCAIS COM DRAG-AND-DROP + LINKS EM NUVEM) */}
+            <ServiceAttachmentsSection
+              leadId={data?.id}
+              existingAttachments={data?.attachments || []}
+              onAttachmentAdded={(att: any) => {
+                setData((prev) =>
+                  prev ? { ...prev, attachments: [att, ...(prev.attachments || [])] } : null
+                );
+                onLeadUpdated();
+              }}
+              onAttachmentDeleted={handleDeleteAttachment}
+              onToggleCover={handleToggleCover}
+            />
 
             {/* SEÇÃO 4: FEED CRONOLÓGICO DE ATIVIDADES & COMENTÁRIOS */}
             <div className="space-y-4">

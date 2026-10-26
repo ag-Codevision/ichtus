@@ -111,6 +111,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       helperId,
       voltage,
       tools,
+      materials,
       paintDetails,
       freightDetails,
       proposalContent,
@@ -140,6 +141,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     if (helperId !== undefined) dataToUpdate.helperId = helperId || null;
     if (voltage !== undefined) dataToUpdate.voltage = voltage || null;
     if (tools !== undefined) dataToUpdate.tools = Array.isArray(tools) ? tools : [];
+    if (materials !== undefined) dataToUpdate.materials = Array.isArray(materials) ? materials : [];
     if (paintDetails !== undefined) dataToUpdate.paintDetails = paintDetails?.trim() || null;
     if (freightDetails !== undefined) dataToUpdate.freightDetails = freightDetails?.trim() || null;
     if (proposalContent !== undefined) dataToUpdate.proposalContent = proposalContent;

@@ -21,7 +21,7 @@ function detectLinkProvider(url: string): string {
 
 /**
  * POST /api/v1/crm/leads/[id]/attachments
- * Realiza upload de arquivos ou registra links externos para o lead (Google Drive, OneDrive, Dropbox, etc.)
+ * Realiza upload de arquivos (individuais ou em lote via drag-and-drop) ou registra links externos para o lead (Google Drive, OneDrive, Dropbox, etc.)
  */
 export async function POST(req: NextRequest, { params }: Params) {
   try {
@@ -76,24 +76,31 @@ export async function POST(req: NextRequest, { params }: Params) {
       return NextResponse.json({
         success: true,
         attachment,
+        attachments: [attachment],
       });
     }
 
-    // 2. Se for upload de arquivo multipart/form-data
+    // 2. Se for upload de arquivo(s) multipart/form-data
     const formData = await req.formData();
-    const file = formData.get("file") as File | null;
+    const rawFiles = formData.getAll("files") as File[];
+    const singleFile = formData.get("file") as File | null;
+
+    const filesToProcess: File[] = [];
+    if (rawFiles && rawFiles.length > 0) {
+      filesToProcess.push(...rawFiles.filter((f) => f && typeof f.arrayBuffer === "function"));
+    } else if (singleFile && typeof singleFile.arrayBuffer === "function") {
+      filesToProcess.push(singleFile);
+    }
+
     const isCover = formData.get("isCover") === "true";
     const userName = (formData.get("userName") as string) || "Equipe";
 
-    if (!file) {
+    if (filesToProcess.length === 0) {
       return NextResponse.json(
         { success: false, error: "Nenhum arquivo enviado." },
         { status: 400 }
       );
     }
-
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
 
     // Garante que o diretório public/uploads/leads exista
     const uploadDir = path.join(process.cwd(), "public", "uploads", "leads");
@@ -101,56 +108,67 @@ export async function POST(req: NextRequest, { params }: Params) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    // Nome único seguro
-    const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-    const filePath = path.join(uploadDir, safeName);
-    fs.writeFileSync(filePath, buffer);
+    const createdAttachments: any[] = [];
 
-    const fileUrl = `/uploads/leads/${safeName}`;
-    const mimeType = file.type || "application/octet-stream";
-    const fileCategory = mimeType.startsWith("image/")
-      ? "IMAGE"
-      : mimeType.includes("pdf")
-      ? "PDF"
-      : "DOCUMENT";
+    for (const file of filesToProcess) {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
 
-    // Se marcado como capa, desmarca as outras
-    if (isCover) {
-      await prisma.leadAttachment.updateMany({
-        where: { leadId: id },
-        data: { isCover: false },
+      // Nome único seguro
+      const safeName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+      const filePath = path.join(uploadDir, safeName);
+      fs.writeFileSync(filePath, buffer);
+
+      const fileUrl = `/uploads/leads/${safeName}`;
+      const mimeType = file.type || "application/octet-stream";
+      const fileCategory = mimeType.startsWith("image/")
+        ? "IMAGE"
+        : mimeType.includes("pdf")
+        ? "PDF"
+        : "DOCUMENT";
+
+      // Se marcado como capa (apenas o primeiro se for lote)
+      const isThisCover: boolean = Boolean(isCover) && createdAttachments.length === 0;
+      if (isThisCover) {
+        await prisma.leadAttachment.updateMany({
+          where: { leadId: id },
+          data: { isCover: false },
+        });
+        await prisma.lead.update({
+          where: { id },
+          data: { coverImage: fileUrl },
+        });
+      }
+
+      const attachment = await prisma.leadAttachment.create({
+        data: {
+          leadId: id,
+          fileName: file.name,
+          fileUrl,
+          fileType: fileCategory,
+          fileSize: file.size,
+          isCover: isThisCover,
+          isExternalLink: false,
+        },
       });
-      await prisma.lead.update({
-        where: { id },
-        data: { coverImage: fileUrl },
-      });
+
+      createdAttachments.push(attachment);
+
+      // Registra atividade no feed
+      await prisma.leadActivity.create({
+        data: {
+          leadId: id,
+          type: "ATTACHMENT",
+          content: `Carregou o arquivo "${file.name}"`,
+          userName,
+        },
+      }).catch((e) => console.warn("Aviso ao registrar atividade de anexo:", e));
     }
-
-    const attachment = await prisma.leadAttachment.create({
-      data: {
-        leadId: id,
-        fileName: file.name,
-        fileUrl,
-        fileType: fileCategory,
-        fileSize: file.size,
-        isCover,
-        isExternalLink: false,
-      },
-    });
-
-    // Registra atividade no feed
-    await prisma.leadActivity.create({
-      data: {
-        leadId: id,
-        type: "ATTACHMENT",
-        content: `Carregou o arquivo "${file.name}"`,
-        userName,
-      },
-    }).catch((e) => console.warn("Aviso ao registrar atividade de anexo:", e));
 
     return NextResponse.json({
       success: true,
-      attachment,
+      attachment: createdAttachments[0],
+      attachments: createdAttachments,
     });
   } catch (error: any) {
     console.error("[CRM Attachment API] Erro ao anexar arquivo:", error);
