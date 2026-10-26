@@ -847,7 +847,7 @@ export function LeadCardDrawerModal({
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-4xl max-h-[100vh] sm:max-h-[90vh] bg-[#F8F9FA] dark:bg-[#141519] sm:rounded-3xl border-0 sm:border border-black/[0.08] dark:border-white/[0.08] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="w-full sm:max-w-4xl max-h-[100vh] sm:max-h-[90vh] bg-[#F8F9FA] dark:bg-[#141519] sm:rounded-3xl border-0 sm:border border-black/[0.08] dark:border-white/[0.08] shadow-2xl flex flex-col overflow-y-auto no-scrollbar animate-in zoom-in-95 duration-200 relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* IMAGEM DE CAPA ESTILO TRELLO (SE HOUVER) */}
@@ -871,7 +871,7 @@ export function LeadCardDrawerModal({
         )}
 
         {/* CABEÇALHO DO VERSO DO CARTÃO */}
-        <div className="p-4 sm:p-6 bg-white dark:bg-[#18191E] border-b border-black/[0.05] dark:border-white/[0.06] flex items-start justify-between gap-4 shrink-0">
+        <div className="p-4 sm:p-6 bg-white dark:bg-[#18191E] border-b border-black/[0.05] dark:border-white/[0.06] flex items-start justify-between gap-4">
           <div className="space-y-1.5 min-w-0 flex-1">
             
               {/* ID do Orçamento Sequencial Inteligente */}
@@ -948,7 +948,7 @@ export function LeadCardDrawerModal({
         </div>
 
         {/* CORPO DO CARTÃO DIVIDIDO EM 2 COLUNAS (ESTILO TRELLO) */}
-        <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* ======================================================== */}
           {/* COLUNA ESQUERDA: CONTEÚDO PRINCIPAL (8 COLUNAS)         */}
           {/* ======================================================== */}

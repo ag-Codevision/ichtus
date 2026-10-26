@@ -17,10 +17,12 @@ import {
   CheckCircle2,
   AlertCircle,
   FileCheck,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/utils";
+import { DocumentPreviewModal, PreviewDocument } from "@/components/admin/crm/DocumentPreviewModal";
 
 export interface AttachmentItem {
   id: string;
@@ -73,6 +75,21 @@ export function ServiceAttachmentsSection({
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Estados de Visualização Pop-up do Documento no Sistema
+  const [previewDoc, setPreviewDoc] = useState<PreviewDocument | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  const handleOpenPreview = (att: AttachmentItem) => {
+    setPreviewDoc({
+      title: att.fileName,
+      url: att.fileUrl,
+      fileType: att.fileType,
+      fileSize: att.fileSize,
+      createdAt: att.createdAt,
+    });
+    setIsPreviewOpen(true);
+  };
 
   // Estado para adicionar link de nuvem
   const [isAddingCloudLink, setIsAddingCloudLink] = useState(false);
@@ -496,15 +513,15 @@ export function ServiceAttachmentsSection({
                     </div>
                   )}
 
-                  <div className="min-w-0">
-                    <a
-                      href={att.fileUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs font-bold text-zinc-900 dark:text-white hover:text-[#FF650F] truncate block"
+                  <div className="min-w-0 flex-1">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenPreview(att)}
+                      title="Visualizar documento em pop-up"
+                      className="text-xs font-bold text-zinc-900 dark:text-white hover:text-[#FF650F] truncate block text-left w-full cursor-pointer transition-colors"
                     >
                       {att.fileName}
-                    </a>
+                    </button>
                     <div className="flex items-center gap-1.5 text-[10px] text-zinc-400 font-mono">
                       {att.fileSize && <span>{formatBytes(att.fileSize)}</span>}
                       {att.createdAt && <span>• {formatDate(att.createdAt)}</span>}
@@ -513,6 +530,14 @@ export function ServiceAttachmentsSection({
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPreview(att)}
+                    title="Visualizar em Pop-up"
+                    className="p-1.5 rounded-lg text-zinc-400 hover:text-[#FF650F] hover:bg-orange-500/10 transition-colors cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                  </button>
                   {att.fileType === "IMAGE" && onToggleCover && (
                     <button
                       type="button"
@@ -551,6 +576,12 @@ export function ServiceAttachmentsSection({
           </div>
         </div>
       )}
+      {/* Pop-up de Visualização Universal de Documentos */}
+      <DocumentPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        document={previewDoc}
+      />
     </div>
   );
 }

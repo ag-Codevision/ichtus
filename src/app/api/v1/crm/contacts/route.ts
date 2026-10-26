@@ -110,6 +110,7 @@ export async function GET(req: NextRequest) {
 
     const kpis = {
       total: totalCount,
+      leads: kpisData.find((k) => k.type === CustomerType.LEAD)?._count._all || 0,
       customers: kpisData.find((k) => k.type === CustomerType.CUSTOMER)?._count._all || 0,
       serviceProviders: kpisData.find((k) => k.type === CustomerType.SERVICE_PROVIDER)?._count._all || 0,
       suppliers: kpisData.find((k) => k.type === CustomerType.SUPPLIER)?._count._all || 0,
@@ -185,15 +186,53 @@ export async function POST(req: NextRequest) {
       tags = [],
     } = body;
 
-    // Validação mínima de identificação
-    const displayName = personType === "PJ" ? (tradeName || companyName) : (fullName || contactPerson);
-    if (!displayName?.trim()) {
+    // 1. Validação obrigatória de Nome
+    const displayName = personType === "PJ"
+      ? (tradeName?.trim() || companyName?.trim())
+      : (fullName?.trim() || contactPerson?.trim());
+
+    if (!displayName) {
       return NextResponse.json(
         {
           success: false,
           error: personType === "PJ"
-            ? "O Nome Fantasia ou Razão Social é obrigatório para Pessoa Jurídica."
-            : "O Nome Completo é obrigatório para Pessoa Física.",
+            ? "O campo Nome Fantasia / Razão Social é obrigatório para Pessoa Jurídica."
+            : "O campo Nome Completo é obrigatório para Pessoa Física.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // 2. Validação obrigatória de WhatsApp
+    const effectiveWhatsapp = whatsapp?.trim() || contactPersonPhone?.trim() || phone?.trim();
+    if (!effectiveWhatsapp) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "O campo WhatsApp é obrigatório para cadastrar o contato.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // 3. Validação obrigatória de E-mail
+    const effectiveEmail = email?.trim()?.toLowerCase() || contactPersonEmail?.trim()?.toLowerCase();
+    if (!effectiveEmail) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "O campo E-mail é obrigatório para cadastrar o contato.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(effectiveEmail)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "O e-mail informado não possui um formato válido (ex: contato@empresa.com.br).",
         },
         { status: 400 }
       );
@@ -226,7 +265,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Validação de Unicidade de E-mail
-    const cleanEmail = email?.trim()?.toLowerCase() || null;
+    const cleanEmail = effectiveEmail;
     if (cleanEmail) {
       const existingEmail = await prisma.customer.findFirst({
         where: {
@@ -351,7 +390,7 @@ export async function POST(req: NextRequest) {
         leadChannel: leadChannel?.trim() || null,
         leadChannelDetails: leadChannelDetails?.trim() || null,
         phone: phone?.trim() || null,
-        whatsapp: whatsapp?.trim() || null,
+        whatsapp: whatsapp?.trim() || effectiveWhatsapp,
         email: cleanEmail,
         financialEmail: financialEmail?.trim()?.toLowerCase() || null,
         zipCode: zipCode?.trim() || null,

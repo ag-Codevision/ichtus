@@ -28,8 +28,7 @@ import {
   FileText,
   Kanban,
   LayoutGrid,
-  Hand,
-  Plus,
+Plus,
   Edit2,
   Trash2,
   Check,
@@ -471,7 +470,7 @@ export default function ProducaoPage() {
       </div>
 
       {/* Barra de Filtro e Ações de Colunas da Produção */}
-      <div className="p-4 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="px-4 py-3 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex items-center justify-between gap-3 overflow-x-auto no-scrollbar">
         <div className="relative w-full max-w-md">
           <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -485,10 +484,7 @@ export default function ProducaoPage() {
 
         {/* Controles de Navegação por Arrasto e Nova Coluna */}
         <div className="flex items-center gap-2 justify-between md:justify-end">
-          <div className="hidden sm:flex items-center gap-1 bg-zinc-100 dark:bg-[#121316] px-2.5 py-1 rounded-full border border-black/[0.06] dark:border-white/[0.08] text-[11px] text-zinc-500 font-medium">
-            <Hand className="w-3.5 h-3.5 text-[#FF650F]" />
-            <span>Arraste para rolar</span>
-          </div>
+          
 
           <div className="flex items-center gap-1">
             <button

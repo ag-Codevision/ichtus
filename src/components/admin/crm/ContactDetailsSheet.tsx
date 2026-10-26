@@ -29,6 +29,7 @@ import {
   Loader2,
   Power,
   Send,
+  Sparkles,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -203,6 +204,7 @@ export function ContactDetailsSheet({
   };
 
   const typeConfig = {
+    LEAD: { label: "Lead", icon: Sparkles, color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" },
     CUSTOMER: { label: "Cliente", icon: Briefcase, color: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20" },
     SUPPLIER: { label: "Fornecedor de Insumos", icon: Truck, color: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" },
     SERVICE_PROVIDER: { label: "Prestador de Serviços", icon: Wrench, color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },

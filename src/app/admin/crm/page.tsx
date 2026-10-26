@@ -9,6 +9,7 @@ import {
   Truck,
   Wrench,
   UserCheck,
+  Sparkles,
 } from "lucide-react";
 import { GoogleSearchBarWithChips, FilterChipType } from "@/components/admin/crm/GoogleSearchBarWithChips";
 import { ContactsListGoogleStyle, ContactItem } from "@/components/admin/crm/ContactsListGoogleStyle";
@@ -28,6 +29,7 @@ export default function CrmPage() {
   const [activeChipFilter, setActiveChipFilter] = useState<FilterChipType>("ALL");
   const [contactKpis, setContactKpis] = useState({
     total: 0,
+    leads: 0,
     customers: 0,
     suppliers: 0,
     serviceProviders: 0,
@@ -50,7 +52,7 @@ export default function CrmPage() {
       let typeParam = "ALL";
       let personTypeParam = "ALL";
 
-      if (activeChipFilter === "CUSTOMER" || activeChipFilter === "SUPPLIER" || activeChipFilter === "SERVICE_PROVIDER") {
+      if (activeChipFilter === "LEAD" || activeChipFilter === "CUSTOMER" || activeChipFilter === "SUPPLIER" || activeChipFilter === "SERVICE_PROVIDER") {
         typeParam = activeChipFilter;
       } else if (activeChipFilter === "PJ" || activeChipFilter === "PF") {
         personTypeParam = activeChipFilter;
@@ -168,7 +170,21 @@ export default function CrmPage() {
       {/* ======================================================== */}
       <div className="space-y-4">
         {/* Métricas e KPIs em Cards Tonais Rápidos */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-500 block truncate">
+                Leads
+              </span>
+              <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white font-mono">
+                {contactKpis.leads}
+              </span>
+            </div>
+          </div>
+
           <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-orange-500/10 text-[#FF650F] flex items-center justify-center shrink-0">
               <Briefcase className="w-5 h-5" />

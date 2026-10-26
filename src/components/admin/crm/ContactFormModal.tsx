@@ -211,16 +211,60 @@ export function ContactFormModal({
     setIsSubmitting(true);
     setErrorMessage("");
 
+    // 1. Validação estrita de Nome
+    const hasName = formData.personType === "PJ"
+      ? Boolean(formData.tradeName?.trim() || formData.companyName?.trim())
+      : Boolean(formData.fullName?.trim());
+
+    if (!hasName) {
+      const msg = formData.personType === "PJ"
+        ? "O campo Nome Fantasia / Razão Social é obrigatório."
+        : "O campo Nome Completo é obrigatório.";
+      setErrorMessage(msg);
+      toast.error(msg, "Campo Obrigatório");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // 2. Validação estrita de WhatsApp
+    const effectiveWhatsapp = formData.whatsapp?.trim() || formData.contactPersonPhone?.trim() || "";
+    if (!effectiveWhatsapp) {
+      const msg = "O campo WhatsApp é obrigatório para realizar o cadastro.";
+      setErrorMessage(msg);
+      toast.error(msg, "Campo Obrigatório");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // 3. Validação estrita de E-mail
+    const effectiveEmail = formData.email?.trim() || formData.contactPersonEmail?.trim() || "";
+    if (!effectiveEmail) {
+      const msg = "O campo E-mail é obrigatório para realizar o cadastro.";
+      setErrorMessage(msg);
+      toast.error(msg, "Campo Obrigatório");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(effectiveEmail)) {
+      const msg = "Por favor, informe um endereço de e-mail válido (ex: contato@empresa.com.br).";
+      setErrorMessage(msg);
+      toast.error(msg, "E-mail Inválido");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const url = isEditing
         ? `/api/v1/crm/contacts/${initialData.id}`
         : "/api/v1/crm/contacts";
       const method = isEditing ? "PUT" : "POST";
 
-      // Assegura que se o usuário preencheu o celular do interlocutor mas não preencheu o WhatsApp da empresa, ele seja aproveitado
       const payload = {
         ...formData,
-        whatsapp: formData.whatsapp?.trim() || formData.contactPersonPhone?.trim() || "",
+        whatsapp: effectiveWhatsapp,
+        email: effectiveEmail,
       };
 
       const res = await fetch(url, {
@@ -305,7 +349,20 @@ export function ContactFormModal({
             <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 block">
               Tipo de Cadastro
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button
+                type="button"
+                onClick={() => setFormData((p) => ({ ...p, type: "LEAD" }))}
+                className={`py-2.5 px-3 rounded-2xl text-xs font-bold flex flex-col sm:flex-row items-center justify-center gap-1.5 transition-all border ${
+                  formData.type === "LEAD"
+                    ? "bg-amber-500 text-white border-amber-500 shadow-sm"
+                    : "bg-black/[0.02] dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-300 border-black/[0.06] dark:border-white/[0.06] hover:bg-black/[0.05]"
+                }`}
+              >
+                <Sparkles className="w-4 h-4 shrink-0" />
+                <span>Lead</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setFormData((p) => ({ ...p, type: "CUSTOMER" }))}
@@ -391,7 +448,7 @@ export function ContactFormModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="sm:col-span-2">
                   <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Nome Fantasia / Nome Comercial *
+                    Nome Fantasia / Nome Comercial <span className="text-red-500 font-bold">*</span>
                   </label>
                   <input
                     type="text"
@@ -443,7 +500,7 @@ export function ContactFormModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="sm:col-span-2">
                   <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Nome Completo *
+                    Nome Completo <span className="text-red-500 font-bold">*</span>
                   </label>
                   <input
                     type="text"
@@ -700,7 +757,7 @@ export function ContactFormModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  WhatsApp Geral da Empresa *
+                  WhatsApp Comercial / Principal <span className="text-red-500 font-bold">*</span>
                 </label>
                 <input
                   type="text"
@@ -725,13 +782,13 @@ export function ContactFormModal({
               </div>
               <div>
                 <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  E-mail Geral / Comercial
+                  E-mail Geral / Comercial <span className="text-red-500 font-bold">*</span>
                 </label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="contato@empresa.com.br"
+                  required={!formData.contactPersonEmail?.trim()} placeholder="contato@empresa.com.br"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                 />
               </div>

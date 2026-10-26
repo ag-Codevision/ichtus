@@ -4,6 +4,7 @@ import { ErrorBoundary } from "@/components/ui/error-boundary";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   Kanban,
@@ -30,10 +31,11 @@ import {
   ArrowRight,
   Palette,
   GripVertical,
-  Hand,
-  SlidersHorizontal,
+SlidersHorizontal,
   AlertCircle,
   Loader2,
+  RotateCw,
+  CheckCheck,
   MoreVertical,
   Check,
   CheckSquare,
@@ -77,6 +79,8 @@ interface Lead {
   dueDate: string | null;
   isCompleted: boolean;
   coverImage: string | null;
+  budgetSentViaWhatsApp?: boolean;
+  budgetSentAt?: string | null;
   budgetCode?: string | null;
   helperId?: string | null;
   voltage?: string | null;
@@ -143,6 +147,60 @@ export default function KanbanPage() {
   const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
   const [sendWhatsAppViaModal, setSendWhatsAppViaModal] = useState(false);
   const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
+  const [sendingBudgetId, setSendingBudgetId] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  // Disparo / Reenvio de Orçamento via WhatsApp direto do Card
+  const handleToggleSendBudget = async (lead: Lead, isResend = false) => {
+    if (sendingBudgetId) return;
+    setSendingBudgetId(lead.id);
+
+    try {
+      const res = await fetch(`/api/v1/crm/leads/${lead.id}/dispatch-whatsapp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "budget" }),
+      });
+
+      const data = await res.json();
+
+      if (data.success && data.wacliSuccess) {
+        setColumns((prevCols) =>
+          prevCols.map((col) => ({
+            ...col,
+            leads: col.leads.map((l) =>
+              l.id === lead.id
+                ? {
+                    ...l,
+                    budgetSentViaWhatsApp: true,
+                    budgetSentAt: new Date().toISOString(),
+                  }
+                : l
+            ),
+          }))
+        );
+
+        const recipient = data.recipientPhone || lead.contactPhone || "cliente";
+        toast.success(
+          isResend
+            ? `Orçamento em PDF reenviado diretamente para ${recipient} via WhatsApp!`
+            : `Orçamento em PDF enviado diretamente para ${recipient} via WhatsApp!`,
+          "WhatsApp Enviado"
+        );
+      } else {
+        const errorMsg =
+          data.error ||
+          data.wacliError ||
+          "O robô WACLI não conseguiu entregar o documento. Verifique se o WhatsApp está conectado em Configurações.";
+        toast.error(errorMsg, "Falha no Envio Automático");
+      }
+    } catch (err) {
+      console.error("Erro ao disparar orçamento via WhatsApp:", err);
+      toast.error("Erro de comunicação com o servidor.", "Falha de Conexão");
+    } finally {
+      setSendingBudgetId(null);
+    }
+  };
 
   // Estados de CRUD de Colunas / Campos do Kanban
   const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
@@ -797,21 +855,27 @@ export default function KanbanPage() {
 
       {/* ÁREA DO FUNIL COMERCIAL & KANBAN (100% IDÊNTICA AO PRINT) */}
       <div className="space-y-4">
-        {/* Barra de Ferramentas Superior do Funil */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative w-full sm:w-72">
+        {/* Barra de Ferramentas Superior do Funil (Linha Única) */}
+        <div className="px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-m3-1 flex items-center justify-between gap-3 overflow-x-auto no-scrollbar">
+          {/* Lado Esquerdo: Busca + Filtro de Prioridade alinhados em linha única */}
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0 min-w-0">
+            {/* Campo de Busca */}
+            <div className="relative w-48 sm:w-56 md:w-64 lg:w-72 shrink-0">
               <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={kanbanSearch}
                 onChange={(e) => setKanbanSearch(e.target.value)}
                 placeholder="Buscar oportunidade, projeto..."
-                className="w-full pl-10 pr-4 py-2 rounded-full bg-zinc-50 dark:bg-[#121316] border border-black/[0.08] dark:border-white/[0.08] text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 focus:outline-none focus:border-[#FF650F] shadow-sm"
+                className="w-full pl-9 pr-3.5 py-1.5 sm:py-2 rounded-full bg-zinc-50 dark:bg-[#121316] border border-black/[0.08] dark:border-white/[0.08] text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 focus:outline-none focus:border-[#FF650F] shadow-sm transition-all"
               />
             </div>
 
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            {/* Separador Vertical */}
+            <div className="h-5 w-px bg-black/[0.06] dark:bg-white/[0.08] hidden sm:block shrink-0" />
+
+            {/* Filtros de Prioridade */}
+            <div className="flex items-center gap-1.5 shrink-0">
               <span className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold flex items-center gap-1 mr-1 shrink-0">
                 <Filter className="w-3.5 h-3.5 text-[#FF650F]" />
                 Prioridade:
@@ -833,13 +897,8 @@ export default function KanbanPage() {
             </div>
           </div>
 
-          {/* Ações Rápidas: + Nova Coluna / Campo e Navegação Lateral */}
-          <div className="flex items-center gap-2 justify-between md:justify-end">
-            <div className="hidden sm:flex items-center gap-1 bg-zinc-100 dark:bg-[#121316] px-2.5 py-1 rounded-full border border-black/[0.06] dark:border-white/[0.08] text-[11px] text-zinc-500 font-medium">
-              <Hand className="w-3.5 h-3.5 text-[#FF650F]" />
-              <span>Arraste para rolar</span>
-            </div>
-
+          {/* Lado Direito: Ações Rápidas (Navegação Lateral e + Novo Campo) */}
+          <div className="flex items-center gap-2 shrink-0">
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -863,7 +922,7 @@ export default function KanbanPage() {
               variant="outline"
               size="sm"
               onClick={handleOpenAddColumn}
-              className="rounded-full text-xs font-bold gap-1.5 border-dashed border-[#FF650F]/50 text-[#FF650F] hover:bg-orange-500/10"
+              className="rounded-full text-xs font-bold gap-1.5 border-dashed border-[#FF650F]/50 text-[#FF650F] hover:bg-orange-500/10 shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Novo Campo</span>
@@ -1005,8 +1064,21 @@ export default function KanbanPage() {
                                 setSelectedCardLeadId(lead.id);
                                 setIsCardModalOpen(true);
                               }}
-                              className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.05] dark:border-white/[0.06] hover:border-[#FF650F]/50 dark:hover:border-[#FF650F]/50 cursor-pointer transition-all duration-200 group hover:shadow-md space-y-2.5 relative"
+                              className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.05] dark:border-white/[0.06] hover:border-[#FF650F]/50 dark:hover:border-[#FF650F]/50 cursor-pointer transition-all duration-200 group hover:shadow-md space-y-2.5 relative overflow-hidden"
                             >
+                              {/* Faixa Horizontal de Capa no Topo do Card (Exibida dinamicamente quando houver coverImage) */}
+                              {lead.coverImage && (
+                                <div className="-mx-3.5 -mt-3.5 mb-2.5 h-24 sm:h-28 overflow-hidden rounded-t-2xl relative border-b border-black/[0.05] dark:border-white/[0.08] bg-zinc-100 dark:bg-black/40">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={lead.coverImage}
+                                    alt={lead.title}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    loading="lazy"
+                                  />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+                                </div>
+                              )}
                               <div className="flex items-start justify-between gap-2">
                                 <div className="space-y-0.5 min-w-0">
                                   <h4 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white line-clamp-1 group-hover:text-[#FF650F] transition-colors">
@@ -1124,6 +1196,63 @@ export default function KanbanPage() {
                                 <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">
                                   {formatDate(lead.createdAt)}
                                 </span>
+                              </div>
+
+                              {/* Mini Dashboard do Card: Switch de Envio de Orçamento WhatsApp & Botão de Reenvio */}
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="pt-2 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between gap-2"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={Boolean(lead.budgetSentViaWhatsApp)}
+                                    disabled={sendingBudgetId === lead.id}
+                                    onClick={() => handleToggleSendBudget(lead, false)}
+                                    title={lead.budgetSentViaWhatsApp ? "Orçamento já enviado via WhatsApp" : "Enviar orçamento via WhatsApp"}
+                                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#FF650F] focus:ring-offset-1 disabled:opacity-50 ${
+                                      lead.budgetSentViaWhatsApp
+                                        ? "bg-emerald-500 dark:bg-emerald-500"
+                                        : "bg-zinc-300 dark:bg-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-600"
+                                    }`}
+                                  >
+                                    <span
+                                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                                        lead.budgetSentViaWhatsApp ? "translate-x-4" : "translate-x-0"
+                                      }`}
+                                    />
+                                  </button>
+
+                                  <div className="flex items-center gap-1 min-w-0 text-[11px]">
+                                    {lead.budgetSentViaWhatsApp ? (
+                                      <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 truncate">
+                                        <CheckCheck className="w-3.5 h-3.5 shrink-0" />
+                                        <span className="truncate">Orçamento Enviado</span>
+                                      </span>
+                                    ) : (
+                                      <span className="text-zinc-500 dark:text-zinc-400 font-medium truncate">
+                                        Enviar Orçamento
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {lead.budgetSentViaWhatsApp && (
+                                  <button
+                                    type="button"
+                                    disabled={sendingBudgetId === lead.id}
+                                    onClick={() => handleToggleSendBudget(lead, true)}
+                                    title="Reenviar orçamento via WhatsApp"
+                                    className="p-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 transition-colors shrink-0 disabled:opacity-50 flex items-center justify-center shadow-2xs"
+                                  >
+                                    {sendingBudgetId === lead.id ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <RotateCw className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                )}
                               </div>
 
                               {isApprovedStage && (

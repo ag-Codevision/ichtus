@@ -17,6 +17,7 @@ enum UserRole {
 }
 
 enum CustomerType {
+  LEAD              // Lead (prospecção / interessado)
   CUSTOMER          // Cliente (comprador de fachadas, luminosos, impressões)
   SERVICE_PROVIDER  // Prestador de Serviços (instaladores de campo, serralheiros, terceiros)
   SUPPLIER          // Fornecedor de Matéria-Prima e Insumos (chapas ACM, lonas, LEDs, tintas)
@@ -266,6 +267,8 @@ model Lead {
   reminderAt      DateTime?     // Lembrete agendado
   isCompleted     Boolean       @default(false)
   coverImage      String?       // URL da imagem de capa (estilo Trello)
+  budgetSentViaWhatsApp Boolean   @default(false) // Orçamento enviado via WhatsApp
+  budgetSentAt          DateTime? // Data/hora do último envio de orçamento
   assignedToId    String?
   assignedTo      User?         @relation(fields: [assignedToId], references: [id])
   orderInColumn   Int           @default(0)

@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { Search, X, Users, Briefcase, Truck, Wrench, Building2, User, ArrowUpDown } from "lucide-react";
+import { Search, X, Users, Briefcase, Truck, Wrench, Building2, User, ArrowUpDown, Sparkles } from "lucide-react";
 
-export type FilterChipType = "ALL" | "CUSTOMER" | "SUPPLIER" | "SERVICE_PROVIDER" | "PJ" | "PF";
+export type FilterChipType = "ALL" | "LEAD" | "CUSTOMER" | "SUPPLIER" | "SERVICE_PROVIDER" | "PJ" | "PF";
 
 interface GoogleSearchBarWithChipsProps {
   searchQuery: string;
@@ -14,6 +14,7 @@ interface GoogleSearchBarWithChipsProps {
   onSortChange?: (sort: string) => void;
   counts: {
     total: number;
+    leads?: number;
     customers: number;
     suppliers: number;
     serviceProviders: number;
@@ -31,6 +32,7 @@ export function GoogleSearchBarWithChips({
 }: GoogleSearchBarWithChipsProps) {
   const chips: { id: FilterChipType; label: string; icon: React.ReactNode; count?: number }[] = [
     { id: "ALL", label: "Todos", icon: <Users className="w-3.5 h-3.5" />, count: counts.total },
+    { id: "LEAD", label: "Leads", icon: <Sparkles className="w-3.5 h-3.5" />, count: counts.leads },
     { id: "CUSTOMER", label: "Clientes", icon: <Briefcase className="w-3.5 h-3.5" />, count: counts.customers },
     { id: "SUPPLIER", label: "Fornecedores", icon: <Truck className="w-3.5 h-3.5" />, count: counts.suppliers },
     { id: "SERVICE_PROVIDER", label: "Prestadores", icon: <Wrench className="w-3.5 h-3.5" />, count: counts.serviceProviders },

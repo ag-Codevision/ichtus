@@ -1,12 +1,12 @@
 "use client";
 
 import React from "react";
-import { MessageCircle, Phone, Building2, User, MoreVertical, Briefcase, Truck, Wrench, ChevronRight, Trash2, KeyRound } from "lucide-react";
+import { MessageCircle, Phone, Building2, User, MoreVertical, Briefcase, Truck, Wrench, ChevronRight, Trash2, KeyRound, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export interface ContactItem {
   id: string;
-  type: "CUSTOMER" | "SERVICE_PROVIDER" | "SUPPLIER";
+  type: "LEAD" | "CUSTOMER" | "SERVICE_PROVIDER" | "SUPPLIER";
   personType: "PJ" | "PF";
   status: "ACTIVE" | "INACTIVE" | "LEAD_PROSPECT" | "BLOCKED";
   companyName: string | null;
@@ -48,6 +48,7 @@ interface ContactsListGoogleStyleProps {
 
 // Gera cor tonal elegante para o avatar no padrão Google
 function getGoogleAvatarColor(name: string, type: string) {
+  if (type === "LEAD") return "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800/40";
   if (type === "SUPPLIER") return "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200 dark:border-purple-800/40";
   if (type === "SERVICE_PROVIDER") return "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200 dark:border-blue-800/40";
   
@@ -102,7 +103,8 @@ export function ContactsListGoogleStyle({
     );
   }
 
-  const typeBadges = {
+  const typeBadges: Record<string, { label: string; icon: any; color: string }> = {
+    LEAD: { label: "Lead", icon: Sparkles, color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" },
     CUSTOMER: { label: "Cliente", icon: Briefcase, color: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20" },
     SUPPLIER: { label: "Fornecedor", icon: Truck, color: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" },
     SERVICE_PROVIDER: { label: "Prestador", icon: Wrench, color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },

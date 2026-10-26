@@ -213,6 +213,63 @@ export async function PUT(req: NextRequest, { params }: Params) {
       tags,
     } = body;
 
+    // 0. Validação de Campos Obrigatórios na Edição (Nome, WhatsApp, E-mail)
+    if (personType !== undefined || tradeName !== undefined || fullName !== undefined || companyName !== undefined) {
+      const activePersonType = personType || existing.personType;
+      const effectiveName = activePersonType === "PJ"
+        ? (tradeName !== undefined ? tradeName : existing.tradeName) || (companyName !== undefined ? companyName : existing.companyName)
+        : (fullName !== undefined ? fullName : existing.fullName);
+      if (!effectiveName?.trim()) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: activePersonType === "PJ"
+              ? "O campo Nome Comercial / Razão Social não pode ficar em branco."
+              : "O campo Nome Completo não pode ficar em branco.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (whatsapp !== undefined || contactPersonPhone !== undefined) {
+      const effWpp = (whatsapp !== undefined ? whatsapp?.trim() : existing.whatsapp) ||
+                     (contactPersonPhone !== undefined ? contactPersonPhone?.trim() : existing.contactPersonPhone);
+      if (!effWpp) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "O campo WhatsApp é obrigatório e não pode ficar em branco.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (email !== undefined || contactPersonEmail !== undefined) {
+      const effEmail = (email !== undefined ? email?.trim() : existing.email) ||
+                       (contactPersonEmail !== undefined ? contactPersonEmail?.trim() : existing.contactPersonEmail);
+      if (!effEmail) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "O campo E-mail é obrigatório e não pode ficar em branco.",
+          },
+          { status: 400 }
+        );
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(effEmail)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "O e-mail informado não possui um formato válido (ex: contato@empresa.com.br).",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // 1. Validação de Unicidade de Documento (CPF / CNPJ) na Edição
     if (documentNumber !== undefined && documentNumber !== null && documentNumber !== "") {
       const cleanedDoc = documentNumber.replace(/\D/g, "");
