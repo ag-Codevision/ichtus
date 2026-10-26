@@ -48,6 +48,7 @@ import { useToast } from "@/components/ui/toast";
 import { ClientSearchAutocomplete, SearchedClient } from "@/components/admin/crm/ClientSearchAutocomplete";
 import { RichTextEditor } from "@/components/admin/crm/RichTextEditor";
 import { ServiceCategoriesModal, ServiceCategoryData } from "@/components/admin/crm/ServiceCategoriesModal";
+import { ResourcesSelector } from "@/components/admin/crm/ResourcesSelector";
 import { getDueDateStatus } from "@/lib/due-date-status";
 
 export interface KanbanTagItem {
@@ -900,49 +901,21 @@ export function LeadCardDrawerModal({
               </div>
             </div>
 
-            {/* Título Editável Inline */}
-            {isEditingTitle ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={titleValue}
-                  onChange={(e) => setTitleValue(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSaveTitle()}
-                  autoFocus
-                  className="text-lg sm:text-xl font-black text-zinc-900 dark:text-white bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-[#FF650F]"
-                />
-                <Button size="sm" onClick={handleSaveTitle} className="rounded-xl text-xs font-bold">
-                  Salvar
-                </Button>
-              </div>
-            ) : (
-              <h2
-                onClick={() => setIsEditingTitle(true)}
-                title="Clique para editar o título"
-                className="text-lg sm:text-xl font-black text-zinc-900 dark:text-white tracking-tight cursor-pointer hover:bg-black/[0.03] dark:hover:bg-white/[0.04] p-1 -ml-1 rounded-xl transition-colors truncate"
-              >
-                {data?.title || "Carregando oportunidade..."}
-              </h2>
-            )}
+            {/* Título Diretamente Editável */}
+            <div className="pt-1">
+              <input
+                type="text"
+                value={titleValue}
+                onChange={(e) => setTitleValue(e.target.value)}
+                onBlur={handleSaveTitle}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveTitle()}
+                placeholder="Título do Serviço..."
+                className="w-full text-lg sm:text-xl font-black text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/60 border border-black/10 dark:border-white/10 px-3.5 py-1.5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF650F]"
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              title="Editar Serviço Completo"
-              onClick={() => {
-                if (onOpenEditLead && leadId) {
-                  onClose();
-                  onOpenEditLead(leadId);
-                } else {
-                  setIsEditingInfo(true);
-                }
-              }}
-              className="px-3 py-1.5 rounded-full bg-orange-500/10 hover:bg-orange-500/20 text-[#FF650F] text-xs font-bold flex items-center gap-1.5 border border-orange-500/20 transition-colors"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Editar</span>
-            </button>
 
             <button
               type="button"
@@ -1099,406 +1072,241 @@ export function LeadCardDrawerModal({
               )}
             </div>
 
-            {/* SEÇÃO: DADOS DA OPORTUNIDADE & CONTATO (CRUD COMPLETO) */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-sm space-y-3">
+            {/* SEÇÃO: DADOS DA OPORTUNIDADE & CONTATO (DIRETAMENTE NO CORPO DO CARD) */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-black/[0.04] dark:border-white/[0.05]">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
                   <User className="w-4 h-4 text-[#FF650F]" />
                   <span>Dados da Oportunidade & Contato</span>
                 </h3>
-                {!isEditingInfo && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (data) {
-                        setInfoForm({
-                          contactName: data.contactName || "",
-                          contactPhone: data.contactPhone || "",
-                          contactEmail: data.contactEmail || "",
-                          estimatedValue: data.estimatedValue != null ? String(data.estimatedValue) : "",
-                          priority: data.priority || "MEDIUM",
-                          source: data.source || "WEBSITE_FORM",
-                          customerId: data.customerId || null,
-                        });
-                      }
-                      setIsEditingInfo(true);
-                    }}
-                    className="text-[11px] font-bold text-zinc-500 hover:text-[#FF650F] flex items-center gap-1 transition-colors"
-                  >
-                    <Edit2 className="w-3 h-3" />
-                    <span>Editar Informações</span>
-                  </button>
-                )}
               </div>
 
-              {isEditingInfo ? (
-                <form onSubmit={handleSaveInfo} className="space-y-4 pt-1">
-                  {/* Seletor Inteligente de Cliente */}
-                  <div>
-                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                      Cliente Vinculado (CRM)
+              {/* Seletor Inteligente de Cliente Vinculado */}
+              <div>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Cliente Vinculado (CRM)
+                </label>
+                <ClientSearchAutocomplete
+                  selectedClient={selectedCustomerObj}
+                  onSelectClient={(client: SearchedClient | null) => {
+                    setSelectedCustomerObj(client);
+                    if (client) {
+                      setInfoForm((prev) => ({
+                        ...prev,
+                        customerId: client.id,
+                        contactName: client.displayName || client.tradeName || client.fullName || prev.contactName || "",
+                        contactPhone: client.whatsapp || client.phone || prev.contactPhone || "",
+                        contactEmail: client.email || prev.contactEmail || "",
+                      }));
+                      handleUpdateLeadField({
+                        customerId: client.id,
+                        contactName: client.displayName || client.tradeName || client.fullName || data?.contactName || "",
+                        contactPhone: client.whatsapp || client.phone || data?.contactPhone || "",
+                        contactEmail: client.email || data?.contactEmail || null,
+                      });
+                    } else {
+                      setInfoForm((prev) => ({ ...prev, customerId: null }));
+                      handleUpdateLeadField({ customerId: null });
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Nome do Contato *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={infoForm.contactName}
+                    onChange={(e) => setInfoForm({ ...infoForm, contactName: e.target.value })}
+                    onBlur={() => {
+                      if (infoForm.contactName.trim() && infoForm.contactName !== data?.contactName) {
+                        handleUpdateLeadField({ contactName: infoForm.contactName.trim() });
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                      WhatsApp / Telefone *
                     </label>
-                    <ClientSearchAutocomplete
-                      selectedClient={selectedCustomerObj}
-                      onSelectClient={(client: SearchedClient | null) => {
-                        setSelectedCustomerObj(client);
-                        if (client) {
-                          setInfoForm((prev) => ({
-                            ...prev,
-                            customerId: client.id,
-                            contactName: client.displayName || client.tradeName || client.fullName || prev.contactName || "",
-                            contactPhone: client.whatsapp || client.phone || prev.contactPhone || "",
-                            contactEmail: client.email || prev.contactEmail || "",
-                          }));
-                        } else {
-                          setInfoForm((prev) => ({ ...prev, customerId: null }));
-                        }
-                      }}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                        Nome do Contato *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={infoForm.contactName}
-                        onChange={(e) => setInfoForm({ ...infoForm, contactName: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                        WhatsApp / Telefone *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={infoForm.contactPhone}
-                        onChange={(e) => setInfoForm({ ...infoForm, contactPhone: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                        E-mail de Contato
-                      </label>
-                      <input
-                        type="email"
-                        value={infoForm.contactEmail}
-                        onChange={(e) => setInfoForm({ ...infoForm, contactEmail: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                        Valor Estimado (R$)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={infoForm.estimatedValue}
-                        onChange={(e) => setInfoForm({ ...infoForm, estimatedValue: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                        Nível de Prioridade
-                      </label>
-                      <select
-                        value={infoForm.priority}
-                        onChange={(e) =>
-                          setInfoForm({
-                            ...infoForm,
-                            priority: e.target.value as "LOW" | "MEDIUM" | "HIGH" | "URGENT",
-                          })
-                        }
-                        className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                      >
-                        <option value="LOW">Baixa</option>
-                        <option value="MEDIUM">Média</option>
-                        <option value="HIGH">Alta</option>
-                        <option value="URGENT">Urgente</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                        Origem do Lead
-                      </label>
-                      <select
-                        value={infoForm.source}
-                        onChange={(e) => setInfoForm({ ...infoForm, source: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                      >
-                        <option value="WEBSITE_FORM">Formulário do Site</option>
-                        <option value="WHATSAPP">WhatsApp Direto</option>
-                        <option value="REFERRAL">Indicação / Recomendação</option>
-                        <option value="INSTAGRAM">Instagram Direct</option>
-                        <option value="GOOGLE_ADS">Google Ads / Tráfego</option>
-                        <option value="OUTBOUND">Prospecção Ativa</option>
-                        <option value="OTHER">Outros</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-black/[0.04] dark:border-white/[0.05]">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsEditingInfo(false)}
-                      className="rounded-xl text-xs font-bold"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button type="submit" size="sm" className="rounded-xl text-xs font-bold">
-                      Salvar Alterações
-                    </Button>
-                  </div>
-                </form>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
-                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04] space-y-0.5">
-                    <span className="text-[10px] font-semibold text-zinc-400 block uppercase">
-                      Contato Principal
-                    </span>
-                    <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white block truncate">
-                      {data?.contactName || "—"}
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04] space-y-0.5">
-                    <span className="text-[10px] font-semibold text-zinc-400 block uppercase">
-                      WhatsApp / Telefone
-                    </span>
-                    {data?.contactPhone ? (
+                    {data?.contactPhone && (
                       <a
                         href={`https://wa.me/${data.contactPhone.replace(/\D/g, "")}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 truncate"
+                        className="text-[10px] text-emerald-600 hover:underline flex items-center gap-0.5"
                       >
-                        <MessageCircle className="w-3.5 h-3.5 shrink-0" />
-                        <span>{data.contactPhone}</span>
+                        <MessageCircle className="w-3 h-3" />
+                        <span>Abrir</span>
                       </a>
-                    ) : (
-                      <span className="text-xs text-zinc-400">—</span>
                     )}
                   </div>
-
-                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04] space-y-0.5">
-                    <span className="text-[10px] font-semibold text-zinc-400 block uppercase">
-                      E-mail
-                    </span>
-                    <span className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 block truncate">
-                      {data?.contactEmail || "Não informado"}
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04] space-y-0.5">
-                    <span className="text-[10px] font-semibold text-zinc-400 block uppercase">
-                      Valor Estimado
-                    </span>
-                    <span className="text-xs sm:text-sm font-mono font-black text-[#FF650F] block">
-                      {data?.estimatedValue ? formatCurrency(data.estimatedValue) : "Sob Consulta"}
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04] space-y-0.5">
-                    <span className="text-[10px] font-semibold text-zinc-400 block uppercase">
-                      Prioridade
-                    </span>
-                    <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 block">
-                      {data?.priority === "URGENT"
-                        ? "🔴 Urgente"
-                        : data?.priority === "HIGH"
-                        ? "🟠 Alta"
-                        : data?.priority === "LOW"
-                        ? "🟢 Baixa"
-                        : "🟡 Média"}
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04] space-y-0.5">
-                    <span className="text-[10px] font-semibold text-zinc-400 block uppercase">
-                      Origem do Lead
-                    </span>
-                    <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block truncate">
-                      {data?.source === "WHATSAPP"
-                        ? "WhatsApp Direto"
-                        : data?.source === "WEBSITE_FORM"
-                        ? "Formulário do Site"
-                        : data?.source === "REFERRAL"
-                        ? "Indicação"
-                        : data?.source === "INSTAGRAM"
-                        ? "Instagram"
-                        : data?.source === "GOOGLE_ADS"
-                        ? "Google Ads"
-                        : data?.source === "OUTBOUND"
-                        ? "Prospecção Ativa"
-                        : "Outros"}
-                    </span>
-                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={infoForm.contactPhone}
+                    onChange={(e) => setInfoForm({ ...infoForm, contactPhone: e.target.value })}
+                    onBlur={() => {
+                      if (infoForm.contactPhone.trim() && infoForm.contactPhone !== data?.contactPhone) {
+                        handleUpdateLeadField({ contactPhone: infoForm.contactPhone.trim() });
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
                 </div>
-              )}
+
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    E-mail de Contato
+                  </label>
+                  <input
+                    type="email"
+                    value={infoForm.contactEmail}
+                    onChange={(e) => setInfoForm({ ...infoForm, contactEmail: e.target.value })}
+                    onBlur={() => {
+                      if (infoForm.contactEmail !== data?.contactEmail) {
+                        handleUpdateLeadField({ contactEmail: infoForm.contactEmail.trim() || null });
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* SEÇÃO: ESPECIFICAÇÕES TÉCNICAS DE CAMPO & LOGÍSTICA (ÍCTHUS) */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-sm space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-black/[0.04] dark:border-white/[0.05]">
+            {/* SEÇÃO: ESPECIFICAÇÕES TÉCNICAS DE INSTALAÇÃO & CAMPO (ÍCTHUS) */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-sm space-y-4">
+              <div className="pb-2 border-b border-black/[0.04] dark:border-white/[0.05]">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
                   <Wrench className="w-4 h-4 text-[#FF650F]" />
-                  <span>Especificações Técnicas & Campo</span>
+                  <span>Especificações Técnicas de Instalação & Campo</span>
                 </h3>
-                {onOpenEditLead && leadId && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      onOpenEditLead(leadId);
-                    }}
-                    className="text-[11px] font-bold text-zinc-500 hover:text-[#FF650F] flex items-center gap-1 transition-colors"
-                  >
-                    <Edit2 className="w-3 h-3" />
-                    <span>Editar Especificações</span>
-                  </button>
-                )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04] space-y-0.5">
-                  <span className="text-[10px] font-semibold text-zinc-400 block uppercase flex items-center gap-1">
-                    <Zap className="w-3 h-3 text-amber-500" />
-                    Voltagem
-                  </span>
-                  <span className="text-xs font-bold text-zinc-900 dark:text-white block">
-                    {data?.voltage || "Não especificado"}
-                  </span>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04] space-y-0.5">
-                  <span className="text-[10px] font-semibold text-zinc-400 block uppercase flex items-center gap-1">
-                    <User className="w-3 h-3 text-blue-500" />
-                    Ajudante Auxiliar
-                  </span>
-                  <span className="text-xs font-bold text-zinc-900 dark:text-white block truncate">
-                    {data?.helper?.tradeName || data?.helper?.fullName || data?.helper?.companyName || "Nenhum"}
-                  </span>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04] space-y-0.5">
-                  <span className="text-[10px] font-semibold text-zinc-400 block uppercase flex items-center gap-1">
-                    <Paintbrush className="w-3 h-3 text-purple-500" />
-                    Especificação de Tinta
-                  </span>
-                  <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 block truncate">
-                    {data?.paintDetails || "Padrão"}
-                  </span>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.03] dark:border-white/[0.04] space-y-0.5">
-                  <span className="text-[10px] font-semibold text-zinc-400 block uppercase flex items-center gap-1">
-                    <Truck className="w-3 h-3 text-emerald-500" />
-                    Frete / Logística
-                  </span>
-                  <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 block truncate">
-                    {data?.freightDetails || "Sem frete"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Ferramentas & Recursos */}
-              {Array.isArray(data?.tools) && data.tools.length > 0 && (
-                <div className="pt-2 border-t border-black/[0.04] dark:border-white/[0.05] space-y-1.5">
-                  <span className="text-[10px] font-bold text-zinc-400 block uppercase">
-                    Ferramentas & Recursos de Campo ({data.tools.length})
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {data.tools.map((t, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-white/[0.06] border border-black/[0.04] dark:border-white/[0.06] text-[11px] font-medium text-zinc-800 dark:text-zinc-200"
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {/* Voltagem do Local em Chips Diretos */}
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5 flex items-center gap-1">
+                    <Zap className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Voltagem do Local</span>
+                  </label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {["110V", "220V", "Bivolt", "N/A"].map((volt) => (
+                      <button
+                        key={volt}
+                        type="button"
+                        onClick={() => handleUpdateLeadField({ voltage: volt })}
+                        className={`py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                          data?.voltage === volt
+                            ? "bg-[#FF650F] text-white border-[#FF650F] shadow-xs"
+                            : "bg-zinc-50 dark:bg-[#121316] text-zinc-700 dark:text-zinc-300 border-black/10 dark:border-white/10 hover:bg-zinc-100"
+                        }`}
                       >
-                        {t}
-                      </span>
+                        {volt}
+                      </button>
                     ))}
                   </div>
                 </div>
-              )}
+
+                {/* Ajudante Auxiliar */}
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5 flex items-center gap-1">
+                    <User className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Ajudante Auxiliar</span>
+                  </label>
+                  <select
+                    value={data?.helperId || ""}
+                    onChange={(e) => handleUpdateLeadField({ helperId: e.target.value || null })}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F] cursor-pointer"
+                  >
+                    <option value="">Nenhum ajudante vinculado</option>
+                    {drawerHelpers.map((prov) => (
+                      <option key={prov.id} value={prov.id}>
+                        {prov.tradeName || prov.companyName || prov.fullName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Especificação de Tinta */}
+                <div>
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5 flex items-center gap-1">
+                    <Paintbrush className="w-3.5 h-3.5 text-purple-500" />
+                    <span>Especificação de Tinta</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: PU Preto Fosco Automotivo"
+                    defaultValue={data?.paintDetails || ""}
+                    onBlur={(e) => {
+                      if (e.target.value !== (data?.paintDetails || "")) {
+                        handleUpdateLeadField({ paintDetails: e.target.value.trim() || null });
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+
+                {/* Frete / Logística */}
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5 flex items-center gap-1">
+                    <Truck className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Detalhes de Frete / Logística</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Carreto próprio da empresa, veículo utilitário..."
+                    defaultValue={data?.freightDetails || ""}
+                    onBlur={(e) => {
+                      if (e.target.value !== (data?.freightDetails || "")) {
+                        handleUpdateLeadField({ freightDetails: e.target.value.trim() || null });
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+              </div>
+
+              {/* Recursos & Ferramentas Necessárias (CRUD COMPLETO) */}
+              <div className="pt-3 border-t border-black/[0.04] dark:border-white/[0.05]">
+                <ResourcesSelector
+                  selectedTools={Array.isArray(data?.tools) ? data.tools : []}
+                  onChange={(newTools) => handleUpdateLeadField({ tools: newTools })}
+                />
+              </div>
             </div>
 
-            {/* SEÇÃO 1: DESCRIÇÃO DETALHADA / BRIEFING COM TEXTO FORMATADO */}
+            {/* SEÇÃO 1: DESCRIÇÃO DETALHADA / BRIEFING (SEMPRE ABERTA DIRETAMENTE) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
                   <FileText className="w-4 h-4 text-[#FF650F]" />
                   <span>Descrição & Escopo do Trabalho (Texto Formatado)</span>
                 </h3>
-                {!isEditingNotes && (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingNotes(true)}
-                    className="text-[11px] font-bold text-zinc-500 hover:text-[#FF650F] flex items-center gap-1 transition-colors"
-                  >
-                    <Edit2 className="w-3 h-3" />
-                    <span>Editar Descrição</span>
-                  </button>
-                )}
+                <Button
+                  size="sm"
+                  onClick={handleSaveNotes}
+                  className="rounded-xl text-xs font-bold bg-[#FF650F] hover:bg-[#e0580c] text-white h-7 px-3"
+                >
+                  Salvar Descrição
+                </Button>
               </div>
 
-              {isEditingNotes ? (
-                <div className="space-y-2.5">
-                  <RichTextEditor
-                    value={notesValue}
-                    onChange={setNotesValue}
-                    placeholder="Adicione escopo, regras, medidas, links técnicos e detalhes da montagem..."
-                    minRows={5}
-                  />
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" onClick={handleSaveNotes} className="rounded-xl text-xs font-bold">
-                      Salvar Descrição
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setNotesValue(data?.notes || "");
-                        setIsEditingNotes(false);
-                      }}
-                      className="rounded-xl text-xs font-bold"
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  onClick={() => setIsEditingNotes(true)}
-                  className="p-3.5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 min-h-[60px] cursor-pointer hover:border-black/20 dark:hover:border-white/20 transition-colors"
-                >
-                  {data?.notes ? (
-                    <RichTextEditor
-                      value={data.notes}
-                      onChange={() => {}}
-                      className="border-0 bg-transparent shadow-none p-0"
-                    />
-                  ) : (
-                    <span className="text-zinc-400 italic text-xs">
-                      Nenhuma descrição adicionada. Clique para adicionar detalhes, escopo ou instruções...
-                    </span>
-                  )}
-                </div>
-              )}
+              <div className="space-y-2">
+                <RichTextEditor
+                  value={notesValue}
+                  onChange={setNotesValue}
+                  placeholder="Adicione escopo, regras, medidas, links técnicos e detalhes da montagem..."
+                  minRows={5}
+                />
+              </div>
             </div>
 
             {/* SEÇÃO 2: CHECKLISTS COM BARRA DE PROGRESSO */}
@@ -1918,6 +1726,87 @@ export function LeadCardDrawerModal({
           {/* COLUNA DIREITA: AÇÕES LATERAIS ESTILO TRELLO (4 COLUNAS) */}
           {/* ======================================================== */}
           <div className="lg:col-span-4 space-y-6">
+            {/* Bloco: Dados Comerciais & Prazos (Direto no Cartão) */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-sm space-y-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block pb-2 border-b border-black/[0.04] dark:border-white/[0.05]">
+                Dados Comerciais & Prazos
+              </span>
+
+              <div>
+                <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 block mb-1">
+                  Valor Estimado (R$)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-xs font-bold text-zinc-400">R$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0,00"
+                    value={infoForm.estimatedValue}
+                    onChange={(e) => setInfoForm({ ...infoForm, estimatedValue: e.target.value })}
+                    onBlur={() => {
+                      const val = infoForm.estimatedValue ? parseFloat(infoForm.estimatedValue) : null;
+                      if (val !== data?.estimatedValue) {
+                        handleUpdateLeadField({ estimatedValue: val });
+                      }
+                    }}
+                    className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono font-bold text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 block mb-1">
+                  Nível de Prioridade
+                </label>
+                <select
+                  value={data?.priority || "MEDIUM"}
+                  onChange={(e) => handleUpdateLeadField({ priority: e.target.value })}
+                  className="w-full px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                >
+                  <option value="LOW">🟢 Baixa</option>
+                  <option value="MEDIUM">🟡 Média</option>
+                  <option value="HIGH">🟠 Alta</option>
+                  <option value="URGENT">🔴 Urgente</option>
+                </select>
+              </div>
+
+              {/* Data de Entrega com Contagem Regressiva e Cores Dinâmicas */}
+              <div>
+                <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 block mb-1">
+                  Data Limite de Entrega
+                </label>
+                <input
+                  type="date"
+                  value={dueDateInput}
+                  onChange={(e) => {
+                    setDueDateInput(e.target.value);
+                    handleUpdateLeadField({ dueDate: e.target.value ? new Date(e.target.value) : null });
+                  }}
+                  className="w-full px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 block mb-1">
+                  Origem do Contato
+                </label>
+                <select
+                  value={data?.source || "WEBSITE_FORM"}
+                  onChange={(e) => handleUpdateLeadField({ source: e.target.value })}
+                  className="w-full px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                >
+                  <option value="WEBSITE_FORM">Formulário do Site</option>
+                  <option value="WHATSAPP">WhatsApp Direto</option>
+                  <option value="REFERRAL">Indicação / Boca a Boca</option>
+                  <option value="INSTAGRAM">Instagram</option>
+                  <option value="GOOGLE_ADS">Google Ads</option>
+                  <option value="OUTBOUND">Prospecção Ativa</option>
+                  <option value="OTHER">Outros</option>
+                </select>
+              </div>
+            </div>
+
             {/* Bloco 1: Adicionar ao Cartão */}
             <div className="space-y-2">
               <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block px-1">
