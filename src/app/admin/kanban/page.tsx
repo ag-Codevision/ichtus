@@ -44,6 +44,8 @@ import {
 import { ClientSearchAutocomplete, SearchedClient } from "@/components/admin/crm/ClientSearchAutocomplete";
 import { LeadCardDrawerModal } from "@/components/admin/crm/LeadCardDrawerModal";
 import { LeadCreateCardModal } from "@/components/admin/crm/LeadCreateCardModal";
+import { ServiceCategoriesModal } from "@/components/admin/crm/ServiceCategoriesModal";
+import { getDueDateStatus } from "@/lib/due-date-status";
 import { ContactDetailsSheet } from "@/components/admin/crm/ContactDetailsSheet";
 
 interface Lead {
@@ -53,6 +55,10 @@ interface Lead {
   contactPhone: string;
   contactEmail: string | null;
   customerId: string | null;
+  categoryId?: string | null;
+  category?: { id: string; name: string; color: string | null } | null;
+  subcategoryId?: string | null;
+  subcategory?: { id: string; name: string } | null;
   customer?: {
     id: string;
     tradeName: string | null;
@@ -134,6 +140,7 @@ export default function KanbanPage() {
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
   const [isNewLeadModalOpen, setIsNewLeadModalOpen] = useState(false);
+  const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
   const [sendWhatsAppViaModal, setSendWhatsAppViaModal] = useState(false);
   const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
 
@@ -768,6 +775,15 @@ export default function KanbanPage() {
         {/* Botão de Ação Primária idêntico ao do print */}
         <div className="flex items-center gap-3">
           <Button
+            variant="outline"
+            size="md"
+            onClick={() => setIsCategoriesModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-bold rounded-full cursor-pointer hover:bg-orange-500/10 hover:text-[#FF650F] hover:border-orange-500/30 transition-all"
+          >
+            <Layers className="w-4 h-4 text-[#FF650F]" />
+            <span>Categorias</span>
+          </Button>
+          <Button
             variant="primary"
             size="md"
             onClick={() => setIsNewLeadModalOpen(true)}
@@ -999,6 +1015,23 @@ export default function KanbanPage() {
                                   <p className="text-[11px] text-zinc-500 truncate">
                                     {lead.customer?.tradeName || lead.customer?.companyName || lead.customer?.fullName || lead.contactName}
                                   </p>
+                                  {(lead.category || lead.subcategory) && (
+                                    <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                                      {lead.category && (
+                                        <span
+                                          className="px-2 py-0.5 rounded-md text-[9px] font-bold text-white shadow-2xs"
+                                          style={{ backgroundColor: lead.category.color || "#FF650F" }}
+                                        >
+                                          {lead.category.name}
+                                        </span>
+                                      )}
+                                      {lead.subcategory && (
+                                        <span className="px-2 py-0.5 rounded-md text-[9px] font-semibold bg-zinc-200 dark:bg-white/10 text-zinc-700 dark:text-zinc-300">
+                                          {lead.subcategory.name}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
                                   <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${priorityInfo.className}`}>
@@ -1053,20 +1086,28 @@ export default function KanbanPage() {
                                 </span>
                               </div>
 
-                              {lead.dueDate && (
-                                <div className="flex items-center gap-1.5 pt-1">
-                                  <span
-                                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
-                                      new Date(lead.dueDate).getTime() < Date.now()
-                                        ? "bg-red-500/10 text-red-600"
-                                        : "bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300"
-                                    }`}
-                                  >
-                                    <Clock className="w-3 h-3" />
-                                    <span>{formatDate(lead.dueDate)}</span>
-                                  </span>
-                                </div>
-                              )}
+                              {lead.dueDate && (() => {
+                                const dueStatus = getDueDateStatus(lead.dueDate);
+                                return (
+                                  <div className="flex items-center gap-1.5 pt-1">
+                                    <span
+                                      className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] ${
+                                        dueStatus?.badgeClass ||
+                                        "bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300"
+                                      }`}
+                                    >
+                                      <Clock className="w-3 h-3 shrink-0" />
+                                      <span>{formatDate(lead.dueDate)}</span>
+                                      {dueStatus && (
+                                        <>
+                                          <span className="opacity-50">•</span>
+                                          <span className="font-black">{dueStatus.label}</span>
+                                        </>
+                                      )}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
 
                               <div className="pt-2 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between text-xs">
                                 <a
@@ -1628,6 +1669,13 @@ export default function KanbanPage() {
         }}
       />
       </ErrorBoundary>
+
+      {/* MODAL: GERENCIAMENTO DE CATEGORIAS E SUBCATEGORIAS */}
+      <ServiceCategoriesModal
+        isOpen={isCategoriesModalOpen}
+        onClose={() => setIsCategoriesModalOpen(false)}
+        onCategoriesChanged={fetchKanban}
+      />
 
       {/* MODAL: FICHA 360º DO CONTATO (CASO CLIQUE DENTRO DO CARD) */}
       <ContactDetailsSheet

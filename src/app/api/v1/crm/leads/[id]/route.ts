@@ -19,6 +19,12 @@ export async function GET(req: NextRequest, { params }: Params) {
         column: {
           select: { id: true, name: true, color: true },
         },
+        category: {
+          select: { id: true, name: true, color: true },
+        },
+        subcategory: {
+          select: { id: true, name: true },
+        },
         helper: {
           select: {
             id: true,
@@ -100,6 +106,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const body = await req.json();
     const {
       budgetCode,
+      categoryId,
+      subcategoryId,
       helperId,
       voltage,
       tools,
@@ -127,6 +135,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const dataToUpdate: any = {};
 
     if (budgetCode !== undefined) dataToUpdate.budgetCode = budgetCode?.trim() || null;
+    if (categoryId !== undefined) dataToUpdate.categoryId = categoryId || null;
+    if (subcategoryId !== undefined) dataToUpdate.subcategoryId = subcategoryId || null;
     if (helperId !== undefined) dataToUpdate.helperId = helperId || null;
     if (voltage !== undefined) dataToUpdate.voltage = voltage || null;
     if (tools !== undefined) dataToUpdate.tools = Array.isArray(tools) ? tools : [];
@@ -167,6 +177,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         column: { select: { id: true, name: true, color: true } },
         customer: true,
         helper: true,
+        category: true,
+        subcategory: true,
         tags: { include: { tag: true } },
         checklists: {
           orderBy: { order: "asc" },

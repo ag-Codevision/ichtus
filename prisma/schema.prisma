@@ -243,6 +243,10 @@ model Lead {
   customer        Customer?     @relation(fields: [customerId], references: [id])
   helperId        String?
   helper          Customer?     @relation("LeadHelper", fields: [helperId], references: [id])
+  categoryId      String?
+  category        ServiceCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subcategoryId   String?
+  subcategory     ServiceSubcategory?  @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
   voltage         String?       // Voltagem do Local: "110V" ou "220V"
   tools           String[]      @default([]) // Ferramentas & Recursos Necessários
   paintDetails    String?       // Especificação de Tinta
@@ -276,6 +280,30 @@ model Lead {
   documents       Document[]
 
   @@map("leads")
+}
+
+model ServiceCategory {
+  id            String               @id @default(cuid())
+  name          String               // Ex: "Fachadas", "Comunicação Visual", "Luminosos", "Impressão Digital"
+  color         String?              @default("#FF650F")
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  subcategories ServiceSubcategory[]
+  leads         Lead[]
+
+  @@map("service_categories")
+}
+
+model ServiceSubcategory {
+  id          String          @id @default(cuid())
+  categoryId  String
+  category    ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name        String          // Ex: "ACM", "Acrílico com LED", "Lona Frontlight", "Adesivação"
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  leads       Lead[]
+
+  @@map("service_subcategories")
 }
 
 model KanbanTag {

@@ -42,6 +42,12 @@ export async function GET(req: NextRequest) {
                 city: true,
               },
             },
+            category: {
+              select: { id: true, name: true, color: true },
+            },
+            subcategory: {
+              select: { id: true, name: true },
+            },
             tags: {
               include: {
                 tag: true,
@@ -89,6 +95,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
       budgetCode,
+      categoryId,
+      subcategoryId,
       helperId,
       voltage,
       tools = [],
@@ -147,6 +155,8 @@ export async function POST(req: NextRequest) {
     const lead = await prisma.lead.create({
       data: {
         budgetCode: finalBudgetCode,
+        categoryId: categoryId || null,
+        subcategoryId: subcategoryId || null,
         helperId: helperId || null,
         voltage: voltage || null,
         tools: Array.isArray(tools) ? tools : [],
@@ -168,6 +178,8 @@ export async function POST(req: NextRequest) {
       include: {
         customer: true,
         helper: true,
+        category: true,
+        subcategory: true,
       },
     });
     // Registra atividade inicial de criação no histórico do cartão

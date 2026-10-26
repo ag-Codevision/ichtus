@@ -27,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ClientSearchAutocomplete, SearchedClient } from "@/components/admin/crm/ClientSearchAutocomplete";
 import { RichTextEditor } from "@/components/admin/crm/RichTextEditor";
+import { ServiceCategoriesModal, ServiceCategoryData } from "@/components/admin/crm/ServiceCategoriesModal";
 
 interface KanbanColumnSimple {
   id: string;
@@ -65,6 +66,33 @@ export function LeadCreateCardModal({
 
   // Cliente Vinculado
   const [selectedClient, setSelectedClient] = useState<SearchedClient | null>(null);
+
+  // Categorias & Subcategorias de Serviços
+  const [categories, setCategories] = useState<ServiceCategoryData[]>([]);
+  const [categoryId, setCategoryId] = useState("");
+  const [subcategoryId, setSubcategoryId] = useState("");
+  const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("/api/v1/crm/categories");
+      const data = await res.json();
+      if (data.success && data.categories) {
+        setCategories(data.categories);
+      }
+    } catch (e) {
+      console.warn("Erro ao carregar categorias:", e);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen]);
+
+  const selectedCategoryObj = categories.find((c) => c.id === categoryId);
+  const availableSubcategories = selectedCategoryObj?.subcategories || [];
 
   // Especificações Técnicas de Campo
   const [voltage, setVoltage] = useState("110V");
@@ -172,6 +200,8 @@ export function LeadCreateCardModal({
         contactPhone: contactPhone.trim(),
         contactEmail: contactEmail.trim() || null,
         customerId: selectedClient?.id || null,
+        categoryId: categoryId || null,
+        subcategoryId: subcategoryId || null,
         estimatedValue: estimatedValue ? parseFloat(estimatedValue) : null,
         priority,
         dueDate: dueDate || null,
@@ -289,6 +319,72 @@ export function LeadCreateCardModal({
               <p className="text-[11px] text-zinc-500">
                 Selecione um cliente cadastrado ou digite os dados de contato do lead na coluna lateral.
               </p>
+            </div>
+
+            {/* Bloco: Categoria & Subcategoria de Serviço */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#18191E] border border-black/[0.05] dark:border-white/[0.06] shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-[#FF650F]" />
+                  <span>Categoria & Subcategoria do Serviço</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsCategoriesModalOpen(true)}
+                  className="text-[11px] font-bold text-[#FF650F] hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Gerenciar Categorias</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 block mb-1">
+                    Categoria Principal
+                  </label>
+                  <select
+                    value={categoryId}
+                    onChange={(e) => {
+                      setCategoryId(e.target.value);
+                      setSubcategoryId("");
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F] cursor-pointer"
+                  >
+                    <option value="">Selecione uma Categoria...</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 block mb-1">
+                    Subcategoria
+                  </label>
+                  <select
+                    value={subcategoryId}
+                    onChange={(e) => setSubcategoryId(e.target.value)}
+                    disabled={!categoryId}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">
+                      {!categoryId
+                        ? "Escolha uma categoria primeiro"
+                        : availableSubcategories.length === 0
+                        ? "Sem subcategorias cadastradas"
+                        : "Selecione a Subcategoria..."}
+                    </option>
+                    {availableSubcategories.map((sub) => (
+                      <option key={sub.id} value={sub.id}>
+                        {sub.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
 
             {/* Bloco: Descrição Rica com Toolbar */}
@@ -730,6 +826,12 @@ export function LeadCreateCardModal({
           </div>
         </form>
       </div>
+      {/* MODAL SECUNDÁRIO: GERENCIAR CATEGORIAS E SUBCATEGORIAS */}
+      <ServiceCategoriesModal
+        isOpen={isCategoriesModalOpen}
+        onClose={() => setIsCategoriesModalOpen(false)}
+        onCategoriesChanged={fetchCategories}
+      />
     </div>
   );
 }

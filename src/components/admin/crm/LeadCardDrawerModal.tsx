@@ -47,6 +47,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ClientSearchAutocomplete, SearchedClient } from "@/components/admin/crm/ClientSearchAutocomplete";
 import { RichTextEditor } from "@/components/admin/crm/RichTextEditor";
+import { ServiceCategoriesModal, ServiceCategoryData } from "@/components/admin/crm/ServiceCategoriesModal";
+import { getDueDateStatus } from "@/lib/due-date-status";
 
 export interface KanbanTagItem {
   id: string;
@@ -98,6 +100,10 @@ export interface LeadDetailFull {
     color: string | null;
   };
   customerId: string | null;
+  categoryId?: string | null;
+  category?: { id: string; name: string; color: string | null } | null;
+  subcategoryId?: string | null;
+  subcategory?: { id: string; name: string } | null;
   customer?: {
     id: string;
     displayName?: string;
@@ -247,6 +253,28 @@ export function LeadCardDrawerModal({
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isDeletingLead, setIsDeletingLead] = useState(false);
 
+  // Categorias & Subcategorias
+  const [categories, setCategories] = useState<ServiceCategoryData[]>([]);
+  const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("/api/v1/crm/categories");
+      const resData = await res.json();
+      if (resData.success && resData.categories) {
+        setCategories(resData.categories);
+      }
+    } catch (e) {
+      console.warn("Erro ao carregar categorias:", e);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen]);
+
   // Carrega dados completos do lead
   const fetchLeadDetails = async () => {
     if (!leadId) return;
@@ -338,8 +366,6 @@ export function LeadCardDrawerModal({
       setIsDueDateModalOpen(false);
     }
   }, [isOpen, leadId]);
-
-  if (!isOpen) return null;
 
   // Atualização genérica de campos do lead
   
@@ -792,6 +818,8 @@ export function LeadCardDrawerModal({
     setIsDueDateModalOpen(false);
   };
 
+  if (!isOpen) return null;
+
   // Cálculos de Status de Prazo
   const leadDueDateObj = data?.dueDate ? new Date(data.dueDate) : null;
   const isLeadDateValid = leadDueDateObj && !isNaN(leadDueDateObj.getTime());
@@ -941,8 +969,60 @@ export function LeadCardDrawerModal({
           {/* COLUNA ESQUERDA: CONTEÚDO PRINCIPAL (8 COLUNAS)         */}
           {/* ======================================================== */}
           <div className="lg:col-span-8 space-y-6">
-            {/* Linha de Metadados: Etiquetas, Prazo e Cliente */}
+            {/* Linha de Metadados: Categoria, Subcategoria, Etiquetas, Prazo e Cliente */}
             <div className="flex flex-wrap items-center gap-4">
+              {/* Categoria & Subcategoria */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
+                    Categoria do Serviço
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsCategoriesModalOpen(true)}
+                    className="text-[10px] text-[#FF650F] font-bold hover:underline"
+                  >
+                    (Gerenciar)
+                  </button>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={data?.categoryId || ""}
+                    onChange={(e) => {
+                      const newCatId = e.target.value || null;
+                      handleUpdateLeadField({ categoryId: newCatId, subcategoryId: null });
+                    }}
+                    className="px-2.5 py-1 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-white/[0.08] text-zinc-800 dark:text-white border-0 cursor-pointer focus:ring-2 focus:ring-[#FF650F]"
+                  >
+                    <option value="">Sem Categoria</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Subcategoria */}
+                  {data?.categoryId && (
+                    <select
+                      value={data?.subcategoryId || ""}
+                      onChange={(e) => {
+                        handleUpdateLeadField({ subcategoryId: e.target.value || null });
+                      }}
+                      className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-zinc-100 dark:bg-white/[0.08] text-zinc-800 dark:text-white border-0 cursor-pointer focus:ring-2 focus:ring-[#FF650F]"
+                    >
+                      <option value="">Sem Subcategoria</option>
+                      {(
+                        categories.find((c) => c.id === data.categoryId)?.subcategories || []
+                      ).map((sub) => (
+                        <option key={sub.id} value={sub.id}>
+                          {sub.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
               {/* Etiquetas */}
               {data?.tags && data.tags.length > 0 && (
                 <div className="space-y-1">
@@ -964,29 +1044,34 @@ export function LeadCardDrawerModal({
                 </div>
               )}
 
-              {/* Prazo de Entrega */}
-              {data?.dueDate && (
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
-                    Data de Entrega
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
-                        isOverdue
-                          ? "bg-red-500/10 text-red-600 border border-red-500/20"
-                          : isDueToday
-                          ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
-                          : "bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300"
-                      }`}
-                    >
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>{formatDate(data.dueDate)}</span>
-                      {isOverdue && <span className="text-[10px] uppercase font-black">Atrasado</span>}
+              {/* Prazo de Entrega com Cores Dinâmicas e Contagem Regressiva */}
+              {data?.dueDate && (() => {
+                const dueStatus = getDueDateStatus(data.dueDate);
+                return (
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
+                      Data de Entrega
                     </span>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 ${
+                          dueStatus?.badgeClass ||
+                          "bg-zinc-100 dark:bg-white/[0.08] text-zinc-700 dark:text-zinc-300"
+                        }`}
+                      >
+                        <Clock className="w-3.5 h-3.5 shrink-0" />
+                        <span>{formatDate(data.dueDate)}</span>
+                        {dueStatus && (
+                          <>
+                            <span className="opacity-50">•</span>
+                            <span className="font-black">{dueStatus.label}</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Cliente Vinculado */}
               {data?.customer && (
@@ -2200,6 +2285,17 @@ export function LeadCardDrawerModal({
           </div>
         </div>
       )}
+
+      {/* MODAL SECUNDÁRIO: GERENCIAR CATEGORIAS */}
+      <ServiceCategoriesModal
+        isOpen={isCategoriesModalOpen}
+        onClose={() => setIsCategoriesModalOpen(false)}
+        onCategoriesChanged={() => {
+          fetchCategories();
+          fetchLeadDetails();
+          onLeadUpdated();
+        }}
+      />
 
       {/* MODAL SECUNDÁRIO: ANEXAR LINK OU NUVEM */}
       {isLinkModalOpen && (
