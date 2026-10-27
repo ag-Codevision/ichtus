@@ -58,6 +58,7 @@ services:
       - "127.0.0.1:3001:3001"
     volumes:
       - glessios_wppdata:/app/auth_info
+      - ./public/uploads:/app/public/uploads:ro
     networks:
       - glessios_network
 

@@ -3,6 +3,14 @@ import path from "path";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
+export interface BudgetPDFMaterialItem {
+  name: string;
+  quantity?: number | string | null;
+  unit?: string | null;
+  unitPrice?: number | string | null;
+  totalPrice?: number | string | null;
+}
+
 export interface BudgetPDFData {
   budgetCode: string;
   title: string;
@@ -17,9 +25,12 @@ export interface BudgetPDFData {
   notes?: string | null;
   voltage?: string | null;
   tools?: string[];
+  materials?: BudgetPDFMaterialItem[];
   paintDetails?: string | null;
   freightDetails?: string | null;
   helperName?: string | null;
+  categoryName?: string | null;
+  subcategoryName?: string | null;
   createdAt?: Date | string | null;
 }
 
@@ -147,7 +158,8 @@ export async function generateBudgetPDF(data: BudgetPDFData): Promise<BudgetPDFR
   });
 
   const emissionDate = formatDate(data.createdAt || new Date());
-  page.drawText(`Emissao: ${emissionDate}  |  Validade: 15 dias`, {
+  const dueInfo = data.dueDate ? ` | Entrega: ${formatDate(data.dueDate)}` : " | Validade: 15 dias";
+  page.drawText(`Emissao: ${emissionDate}${dueInfo}`, {
     x: boxX + 12,
     y: boxY + 12,
     size: 8,
@@ -242,8 +254,13 @@ export async function generateBudgetPDF(data: BudgetPDFData): Promise<BudgetPDFR
     color: colorDark,
   });
 
-  const titleStr = sanitizeText(data.title || "Fabricacao e Instalacao de Comunicacao Visual");
-  page.drawText(`Projeto: ${titleStr}`, {
+  const catPart = data.categoryName
+    ? ` (${sanitizeText(data.categoryName)}${data.subcategoryName ? " - " + sanitizeText(data.subcategoryName) : ""})`
+    : "";
+  const rawTitle = sanitizeText(data.title || "Fabricacao e Instalacao de Comunicacao Visual");
+  const maxTitleLen = catPart ? 45 : 70;
+  const shortTitle = rawTitle.length > maxTitleLen ? rawTitle.slice(0, maxTitleLen - 3) + "..." : rawTitle;
+  page.drawText(`Projeto: ${shortTitle}${catPart}`, {
     x: 52,
     y: currentY - 34,
     size: 9,

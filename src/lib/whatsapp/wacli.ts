@@ -1,5 +1,6 @@
 import { exec } from "child_process";
 import { promisify } from "util";
+import fs from "fs";
 import { getSystemSettings } from "@/lib/settings/system-settings";
 
 const execAsync = promisify(exec);
@@ -9,6 +10,7 @@ export interface WACLiSendOptions {
   message: string;
   mediaUrl?: string;
   documentUrl?: string;
+  documentBase64?: string;
   fileName?: string;
   mimetype?: string;
 }
@@ -44,6 +46,7 @@ export async function sendWhatsAppMessage({
   message,
   mediaUrl,
   documentUrl,
+  documentBase64,
   fileName,
   mimetype,
 }: WACLiSendOptions): Promise<WACLiResult> {
@@ -58,6 +61,17 @@ export async function sendWhatsAppMessage({
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos para protocolo WS
 
+    let resolvedBase64 = documentBase64;
+    if (!resolvedBase64 && documentUrl && !documentUrl.startsWith("http://") && !documentUrl.startsWith("https://")) {
+      try {
+        if (fs.existsSync(documentUrl)) {
+          resolvedBase64 = fs.readFileSync(documentUrl).toString("base64");
+        }
+      } catch (err) {
+        console.warn("[WACLI CLIENT] Aviso ao carregar buffer local do documento:", err);
+      }
+    }
+
     const response = await fetch(`${wacliApiUrl}/api/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -67,6 +81,7 @@ export async function sendWhatsAppMessage({
         message,
         mediaUrl,
         documentUrl,
+        documentBase64: resolvedBase64,
         fileName,
         mimetype,
       }),

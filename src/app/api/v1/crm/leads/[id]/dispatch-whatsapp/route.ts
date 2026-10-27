@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/wacli";
 import { generateBudgetPDF } from "@/lib/documents/budget-pdf-generator";
+import { syncLeadBudgetDocument } from "@/lib/crm/budget-sync";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -164,10 +165,20 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     // 2. Disparo direto pelo robô WACLI com o documento PDF anexado
     try {
+      let docBase64 = undefined;
+      if (budgetPdfPath && fs.existsSync(budgetPdfPath)) {
+        try {
+          docBase64 = fs.readFileSync(budgetPdfPath).toString("base64");
+        } catch (bErr) {
+          console.warn("[WhatsApp Dispatch] Aviso ao ler base64 do PDF:", bErr);
+        }
+      }
+
       wacliResult = await sendWhatsAppMessage({
         to: formattedPhone,
         message,
         documentUrl: budgetPdfPath || undefined,
+        documentBase64: docBase64,
         fileName: budgetPdfFileName,
         mimetype: "application/pdf",
       });

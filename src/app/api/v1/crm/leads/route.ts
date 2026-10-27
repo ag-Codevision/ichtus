@@ -4,6 +4,7 @@ import { LeadSource, PriorityLevel } from "@prisma/client";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/wacli";
 import { generateNextBudgetCode } from "@/lib/crm/budget-code";
 import { generateBudgetPDF } from "@/lib/documents/budget-pdf-generator";
+import { syncLeadBudgetDocument } from "@/lib/crm/budget-sync";
 
 /**
  * GET /api/v1/crm/leads
@@ -242,65 +243,21 @@ export async function POST(req: NextRequest) {
     }
 
 
-    // 1. Gera automaticamente o Orçamento em PDF profissional da Ícthus
+    // 1. Gera e sincroniza automaticamente o Orçamento em PDF profissional da Ícthus e registro Document
     let pdfResult = null;
     let createdDocument = null;
     try {
-      pdfResult = await generateBudgetPDF({
-        budgetCode: finalBudgetCode,
-        title: lead.title,
-        contactName: lead.contactName,
-        contactPhone: lead.contactPhone,
-        contactEmail: lead.contactEmail,
-        clientTradeName: lead.customer?.tradeName || lead.customer?.companyName || lead.customer?.fullName,
-        clientAddress: lead.customer?.city ? `${lead.customer.city} - ${lead.customer.state || "PR"}` : null,
-        estimatedValue: lead.estimatedValue ? Number(lead.estimatedValue) : null,
-        priority: lead.priority,
-        dueDate: safeDueDate,
-        notes: lead.notes,
-        voltage: lead.voltage,
-        tools: lead.tools,
-        paintDetails: lead.paintDetails,
-        freightDetails: lead.freightDetails,
-        helperName: lead.helper?.fullName || lead.helper?.tradeName,
-        createdAt: lead.createdAt,
-      });
-
-      // 2. Registra o documento na tabela de Documentos com categoria "ORCAMENTO"
-      createdDocument = await prisma.document.create({
-        data: {
-          code: finalBudgetCode,
-          title: `Orçamento [${finalBudgetCode}] — ${lead.title}`,
-          category: "ORCAMENTO",
-          fileUrl: pdfResult.fileUrl,
-          fileSize: pdfResult.fileSize,
-          customerId: lead.customerId || null,
-          leadId: lead.id,
-          clientName: lead.customer?.tradeName || lead.contactName,
-          clientPhone: lead.contactPhone,
-          clientEmail: lead.contactEmail,
-          totalAmount: lead.estimatedValue ? Number(lead.estimatedValue) : null,
-          status: "GERADO",
-          sentViaWhatsapp: false,
-          metadata: {
-            voltage: lead.voltage,
-            tools: lead.tools,
-            paintDetails: lead.paintDetails,
-            freightDetails: lead.freightDetails,
-          },
-        },
-      });
-
-      // Registra também como anexo no Lead para consulta rápida no card
-      await prisma.leadAttachment.create({
-        data: {
-          leadId: lead.id,
-          fileName: pdfResult.fileName,
-          fileUrl: pdfResult.fileUrl,
-          fileType: "PDF",
-          fileSize: pdfResult.fileSize,
-        },
-      }).catch((e) => console.warn("Aviso ao vincular anexo ao lead:", e));
+      const syncRes = await syncLeadBudgetDocument(lead.id);
+      if (syncRes.success) {
+        pdfResult = syncRes.pdfResult || null;
+        if (syncRes.documentId) {
+          createdDocument = await prisma.document.findUnique({
+            where: { id: syncRes.documentId },
+          });
+        }
+      } else {
+        console.warn("[CRM] Falha na sincronização do orçamento:", syncRes.error);
+      }
     } catch (pdfErr) {
       console.error("[CRM] Falha ao gerar documento de orçamento em PDF:", pdfErr);
     }

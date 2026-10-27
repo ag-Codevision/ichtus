@@ -335,7 +335,7 @@ const server = http.createServer(async (req, res) => {
     req.on("end", async () => {
       try {
         const body = JSON.parse(bodyData || "{}");
-        const { to, message, mediaUrl, documentUrl, fileName, mimetype } = body;
+        const { to, message, mediaUrl, documentUrl, documentBase64, fileName, mimetype } = body;
 
         if (!to || !message) {
           res.writeHead(400, { "Content-Type": "application/json" });
