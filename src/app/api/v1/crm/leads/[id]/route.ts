@@ -408,51 +408,108 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
 
-    // 1. Remove documentos vinculados na tabela Document
-    await prisma.document.deleteMany({
-      where: { leadId: id },
-    });
-
-    // 2. Remove ordens de serviço vinculadas
-    await prisma.serviceOrder.deleteMany({
-      where: { leadId: id },
-    });
-
-    // 3. Remove etiquetas vinculadas
-    await prisma.leadTagAssignment.deleteMany({
-      where: { leadId: id },
-    });
-
-    // 4. Remove checklists e seus itens
-    const checklists = await prisma.leadChecklist.findMany({
-      where: { leadId: id },
-      select: { id: true },
-    });
-    if (checklists.length > 0) {
-      await prisma.leadChecklistItem.deleteMany({
-        where: { checklistId: { in: checklists.map((c) => c.id) } },
+    // Executa toda a limpeza e exclusão dentro de uma transação para integridade
+    await prisma.$transaction(async (tx) => {
+      // 1. Identificar ordens de serviço vinculadas
+      const serviceOrders = await tx.serviceOrder.findMany({
+        where: { leadId: id },
+        select: { id: true },
       });
-      await prisma.leadChecklist.deleteMany({
+      const soIds = serviceOrders.map((so) => so.id);
+
+      if (soIds.length > 0) {
+        // 1.1 Faturas vinculadas às ordens de serviço
+        const invoices = await tx.invoice.findMany({
+          where: { serviceOrderId: { in: soIds } },
+          select: { id: true },
+        });
+        const invoiceIds = invoices.map((inv) => inv.id);
+
+        if (invoiceIds.length > 0) {
+          // Remover transações financeiras vinculadas a essas faturas
+          await tx.financialTransaction.deleteMany({
+            where: { invoiceId: { in: invoiceIds } },
+          });
+
+          // Remover as faturas
+          await tx.invoice.deleteMany({
+            where: { id: { in: invoiceIds } },
+          });
+        }
+
+        // 1.2 Agendamentos vinculados às ordens de serviço
+        await tx.appointment.deleteMany({
+          where: { serviceOrderId: { in: soIds } },
+        });
+
+        // 1.3 Desvincular movimentações de estoque para preservar integridade contábil
+        await tx.stockMovement.updateMany({
+          where: { serviceOrderId: { in: soIds } },
+          data: { serviceOrderId: null },
+        });
+
+        // 1.4 Remover documentos vinculados à ordem de serviço
+        await tx.document.deleteMany({
+          where: { serviceOrderId: { in: soIds } },
+        });
+
+        // 1.5 Remover aprovações de arte (ArtworkProof)
+        await tx.artworkProof.deleteMany({
+          where: { serviceOrderId: { in: soIds } },
+        });
+
+        // 1.6 Remover itens da ordem de serviço
+        await tx.serviceOrderItem.deleteMany({
+          where: { serviceOrderId: { in: soIds } },
+        });
+
+        // 1.7 Remover as ordens de serviço
+        await tx.serviceOrder.deleteMany({
+          where: { id: { in: soIds } },
+        });
+      }
+
+      // 2. Remove documentos vinculados diretamente ao Lead
+      await tx.document.deleteMany({
         where: { leadId: id },
       });
-    }
 
-    // 5. Remove anexos e comentários
-    await prisma.leadAttachment.deleteMany({
-      where: { leadId: id },
-    });
+      // 3. Remove etiquetas vinculadas
+      await tx.leadTagAssignment.deleteMany({
+        where: { leadId: id },
+      });
 
-    await prisma.leadComment.deleteMany({
-      where: { leadId: id },
-    });
+      // 4. Remove checklists e seus itens
+      const checklists = await tx.leadChecklist.findMany({
+        where: { leadId: id },
+        select: { id: true },
+      });
+      if (checklists.length > 0) {
+        await tx.leadChecklistItem.deleteMany({
+          where: { checklistId: { in: checklists.map((c) => c.id) } },
+        });
+        await tx.leadChecklist.deleteMany({
+          where: { leadId: id },
+        });
+      }
 
-    await prisma.leadActivity.deleteMany({
-      where: { leadId: id },
-    });
+      // 5. Remove anexos, comentários e atividades
+      await tx.leadAttachment.deleteMany({
+        where: { leadId: id },
+      });
 
-    // 6. Remove o lead com segurança
-    await prisma.lead.delete({
-      where: { id },
+      await tx.leadComment.deleteMany({
+        where: { leadId: id },
+      });
+
+      await tx.leadActivity.deleteMany({
+        where: { leadId: id },
+      });
+
+      // 6. Remove o lead com segurança
+      await tx.lead.delete({
+        where: { id },
+      });
     });
 
     return NextResponse.json({
