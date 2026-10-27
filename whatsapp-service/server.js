@@ -52,6 +52,35 @@ const userDevicesCache = createMemoryCache(3000);
  * Esvazia os arquivos e pastas internas de auth_info sem remover o diretório em si.
  * Isso evita o erro crítico EBUSY no Linux quando auth_info é ponto de montagem de volume no Docker.
  */
+
+/**
+ * Validação preventiva e auto-recuperação da pasta de credenciais.
+ * Protege contra quedas, falta temporária de disco (ENOSPC) ou corrupção de creds.json (0 bytes).
+ */
+function validateAndHealAuthDir() {
+  try {
+    const credsPath = path.join(AUTH_DIR, "creds.json");
+    if (fs.existsSync(credsPath)) {
+      const stats = fs.statSync(credsPath);
+      if (stats.size === 0) {
+        console.warn("[WHATSAPP] ⚠️ Arquivo creds.json possui 0 bytes (corrompido). Executando auto-recuperação preventiva...");
+        clearAuthDir();
+        return;
+      }
+      try {
+        const content = fs.readFileSync(credsPath, "utf8");
+        JSON.parse(content);
+      } catch (parseErr) {
+        console.warn("[WHATSAPP] ⚠️ Conteúdo de creds.json inválido/ilegível. Executando auto-recuperação preventiva...", parseErr.message);
+        clearAuthDir();
+        return;
+      }
+    }
+  } catch (err) {
+    console.error("[WHATSAPP] Erro na verificação preventiva de integridade da sessão:", err);
+  }
+}
+
 function clearAuthDir() {
   try {
     if (fs.existsSync(AUTH_DIR)) {
@@ -175,6 +204,7 @@ async function startWhatsApp() {
   isStarting = true;
 
   try {
+    validateAndHealAuthDir();
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
     const { version } = await fetchLatestBaileysVersion();
 
@@ -272,6 +302,10 @@ async function startWhatsApp() {
     });
   } catch (error) {
     console.error("[WHATSAPP] Falha crítica ao inicializar WhatsApp Socket:", error);
+    if (error?.name === "SyntaxError" || error?.message?.includes("JSON") || error?.message?.includes("Unexpected end")) {
+      console.warn("[WHATSAPP] ⚠️ Detectado arquivo de sessão corrompido no erro. Limpando credenciais para auto-recuperação...");
+      clearAuthDir();
+    }
     isStarting = false;
     setTimeout(startWhatsApp, 5000);
   } finally {
@@ -459,7 +493,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // 4. Desconectar Sessão
-  if (req.method === "POST" && pathname === "/api/disconnect") {
+  if (req.method === "POST" && (pathname === "/api/disconnect" || pathname === "/api/reset")) {
     try {
       console.log("[WHATSAPP] Solicitação manual de desconexão recebida.");
       if (sock) {

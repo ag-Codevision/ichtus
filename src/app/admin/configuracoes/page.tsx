@@ -202,6 +202,31 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const handleResetSession = async () => {
+    setIsCheckingWpp(true);
+    setFeedback(null);
+    try {
+      const res = await fetch("/api/v1/admin/settings/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reset" }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setFeedback({ type: "success", text: "Sessão reiniciada! Gerando novo QR Code limpo..." });
+        setTimeout(() => {
+          refreshWhatsappStatus(false);
+        }, 1500);
+      } else {
+        setFeedback({ type: "error", text: json.error || "Falha ao reiniciar sessão." });
+      }
+    } catch {
+      setFeedback({ type: "error", text: "Erro ao comunicar com a API do WhatsApp." });
+    } finally {
+      setIsCheckingWpp(false);
+    }
+  };
+
   const handleSendTestMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!testPhone) {
@@ -509,10 +534,36 @@ export default function AdminSettingsPage() {
                     />
                     <div className="absolute inset-0 rounded-2xl border-2 border-[#FF650F] pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity" />
                   </div>
+                ) : wppStatus?.isDaemonOnline === false ? (
+                  <div className="w-64 h-64 flex flex-col items-center justify-center text-center p-4 text-zinc-500">
+                    <AlertCircle className="w-8 h-8 text-amber-500 mb-2" />
+                    <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">Serviço Reiniciando ou Desconectado</span>
+                    <span className="text-[11px] text-zinc-400 mt-1 mb-3">Clique no botão abaixo para restaurar a sessão limpa e emitir o QR Code.</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResetSession}
+                      disabled={isCheckingWpp}
+                      className="rounded-xl text-xs h-8 text-[#FF650F] border-[#FF650F]/30 hover:bg-[#FF650F]/10"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isCheckingWpp ? "animate-spin" : ""}`} />
+                      Resetar e Gerar QR Code
+                    </Button>
+                  </div>
                 ) : (
-                  <div className="w-64 h-64 flex flex-col items-center justify-center text-center text-zinc-400">
+                  <div className="w-64 h-64 flex flex-col items-center justify-center text-center text-zinc-400 p-4">
                     <RefreshCw className="w-8 h-8 animate-spin mb-2 text-[#FF650F]" />
-                    <span className="text-xs">Gerando QR Code...</span>
+                    <span className="text-xs font-medium">Gerando QR Code...</span>
+                    <p className="text-[10px] text-zinc-500 mt-1 max-w-[180px]">Se demorar mais de alguns segundos, você pode forçar um novo código.</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleResetSession}
+                      disabled={isCheckingWpp}
+                      className="mt-2 text-[11px] h-7 text-zinc-500 hover:text-[#FF650F]"
+                    >
+                      Forçar Novo QR Code
+                    </Button>
                   </div>
                 )}
               </div>
@@ -527,10 +578,21 @@ export default function AdminSettingsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => refreshWhatsappStatus(false)}
+                  disabled={isCheckingWpp}
                   className="rounded-xl text-xs h-8"
                 >
-                  <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1 ${isCheckingWpp ? "animate-spin" : ""}`} />
                   Atualizar QR Code
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetSession}
+                  disabled={isCheckingWpp}
+                  className="rounded-xl text-xs h-8 text-zinc-500 hover:text-red-500"
+                  title="Limpa arquivos de sessão e força a geração de um novo QR Code"
+                >
+                  Resetar Sessão
                 </Button>
               </div>
             </div>

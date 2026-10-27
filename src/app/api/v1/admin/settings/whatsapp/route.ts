@@ -148,15 +148,16 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (action === "disconnect") {
-      // Notifica o microserviço Baileys para fazer logout real e limpar tokens
+    if (action === "disconnect" || action === "reset" || action === "force_reset") {
+      // Notifica o microserviço Baileys para fazer logout real e limpar tokens/sessão
       try {
-        await fetch(`${apiUrl}/api/disconnect`, {
+        const endpoint = action === "disconnect" ? "/api/disconnect" : "/api/reset";
+        await fetch(`${apiUrl}${endpoint}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
         }).catch(() => null);
       } catch (e) {
-        console.warn("[SETTINGS_WPP] Aviso ao enviar disconnect para microserviço:", e);
+        console.warn("[SETTINGS_WPP] Aviso ao enviar reset/disconnect para microserviço:", e);
       }
 
       const updated = saveSystemSettings({
@@ -171,7 +172,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         status: updated.whatsapp.status,
-        message: "Sessão desconectada. Novo QR Code gerado para pareamento.",
+        message: action === "disconnect" 
+          ? "Sessão desconectada. Novo QR Code gerado para pareamento." 
+          : "Sessão resetada com sucesso. Gerando novo QR Code limpo...",
       });
     }
 
