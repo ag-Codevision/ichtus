@@ -31,13 +31,17 @@
     "autoSendOSUpdates": true,
     "autoSendPixInvoice": true,
     "status": "PAIRING_REQUIRED",
-    "lastConnectedAt": null
+    "lastConnectedAt": null,
+    "templates": {
+      "proposalMessage": "Olá, *{cliente}*! Tudo bem? 🤝\n\nSegue em anexo a sua *Proposta Comercial / Orçamento* referente ao projeto *{projeto}* {codigo} da *Icthus Soluções*.\n\n📄 *Visualize também online com aprovação digital:* {link_proposta}\n\nQualquer dúvida ou alteração nos detalhes técnicos, estamos 100% à disposição!\n\n*Icthus Comunicação Visual*",
+      "contractMessage": "Olá, *{cliente}*! Tudo bem? 📋\n\nSegue o link do seu *Contrato de Prestação de Serviços* referente ao projeto *{projeto}* {codigo} da *Icthus Soluções*:\n\n✍️ *Acesse e confira o contrato:* {link_contrato}\n\nFicamos à disposição para qualquer ajuste e para formalizarmos o início da produção!\n\n*Icthus Comunicação Visual*"
+    }
   },
   "company": {
     "tradeName": "Icthus Comunicação Visual",
     "legalName": "Icthus Soluções & Design Visual Ltda",
     "cnpj": "45.123.456/0001-78",
-    "email": "contato@glessios.com.br",
+    "email": "contato@icthusbrasil.com",
     "phone": "(41) 3345-8900",
     "whatsapp": "(41) 99824-3990",
     "address": "Rua das Indústrias, 1024 - CIC",
@@ -46,7 +50,7 @@
   },
   "portal": {
     "defaultPassword": "Icthus@123",
-    "portalUrl": "https://glessios.com.br/portal/login",
+    "portalUrl": "https://icthusbrasil.com/portal/login",
     "allowSelfRegistration": false,
     "welcomeMessageTemplate": "Olá, {nome}! Seu perfil de acesso ao Portal do Cliente Icthus foi liberado.\n\n🔗 Acesse: {url}\n📧 Login: {email}\n🔑 Senha: {senha}"
   },

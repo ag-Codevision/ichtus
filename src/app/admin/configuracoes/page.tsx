@@ -26,11 +26,33 @@ import {
   Sparkles,
   HelpCircle,
   Info,
+  MessageSquare,
+  FileText,
+  FileCheck,
+  RotateCcw,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 type TabKey = "WHATSAPP" | "PORTAL" | "COMPANY" | "PRODUCTION";
+
+const DYNAMIC_TAGS = [
+  { tag: "{cliente}", label: "Nome do Cliente", example: "João Silva", desc: "Nome completo do cliente ou razão social" },
+  { tag: "{projeto}", label: "Nome do Projeto", example: "Fachada ACM + Letras Caixa", desc: "Título do serviço/projeto" },
+  { tag: "{codigo}", label: "Código Orçamento", example: "[3006 23 10 26]", desc: "Código único de referência" },
+  { tag: "{empresa}", label: "Nome da Empresa", example: "Icthus Comunicação Visual", desc: "Nome oficial da sua empresa" },
+  { tag: "{valor_total}", label: "Valor Total", example: "R$ 4.850,00", desc: "Valor formatado do orçamento" },
+  { tag: "{link_proposta}", label: "Link da Proposta", example: "https://icthusbrasil.com/proposta/exemplo123", desc: "Link público de visualização e aprovação online" },
+  { tag: "{link_contrato}", label: "Link do Contrato", example: "https://icthusbrasil.com/contrato/exemplo123", desc: "Link para o contrato de prestação" },
+  { tag: "{link_portal}", label: "Portal do Cliente", example: "https://icthusbrasil.com/portal/login", desc: "Link direto para o portal do cliente" },
+];
+
+const DEFAULT_PROPOSAL_MESSAGE =
+  "Olá, *{cliente}*! Tudo bem? 🤝\n\nSegue em anexo a sua *Proposta Comercial / Orçamento* referente ao projeto *{projeto}* {codigo} da *Icthus Soluções*.\n\n📄 *Visualize também online com aprovação digital:* {link_proposta}\n\nQualquer dúvida ou alteração nos detalhes técnicos, estamos 100% à disposição!\n\n*Icthus Comunicação Visual*";
+
+const DEFAULT_CONTRACT_MESSAGE =
+  "Olá, *{cliente}*! Tudo bem? 📋\n\nSegue o link do seu *Contrato de Prestação de Serviços* referente ao projeto *{projeto}* {codigo} da *Icthus Soluções*:\n\n✍️ *Acesse e confira o contrato:* {link_contrato}\n\nFicamos à disposição para qualquer ajuste e para formalizarmos o início da produção!\n\n*Icthus Comunicação Visual*";
 
 export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("WHATSAPP");
@@ -81,6 +103,12 @@ export default function AdminSettingsPage() {
       autoSendPixInvoice: true,
       connectedNumber: "+55 (41) 99824-3990",
       status: "PAIRING_REQUIRED",
+      templates: {
+        proposalMessage:
+          "Olá, *{cliente}*! Tudo bem? 🤝\n\nSegue em anexo a sua *Proposta Comercial / Orçamento* referente ao projeto *{projeto}* {codigo} da *Icthus Soluções*.\n\n📄 *Visualize também online com aprovação digital:* {link_proposta}\n\nQualquer dúvida ou alteração nos detalhes técnicos, estamos 100% à disposição!\n\n*Icthus Comunicação Visual*",
+        contractMessage:
+          "Olá, *{cliente}*! Tudo bem? 📋\n\nSegue o link do seu *Contrato de Prestação de Serviços* referente ao projeto *{projeto}* {codigo} da *Icthus Soluções*:\n\n✍️ *Acesse e confira o contrato:* {link_contrato}\n\nFicamos à disposição para qualquer ajuste e para formalizarmos o início da produção!\n\n*Icthus Comunicação Visual*",
+      },
     },
     company: {
       tradeName: "Icthus Comunicação Visual",
@@ -112,6 +140,104 @@ export default function AdminSettingsPage() {
   });
 
   const [copiedText, setCopiedText] = useState<string | null>(null);
+
+  // Estados e Funções dos Modelos de Mensagem do WhatsApp
+  const [activeTemplateTab, setActiveTemplateTab] = useState<"PROPOSAL" | "CONTRACT">("PROPOSAL");
+  const [copiedTag, setCopiedTag] = useState<string | null>(null);
+  const templateTextareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const getCurrentTemplateMessage = () => {
+    if (activeTemplateTab === "PROPOSAL") {
+      return settings?.whatsapp?.templates?.proposalMessage ?? DEFAULT_PROPOSAL_MESSAGE;
+    }
+    return settings?.whatsapp?.templates?.contractMessage ?? DEFAULT_CONTRACT_MESSAGE;
+  };
+
+  const setTemplateMessage = (val: string) => {
+    setSettings((prev: any) => ({
+      ...prev,
+      whatsapp: {
+        ...(prev.whatsapp || {}),
+        templates: {
+          ...(prev.whatsapp?.templates || {}),
+          [activeTemplateTab === "PROPOSAL" ? "proposalMessage" : "contractMessage"]: val,
+        },
+      },
+    }));
+  };
+
+  const handleInsertTag = (tag: string) => {
+    const currentVal = getCurrentTemplateMessage();
+    const textarea = templateTextareaRef.current;
+    if (!textarea) {
+      setTemplateMessage(currentVal + " " + tag);
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const nextVal = currentVal.substring(0, start) + tag + currentVal.substring(end);
+    setTemplateMessage(nextVal);
+
+    setTimeout(() => {
+      textarea.focus();
+      const newPos = start + tag.length;
+      textarea.setSelectionRange(newPos, newPos);
+    }, 15);
+  };
+
+  const handleCopyTag = (tag: string) => {
+    navigator.clipboard.writeText(tag);
+    setCopiedTag(tag);
+    setTimeout(() => setCopiedTag(null), 2000);
+  };
+
+  const handleRestoreDefault = () => {
+    const defaultMsg = activeTemplateTab === "PROPOSAL" ? DEFAULT_PROPOSAL_MESSAGE : DEFAULT_CONTRACT_MESSAGE;
+    setTemplateMessage(defaultMsg);
+    setFeedback({
+      type: "success",
+      text: `Modelo de ${activeTemplateTab === "PROPOSAL" ? "Proposta" : "Contrato"} restaurado para o padrão oficial da Icthus!`,
+    });
+  };
+
+  const renderFormattedPreview = (raw: string) => {
+    let text = raw || "";
+    DYNAMIC_TAGS.forEach((item) => {
+      text = text.replaceAll(item.tag, item.example);
+    });
+
+    const lines = text.split("\n");
+    return lines.map((line, idx) => {
+      if (!line.trim()) {
+        return <div key={idx} className="h-2.5" />;
+      }
+
+      const parts = line.split(/(\*[^*]+\*|https?:\/\/[^\s]+)/g);
+
+      return (
+        <div key={idx} className="leading-relaxed">
+          {parts.map((part, pIdx) => {
+            if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
+              return (
+                <strong key={pIdx} className="font-bold text-white">
+                  {part.slice(1, -1)}
+                </strong>
+              );
+            }
+            if (part.startsWith("http://") || part.startsWith("https://")) {
+              return (
+                <span key={pIdx} className="text-sky-300 underline break-all font-mono">
+                  {part}
+                </span>
+              );
+            }
+            return <span key={pIdx}>{part}</span>;
+          })}
+        </div>
+      );
+    });
+  };
 
   // Carrega configurações gerais e status do WhatsApp
   const fetchAllSettings = async () => {
@@ -764,6 +890,218 @@ export default function AdminSettingsPage() {
                     <span>{testFeedback.text}</span>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+
+          {/* Seção: Modelos de Mensagens Automáticas do WhatsApp */}
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#16171B] border border-black/[0.08] dark:border-white/[0.08] shadow-sm space-y-6">
+            {/* Cabeçalho da Seção */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-black/[0.06] dark:border-white/[0.06]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#FF650F]/15 border border-[#FF650F]/30 flex items-center justify-center text-[#FF650F]">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-zinc-900 dark:text-white">
+                      Modelos de Mensagens do WhatsApp
+                    </h3>
+                    <Badge className="bg-[#FF650F]/15 text-[#FF650F] border border-[#FF650F]/30 text-[10px] font-bold">
+                      Personalizável
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Defina o que o cliente recebe no WhatsApp ao enviar propostas ou contratos, com links dinâmicos e tags automáticas
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRestoreDefault}
+                  className="rounded-xl text-xs h-9 border-zinc-200 dark:border-zinc-800 hover:text-[#FF650F]"
+                  title="Restaura o modelo oficial pré-definido da Icthus"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                  Restaurar Padrão
+                </Button>
+
+                <Button
+                  onClick={handleSaveGeneralSettings}
+                  disabled={isSaving}
+                  className="bg-[#FF650F] hover:bg-[#E55507] text-white font-bold text-xs rounded-xl shadow-md h-9 px-4 flex items-center gap-2"
+                >
+                  {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  Salvar Modelos
+                </Button>
+              </div>
+            </div>
+
+            {/* Alternador de Abas de Modelos */}
+            <div className="flex items-center gap-2 border-b border-black/[0.06] dark:border-white/[0.06] pb-3">
+              <button
+                type="button"
+                onClick={() => setActiveTemplateTab("PROPOSAL")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeTemplateTab === "PROPOSAL"
+                    ? "bg-[#FF650F] text-white shadow-md shadow-[#FF650F]/20"
+                    : "bg-black/[0.03] dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>📄 Proposta Comercial / Orçamento</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTemplateTab("CONTRACT")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeTemplateTab === "CONTRACT"
+                    ? "bg-[#FF650F] text-white shadow-md shadow-[#FF650F]/20"
+                    : "bg-black/[0.03] dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+              >
+                <FileCheck className="w-3.5 h-3.5" />
+                <span>✍️ Contrato de Prestação de Serviços</span>
+              </button>
+            </div>
+
+            {/* Painel de Tags Dinâmicas Clicáveis para Copiar e Inserir */}
+            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-[#121316] border border-black/[0.06] dark:border-white/[0.06] space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs font-extrabold text-zinc-800 dark:text-zinc-200">
+                  <Sparkles className="w-4 h-4 text-[#FF650F]" />
+                  <span>Tags Dinâmicas Disponíveis:</span>
+                  <span className="text-[11px] font-normal text-zinc-500">
+                    (Clique no nome da tag para <strong>inserir no texto</strong> ou no botão para <strong>copiar</strong>)
+                  </span>
+                </div>
+                {copiedTag && (
+                  <span className="text-xs font-bold text-emerald-500 animate-in fade-in flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" /> Tag {copiedTag} copiada para a área de transferência!
+                  </span>
+                )}
+              </div>
+
+              {/* Grid de Pílulas com as Tags */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {DYNAMIC_TAGS.map((item) => (
+                  <div
+                    key={item.tag}
+                    className="group relative flex items-center justify-between p-2 rounded-xl bg-white dark:bg-[#1A1B20] border border-black/[0.08] dark:border-white/[0.08] hover:border-[#FF650F]/50 transition-all shadow-xs"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleInsertTag(item.tag)}
+                      className="flex-1 text-left truncate pr-1"
+                      title={`Clique para inserir ${item.tag} na mensagem`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <code className="text-xs font-mono font-bold text-[#FF650F] group-hover:underline">
+                          {item.tag}
+                        </code>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                        {item.label}
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCopyTag(item.tag)}
+                      className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-[#FF650F] transition-colors shrink-0"
+                      title={`Copiar ${item.tag}`}
+                    >
+                      {copiedTag === item.tag ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Grid com Editor à Esquerda e Simulador WhatsApp à Direita */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Editor de Texto (7 colunas) */}
+              <div className="lg:col-span-7 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                    <span>Corpo da Mensagem ({activeTemplateTab === "PROPOSAL" ? "Orçamento" : "Contrato"}):</span>
+                  </label>
+                  <span className="text-[11px] font-mono text-zinc-400">
+                    {getCurrentTemplateMessage().length} caracteres
+                  </span>
+                </div>
+
+                <div className="relative">
+                  <textarea
+                    ref={templateTextareaRef}
+                    rows={12}
+                    value={getCurrentTemplateMessage()}
+                    onChange={(e) => setTemplateMessage(e.target.value)}
+                    placeholder="Escreva a mensagem aqui... Clique nas tags acima para adicionar {cliente}, {link_proposta}, etc."
+                    className="w-full p-4 rounded-2xl bg-zinc-50 dark:bg-[#101114] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F] font-sans leading-relaxed resize-y shadow-inner"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                  <div className="flex items-center gap-2">
+                    <span>Dicas de formatação:</span>
+                    <code className="bg-black/5 dark:bg-white/5 px-1 py-0.5 rounded font-bold">*negrito*</code>
+                    <code className="bg-black/5 dark:bg-white/5 px-1 py-0.5 rounded italic">_itálico_</code>
+                    <code className="bg-black/5 dark:bg-white/5 px-1 py-0.5 rounded line-through">~tachado~</code>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview WhatsApp em Tempo Real (5 colunas) */}
+              <div className="lg:col-span-5 flex flex-col">
+                <div className="flex items-center justify-between pb-2 mb-2">
+                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5 text-[#FF650F]" />
+                    Prévia em Tempo Real (WhatsApp do Cliente)
+                  </span>
+                  <Badge variant="outline" className="text-[10px] text-emerald-500 border-emerald-500/30">
+                    Simulador Oficial
+                  </Badge>
+                </div>
+
+                {/* Caixa Simuladora de Conversa no WhatsApp */}
+                <div className="flex-1 rounded-2xl bg-[#0b141a] border border-[#222e35] p-3 flex flex-col justify-between shadow-lg overflow-hidden min-h-[300px]">
+                  {/* Header do Chat WhatsApp */}
+                  <div className="flex items-center gap-2.5 pb-2.5 border-b border-[#222e35] text-white">
+                    <div className="w-8 h-8 rounded-full bg-[#FF650F] flex items-center justify-center font-bold text-xs text-white shrink-0 shadow">
+                      I
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h5 className="text-xs font-bold truncate">Icthus Comunicação Visual</h5>
+                      <span className="text-[10px] text-emerald-400 block truncate">Online agora</span>
+                    </div>
+                  </div>
+
+                  {/* Corpo com Balão de Mensagem */}
+                  <div className="py-4 space-y-3 flex-1 flex flex-col justify-end">
+                    <div className="max-w-[92%] self-end bg-[#005c4b] text-[#e9edef] rounded-2xl rounded-tr-xs p-3 shadow-sm text-xs space-y-1">
+                      {renderFormattedPreview(getCurrentTemplateMessage())}
+                      <div className="flex items-center justify-end gap-1 pt-1 text-[10px] text-[#8696a0]">
+                        <span>{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                        <span className="text-sky-400 font-bold">✓✓</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Rodapé do Simulador */}
+                  <div className="pt-2 border-t border-[#222e35] text-[10px] text-[#8696a0] flex items-center justify-between">
+                    <span>Exibindo com dados de exemplo</span>
+                    <span className="font-mono text-[9px] text-[#00a884]">criptografia de ponta a ponta</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

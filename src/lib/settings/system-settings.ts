@@ -38,6 +38,10 @@ export interface SystemSettings {
     connectedNumber?: string;
     status: "CONNECTED" | "PAIRING_REQUIRED" | "DISCONNECTED" | "SIMULATION_DEV";
     lastConnectedAt?: string | null;
+    templates?: {
+      proposalMessage?: string;
+      contractMessage?: string;
+    };
   };
   company: {
     tradeName: string;
@@ -104,12 +108,18 @@ export const DEFAULT_SETTINGS: SystemSettings = {
     connectedNumber: "+55 (41) 99824-3990",
     status: "PAIRING_REQUIRED",
     lastConnectedAt: null,
+    templates: {
+      proposalMessage:
+        "Olá, *{cliente}*! Tudo bem? 🤝\n\nSegue em anexo a sua *Proposta Comercial / Orçamento* referente ao projeto *{projeto}* {codigo} da *Icthus Soluções*.\n\n📄 *Visualize também online com aprovação digital:* {link_proposta}\n\nQualquer dúvida ou alteração nos detalhes técnicos, estamos 100% à disposição!\n\n*Icthus Comunicação Visual*",
+      contractMessage:
+        "Olá, *{cliente}*! Tudo bem? 📋\n\nSegue o link do seu *Contrato de Prestação de Serviços* referente ao projeto *{projeto}* {codigo} da *Icthus Soluções*:\n\n✍️ *Acesse e confira o contrato:* {link_contrato}\n\nFicamos à disposição para qualquer ajuste e para formalizarmos o início da produção!\n\n*Icthus Comunicação Visual*",
+    },
   },
   company: {
     tradeName: "Icthus Comunicação Visual",
     legalName: "Icthus Soluções & Design Visual Ltda",
     cnpj: "45.123.456/0001-78",
-    email: "contato@glessios.com.br",
+    email: "contato@icthusbrasil.com",
     phone: "(41) 3345-8900",
     whatsapp: "(41) 99824-3990",
     address: "Rua das Indústrias, 1024 - CIC",
@@ -145,7 +155,14 @@ export function getSystemSettings(): SystemSettings {
       return {
         ...DEFAULT_SETTINGS,
         ...parsed,
-        whatsapp: { ...DEFAULT_SETTINGS.whatsapp, ...(parsed.whatsapp || {}) },
+        whatsapp: {
+          ...DEFAULT_SETTINGS.whatsapp,
+          ...(parsed.whatsapp || {}),
+          templates: {
+            ...DEFAULT_SETTINGS.whatsapp.templates,
+            ...((parsed.whatsapp && parsed.whatsapp.templates) || {}),
+          },
+        },
         company: { ...DEFAULT_SETTINGS.company, ...(parsed.company || {}) },
         portal: { ...DEFAULT_SETTINGS.portal, ...(parsed.portal || {}) },
         production: { ...DEFAULT_SETTINGS.production, ...(parsed.production || {}) },
@@ -168,7 +185,14 @@ export function saveSystemSettings(settings: Partial<SystemSettings>): SystemSet
     const updated: SystemSettings = {
       ...current,
       ...settings,
-      whatsapp: { ...current.whatsapp, ...(settings.whatsapp || {}) },
+      whatsapp: {
+        ...current.whatsapp,
+        ...(settings.whatsapp || {}),
+        templates: {
+          ...(current.whatsapp.templates || DEFAULT_SETTINGS.whatsapp.templates),
+          ...(settings.whatsapp?.templates || {}),
+        },
+      },
       company: { ...current.company, ...(settings.company || {}) },
       portal: { ...current.portal, ...(settings.portal || {}) },
       production: { ...current.production, ...(settings.production || {}) },

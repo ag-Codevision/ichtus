@@ -5,6 +5,7 @@ import path from "path";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/wacli";
 import { generateBudgetPDF } from "@/lib/documents/budget-pdf-generator";
 import { syncLeadBudgetDocument } from "@/lib/crm/budget-sync";
+import { getSystemSettings } from "@/lib/settings/system-settings";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -92,16 +93,39 @@ export async function POST(req: NextRequest, { params }: Params) {
     let budgetPdfPath: string | null = null;
     const budgetPdfFileName = `Orcamento_${(lead.budgetCode || lead.title || "Icthus").replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`;
 
+    const settings = getSystemSettings();
+    const portalUrl = settings?.portal?.portalUrl || `${baseUrl}/portal/login`;
+    const proposalOnlineUrl = `${baseUrl}/proposta/${lead.id}`;
+    const contractOnlineUrl = `${baseUrl}/admin/crm/trabalhos/${lead.id}/contrato`;
+
+    const formatTags = (tpl: string, docUrl: string) => {
+      const valorFormatado = lead.estimatedValue
+        ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(lead.estimatedValue))
+        : "Sob Consulta";
+
+      return tpl
+        .replace(/\{cliente\}/g, clientName)
+        .replace(/\{projeto\}/g, lead.title)
+        .replace(/\{codigo\}/g, budgetId)
+        .replace(/\{empresa\}/g, "Icthus Comunicação Visual")
+        .replace(/\{link_proposta\}/g, proposalOnlineUrl)
+        .replace(/\{link_contrato\}/g, docUrl)
+        .replace(/\{link_portal\}/g, portalUrl)
+        .replace(/\{valor_total\}/g, valorFormatado);
+    };
+
     if (type === "contract") {
-      documentUrl = `${baseUrl}/admin/crm/trabalhos/${lead.id}/contrato`;
-      message =
-        customMessage?.trim() ||
-        `Olá, *${clientName}*! Tudo bem? 📋\n\nSegue o link do seu *Contrato de Prestação de Serviços* referente ao projeto *${lead.title}* ${budgetId}:\n\n✍️ *Acesse e confira o contrato:* ${documentUrl}\n\nFicamos à disposição para qualquer ajuste e para formalizarmos o início da produção!\n\n*Glessios Comunicação Visual*`;
+      documentUrl = contractOnlineUrl;
+      const defaultContractTpl =
+        settings?.whatsapp?.templates?.contractMessage ||
+        `Olá, *${clientName}*! Tudo bem? 📋\n\nSegue o link do seu *Contrato de Prestação de Serviços* referente ao projeto *${lead.title}* ${budgetId} da *Icthus Soluções*:\n\n✍️ *Acesse o Portal do Cliente:* ${portalUrl}\n\nFicamos à disposição para qualquer ajuste e para formalizarmos o início da produção!\n\n*Icthus Comunicação Visual*`;
+      message = customMessage?.trim() || formatTags(defaultContractTpl, documentUrl);
     } else {
-      documentUrl = `${baseUrl}/admin/crm/trabalhos/${lead.id}/proposta`;
-      message =
-        customMessage?.trim() ||
-        `Olá, *${clientName}*! Tudo bem? 🤝\n\nSegue em anexo a sua *Proposta Comercial / Orçamento* referente ao projeto *${lead.title}* ${budgetId}.\n\n📄 *Visualize também online com aprovação digital:* ${documentUrl}\n\nQualquer dúvida ou alteração nos detalhes técnicos, estamos 100% à disposição!\n\n*Glessios Comunicação Visual*`;
+      documentUrl = proposalOnlineUrl;
+      const defaultProposalTpl =
+        settings?.whatsapp?.templates?.proposalMessage ||
+        `Olá, *${clientName}*! Tudo bem? 🤝\n\nSegue em anexo a sua *Proposta Comercial / Orçamento* referente ao projeto *${lead.title}* ${budgetId} da *Icthus Soluções*.\n\n📄 *Visualize também online com aprovação digital:* ${proposalOnlineUrl}\n\nQualquer dúvida ou alteração nos detalhes técnicos, estamos 100% à disposição!\n\n*Icthus Comunicação Visual*`;
+      message = customMessage?.trim() || formatTags(defaultProposalTpl, documentUrl);
 
       // 1. Localiza ou Gera o arquivo físico do Orçamento em PDF para anexo direto via WACLI
       try {
