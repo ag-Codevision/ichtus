@@ -153,7 +153,19 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     if (contactName !== undefined) dataToUpdate.contactName = contactName?.trim() || "";
     if (contactPhone !== undefined) dataToUpdate.contactPhone = contactPhone?.trim() || "";
     if (contactEmail !== undefined) dataToUpdate.contactEmail = contactEmail?.trim() || null;
-    if (customerId !== undefined) dataToUpdate.customerId = customerId || null;
+    if (customerId !== undefined) {
+      dataToUpdate.customerId = customerId || null;
+      if (dataToUpdate.customerId) {
+        const customer = await prisma.customer.findUnique({
+          where: { id: dataToUpdate.customerId },
+        });
+        if (customer) {
+          dataToUpdate.contactName = customer.tradeName || customer.fullName || customer.companyName || dataToUpdate.contactName || "";
+          dataToUpdate.contactPhone = customer.whatsapp || customer.phone || dataToUpdate.contactPhone || "";
+          dataToUpdate.contactEmail = customer.email || dataToUpdate.contactEmail || null;
+        }
+      }
+    }
     if (estimatedValue !== undefined) {
       dataToUpdate.estimatedValue =
         estimatedValue !== null && estimatedValue !== "" ? Number(estimatedValue) : null;

@@ -172,8 +172,18 @@ export function LeadCreateCardModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !contactName.trim() || !contactPhone.trim()) {
-      alert("Por favor, preencha o título do serviço, nome e telefone de contato.");
+    const finalContactName = selectedClient
+      ? (selectedClient.displayName || selectedClient.tradeName || selectedClient.fullName || contactName).trim()
+      : contactName.trim();
+    const finalContactPhone = selectedClient
+      ? (selectedClient.whatsapp || selectedClient.phone || contactPhone).trim()
+      : contactPhone.trim();
+    const finalContactEmail = selectedClient
+      ? (selectedClient.email || contactEmail || null)
+      : (contactEmail.trim() || null);
+
+    if (!title.trim() || !finalContactName || !finalContactPhone) {
+      alert("Por favor, informe o título do serviço e certifique-se de que o cliente selecionado ou contato possui nome e telefone.");
       return;
     }
 
@@ -182,9 +192,9 @@ export function LeadCreateCardModal({
       const payload = {
         title: title.trim(),
         columnId: columnId || columns[0]?.id,
-        contactName: contactName.trim(),
-        contactPhone: contactPhone.trim(),
-        contactEmail: contactEmail.trim() || null,
+        contactName: finalContactName,
+        contactPhone: finalContactPhone,
+        contactEmail: finalContactEmail,
         customerId: selectedClient?.id || null,
         categoryId: categoryId || null,
         subcategoryId: subcategoryId || null,
@@ -320,9 +330,6 @@ export function LeadCreateCardModal({
 
               {/* Seletor Inteligente de Cliente */}
               <div>
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Cliente Vinculado (CRM)
-                </label>
                 <ClientSearchAutocomplete
                   selectedClient={selectedClient}
                   onSelectClient={(client) => {
@@ -340,48 +347,58 @@ export function LeadCreateCardModal({
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Nome do Contato *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Nome do responsável"
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
-                </div>
+              {/* Se NÃO houver cliente selecionado (Lead Avulso), exibe inputs manuais de contato */}
+              {!selectedClient ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                      Nome do Contato *
+                    </label>
+                    <input
+                      type="text"
+                      required={!selectedClient}
+                      placeholder="Nome do responsável"
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    />
+                  </div>
 
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    WhatsApp / Telefone *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="(41) 99999-9999"
-                    value={contactPhone}
-                    onChange={(e) => setContactPhone(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
-                </div>
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                      WhatsApp / Telefone *
+                    </label>
+                    <input
+                      type="text"
+                      required={!selectedClient}
+                      placeholder="(41) 99999-9999"
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    />
+                  </div>
 
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    E-mail
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="email@cliente.com"
-                    value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                      E-mail
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="email@cliente.com"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    />
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.05] flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                    Contato e dados de envio vinculados diretamente ao cadastro do cliente acima.
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* BLOCO 2: CATEGORIA & SUBCATEGORIA (LOGO ABAIXO DE DADOS DA OPORTUNIDADE & CONTATO) */}
@@ -697,23 +714,6 @@ export function LeadCreateCardModal({
                   onChange={(e) => setDueDate(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                 />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 block mb-1">
-                  Canal de Origem
-                </label>
-                <select
-                  value={source}
-                  onChange={(e) => setSource(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                >
-                  <option value="WEBSITE_FORM">Formulário do Site</option>
-                  <option value="WHATSAPP">WhatsApp Direto</option>
-                  <option value="INDICATION">Indicação</option>
-                  <option value="PHONE">Telefone</option>
-                  <option value="OTHER">Outros</option>
-                </select>
               </div>
 
               {/* Chave Switch: Enviar Orçamento por WhatsApp */}

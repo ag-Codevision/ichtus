@@ -1001,9 +1001,6 @@ export function LeadCardDrawerModal({
 
               {/* Seletor Inteligente de Cliente Vinculado */}
               <div>
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Cliente Vinculado (CRM)
-                </label>
                 <ClientSearchAutocomplete
                   selectedClient={selectedCustomerObj}
                   onSelectClient={(client: SearchedClient | null) => {
@@ -1030,73 +1027,83 @@ export function LeadCardDrawerModal({
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Nome do Contato *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={infoForm.contactName}
-                    onChange={(e) => setInfoForm({ ...infoForm, contactName: e.target.value })}
-                    onBlur={() => {
-                      if (infoForm.contactName.trim() && infoForm.contactName !== data?.contactName) {
-                        handleUpdateLeadField({ contactName: infoForm.contactName.trim() });
-                      }
-                    }}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                      WhatsApp / Telefone *
+              {/* Se NÃO houver cliente vinculado (Lead Avulso), exibe inputs manuais de contato */}
+              {!selectedCustomerObj && !data?.customerId ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                      Nome do Contato *
                     </label>
-                    {data?.contactPhone && (
-                      <a
-                        href={`https://wa.me/${data.contactPhone.replace(/\D/g, "")}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[10px] text-emerald-600 hover:underline flex items-center gap-0.5"
-                      >
-                        <MessageCircle className="w-3 h-3" />
-                        <span>Abrir</span>
-                      </a>
-                    )}
+                    <input
+                      type="text"
+                      required
+                      value={infoForm.contactName}
+                      onChange={(e) => setInfoForm({ ...infoForm, contactName: e.target.value })}
+                      onBlur={() => {
+                        if (infoForm.contactName.trim() && infoForm.contactName !== data?.contactName) {
+                          handleUpdateLeadField({ contactName: infoForm.contactName.trim() });
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    />
                   </div>
-                  <input
-                    type="text"
-                    required
-                    value={infoForm.contactPhone}
-                    onChange={(e) => setInfoForm({ ...infoForm, contactPhone: e.target.value })}
-                    onBlur={() => {
-                      if (infoForm.contactPhone.trim() && infoForm.contactPhone !== data?.contactPhone) {
-                        handleUpdateLeadField({ contactPhone: infoForm.contactPhone.trim() });
-                      }
-                    }}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
-                </div>
 
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    E-mail de Contato
-                  </label>
-                  <input
-                    type="email"
-                    value={infoForm.contactEmail}
-                    onChange={(e) => setInfoForm({ ...infoForm, contactEmail: e.target.value })}
-                    onBlur={() => {
-                      if (infoForm.contactEmail !== data?.contactEmail) {
-                        handleUpdateLeadField({ contactEmail: infoForm.contactEmail.trim() || null });
-                      }
-                    }}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                        WhatsApp / Telefone *
+                      </label>
+                      {data?.contactPhone && (
+                        <a
+                          href={`https://wa.me/${data.contactPhone.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10px] text-emerald-600 hover:underline flex items-center gap-0.5"
+                        >
+                          <MessageCircle className="w-3 h-3" />
+                          <span>Abrir</span>
+                        </a>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={infoForm.contactPhone}
+                      onChange={(e) => setInfoForm({ ...infoForm, contactPhone: e.target.value })}
+                      onBlur={() => {
+                        if (infoForm.contactPhone.trim() && infoForm.contactPhone !== data?.contactPhone) {
+                          handleUpdateLeadField({ contactPhone: infoForm.contactPhone.trim() });
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                      E-mail de Contato
+                    </label>
+                    <input
+                      type="email"
+                      value={infoForm.contactEmail}
+                      onChange={(e) => setInfoForm({ ...infoForm, contactEmail: e.target.value })}
+                      onBlur={() => {
+                        if (infoForm.contactEmail !== data?.contactEmail) {
+                          handleUpdateLeadField({ contactEmail: infoForm.contactEmail.trim() || null });
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    />
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.05] flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                    Contato e dados de envio vinculados diretamente ao cadastro do cliente acima.
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* BLOCO 2: CATEGORIA & SUBCATEGORIA DO SERVIÇO (LOGO ABAIXO DE DADOS DA OPORTUNIDADE & CONTATO) */}
@@ -1673,25 +1680,6 @@ export function LeadCardDrawerModal({
                   }}
                   className="w-full px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
                 />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 block mb-1">
-                  Origem do Contato
-                </label>
-                <select
-                  value={data?.source || "WEBSITE_FORM"}
-                  onChange={(e) => handleUpdateLeadField({ source: e.target.value })}
-                  className="w-full px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                >
-                  <option value="WEBSITE_FORM">Formulário do Site</option>
-                  <option value="WHATSAPP">WhatsApp Direto</option>
-                  <option value="REFERRAL">Indicação / Boca a Boca</option>
-                  <option value="INSTAGRAM">Instagram</option>
-                  <option value="GOOGLE_ADS">Google Ads</option>
-                  <option value="OUTBOUND">Prospecção Ativa</option>
-                  <option value="OTHER">Outros</option>
-                </select>
               </div>
             </div>
 

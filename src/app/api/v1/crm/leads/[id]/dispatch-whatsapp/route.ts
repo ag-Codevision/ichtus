@@ -35,17 +35,31 @@ export async function POST(req: NextRequest, { params }: Params) {
       );
     }
 
-    // Prioridade de telefone: se há cliente cadastrado com whatsapp, prioriza; senão usa o telefone do contato
+    // Busca sempre a versão mais fresca e atualizada do cliente vinculado no CRM
+    let customer = lead.customer;
+    if (lead.customerId) {
+      const freshCustomer = await prisma.customer.findUnique({
+        where: { id: lead.customerId },
+      });
+      if (freshCustomer) {
+        customer = freshCustomer;
+      }
+    }
+
+    // Prioridade absoluta: Telefone/WhatsApp do cliente cadastrado na aba Contatos.
+    // Apenas se for lead avulso sem cliente vinculado, utiliza lead.contactPhone.
     const recipientPhone =
-      lead.customer?.whatsapp ||
-      lead.contactPhone ||
-      lead.customer?.phone;
+      customer?.whatsapp ||
+      customer?.phone ||
+      lead.contactPhone;
+
+    const clientName = customer?.tradeName || customer?.fullName || lead.contactName || "Cliente";
 
     if (!recipientPhone) {
       return NextResponse.json(
         {
           success: false,
-          error: "Nenhum telefone de WhatsApp cadastrado para este contato ou cliente.",
+          error: `Nenhum telefone de WhatsApp cadastrado para ${clientName}. Cadastre o WhatsApp no contato do cliente.`,
         },
         { status: 400 }
       );
@@ -53,6 +67,16 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     // Normalização estrita do número para padrão E.164 com DDI 55
     const cleanPhone = recipientPhone.replace(/\D/g, "");
+    if (cleanPhone.length < 10) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `O telefone cadastrado (${recipientPhone}) é inválido ou está incompleto. Deve conter DDD + número com 9 dígitos.`,
+        },
+        { status: 400 }
+      );
+    }
+
     const formattedPhone = cleanPhone.startsWith("55")
       ? cleanPhone
       : `55${cleanPhone}`;
@@ -62,7 +86,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     const baseUrl = `${protocol}://${host}`;
 
     const budgetId = lead.budgetCode ? `[${lead.budgetCode}]` : "";
-    const clientName = lead.contactName || lead.customer?.tradeName || lead.customer?.fullName || "Cliente";
 
     let message = "";
     let documentUrl = "";
@@ -104,11 +127,11 @@ export async function POST(req: NextRequest, { params }: Params) {
             title: lead.title,
             contactName: lead.contactName,
             contactPhone: lead.contactPhone,
-            contactEmail: lead.contactEmail,
+            contactEmail: customer?.email || lead.contactEmail,
             clientTradeName:
-              lead.customer?.tradeName || lead.customer?.companyName || lead.customer?.fullName,
-            clientAddress: lead.customer?.city
-              ? `${lead.customer.city} - ${lead.customer.state || "PR"}`
+              customer?.tradeName || customer?.companyName || customer?.fullName || lead.contactName,
+            clientAddress: customer?.city
+              ? `${customer.city} - ${customer.state || "PR"}`
               : null,
             estimatedValue: lead.estimatedValue ? Number(lead.estimatedValue) : null,
             priority: lead.priority,
@@ -142,9 +165,9 @@ export async function POST(req: NextRequest, { params }: Params) {
                 fileUrl: pdfResult.fileUrl,
                 fileSize: pdfResult.fileSize,
                 customerId: lead.customerId || null,
-                clientName: lead.customer?.tradeName || lead.customer?.fullName || lead.contactName || "Cliente",
-                clientPhone: lead.contactPhone,
-                clientEmail: lead.contactEmail,
+                clientName: customer?.tradeName || customer?.fullName || lead.contactName || "Cliente",
+                clientPhone: recipientPhone,
+                clientEmail: customer?.email || lead.contactEmail,
                 totalAmount: lead.estimatedValue ? Number(lead.estimatedValue) : null,
                 status: "GERADO",
                 sentViaWhatsapp: false,

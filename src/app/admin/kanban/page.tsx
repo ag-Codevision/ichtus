@@ -180,13 +180,21 @@ export default function KanbanPage() {
           }))
         );
 
-        const recipient = data.recipientPhone || lead.contactPhone || "cliente";
+        const recipient = data.recipientPhone ? `+${data.recipientPhone}` : (lead.contactPhone || "cliente");
+        const clientName = data.clientName || lead.customer?.tradeName || lead.customer?.fullName || lead.contactName || "o cliente";
         toast.success(
           isResend
-            ? `Orçamento em PDF reenviado diretamente para ${recipient} via WhatsApp!`
-            : `Orçamento em PDF enviado diretamente para ${recipient} via WhatsApp!`,
+            ? `Orçamento em PDF reenviado diretamente para ${clientName} (${recipient}) via WhatsApp!`
+            : `Orçamento em PDF enviado diretamente para ${clientName} (${recipient}) via WhatsApp!`,
           "WhatsApp Enviado"
         );
+        if (data.isSelf) {
+          toast.info(
+            "Atenção: O telefone informado é idêntico ao número pareado no robô WhatsApp.",
+            "Número do Aparelho Conectado",
+            6000
+          );
+        }
       } else {
         const errorMsg =
           data.error ||
@@ -1199,61 +1207,71 @@ export default function KanbanPage() {
                               </div>
 
                               {/* Mini Dashboard do Card: Switch de Envio de Orçamento WhatsApp & Botão de Reenvio */}
-                              <div
-                                onClick={(e) => e.stopPropagation()}
-                                className="pt-2 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between gap-2"
-                              >
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <button
-                                    type="button"
-                                    role="switch"
-                                    aria-checked={Boolean(lead.budgetSentViaWhatsApp)}
-                                    disabled={sendingBudgetId === lead.id}
-                                    onClick={() => handleToggleSendBudget(lead, false)}
-                                    title={lead.budgetSentViaWhatsApp ? "Orçamento já enviado via WhatsApp" : "Enviar orçamento via WhatsApp"}
-                                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#FF650F] focus:ring-offset-1 disabled:opacity-50 ${
-                                      lead.budgetSentViaWhatsApp
-                                        ? "bg-emerald-500 dark:bg-emerald-500"
-                                        : "bg-zinc-300 dark:bg-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-600"
-                                    }`}
+                              {(() => {
+                                const targetPhone = lead.customer?.whatsapp || lead.customer?.phone || lead.contactPhone;
+                                const targetName = lead.customer?.tradeName || lead.customer?.fullName || lead.contactName || "o cliente";
+                                return (
+                                  <div
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="pt-2 border-t border-black/[0.05] dark:border-white/[0.06] flex items-center justify-between gap-2"
                                   >
-                                    <span
-                                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                                        lead.budgetSentViaWhatsApp ? "translate-x-4" : "translate-x-0"
-                                      }`}
-                                    />
-                                  </button>
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={Boolean(lead.budgetSentViaWhatsApp)}
+                                        disabled={sendingBudgetId === lead.id}
+                                        onClick={() => handleToggleSendBudget(lead, false)}
+                                        title={
+                                          lead.budgetSentViaWhatsApp
+                                            ? `Orçamento já enviado via WhatsApp para ${targetName} (${targetPhone || "sem telefone"})`
+                                            : `Enviar orçamento via WhatsApp para ${targetName} (${targetPhone || "sem telefone"})`
+                                        }
+                                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#FF650F] focus:ring-offset-1 disabled:opacity-50 ${
+                                          lead.budgetSentViaWhatsApp
+                                            ? "bg-emerald-500 dark:bg-emerald-500"
+                                            : "bg-zinc-300 dark:bg-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-600"
+                                        }`}
+                                      >
+                                        <span
+                                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                                            lead.budgetSentViaWhatsApp ? "translate-x-4" : "translate-x-0"
+                                          }`}
+                                        />
+                                      </button>
 
-                                  <div className="flex items-center gap-1 min-w-0 text-[11px]">
-                                    {lead.budgetSentViaWhatsApp ? (
-                                      <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 truncate">
-                                        <CheckCheck className="w-3.5 h-3.5 shrink-0" />
-                                        <span className="truncate">Orçamento Enviado</span>
-                                      </span>
-                                    ) : (
-                                      <span className="text-zinc-500 dark:text-zinc-400 font-medium truncate">
-                                        Enviar Orçamento
-                                      </span>
+                                      <div className="flex items-center gap-1 min-w-0 text-[11px]">
+                                        {lead.budgetSentViaWhatsApp ? (
+                                          <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 truncate">
+                                            <CheckCheck className="w-3.5 h-3.5 shrink-0" />
+                                            <span className="truncate">Orçamento Enviado</span>
+                                          </span>
+                                        ) : (
+                                          <span className="text-zinc-500 dark:text-zinc-400 font-medium truncate">
+                                            Enviar Orçamento
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {lead.budgetSentViaWhatsApp && (
+                                      <button
+                                        type="button"
+                                        disabled={sendingBudgetId === lead.id}
+                                        onClick={() => handleToggleSendBudget(lead, true)}
+                                        title={`Reenviar orçamento via WhatsApp para ${targetName} (${targetPhone || "sem telefone"})`}
+                                        className="p-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 transition-colors shrink-0 disabled:opacity-50 flex items-center justify-center shadow-2xs"
+                                      >
+                                        {sendingBudgetId === lead.id ? (
+                                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        ) : (
+                                          <RotateCw className="w-3.5 h-3.5" />
+                                        )}
+                                      </button>
                                     )}
                                   </div>
-                                </div>
-
-                                {lead.budgetSentViaWhatsApp && (
-                                  <button
-                                    type="button"
-                                    disabled={sendingBudgetId === lead.id}
-                                    onClick={() => handleToggleSendBudget(lead, true)}
-                                    title="Reenviar orçamento via WhatsApp"
-                                    className="p-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 transition-colors shrink-0 disabled:opacity-50 flex items-center justify-center shadow-2xs"
-                                  >
-                                    {sendingBudgetId === lead.id ? (
-                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    ) : (
-                                      <RotateCw className="w-3.5 h-3.5" />
-                                    )}
-                                  </button>
-                                )}
-                              </div>
+                                );
+                              })()}
 
                               {isApprovedStage && (
                                 <div className="pt-1">
@@ -1513,9 +1531,6 @@ export default function KanbanPage() {
 
               {/* Seletor Inteligente de Cliente */}
               <div>
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Cliente Vinculado (CRM)
-                </label>
                 <ClientSearchAutocomplete
                   selectedClient={selectedClientForEditLead}
                   onSelectClient={(client) => {
@@ -1538,61 +1553,69 @@ export default function KanbanPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Nome do Contato *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Nome do cliente"
-                    value={editLeadForm.contactName}
-                    onChange={(e) => setEditLeadForm({ ...editLeadForm, contactName: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
+              {/* Se NÃO houver cliente vinculado (Lead Avulso), exibe inputs manuais de contato */}
+              {!selectedClientForEditLead ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                      Nome do Contato *
+                    </label>
+                    <input
+                      type="text"
+                      required={!selectedClientForEditLead}
+                      placeholder="Nome do cliente"
+                      value={editLeadForm.contactName}
+                      onChange={(e) => setEditLeadForm({ ...editLeadForm, contactName: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                      WhatsApp / Telefone *
+                    </label>
+                    <input
+                      type="text"
+                      required={!selectedClientForEditLead}
+                      placeholder="(41) 99999-9999"
+                      value={editLeadForm.contactPhone}
+                      onChange={(e) => setEditLeadForm({ ...editLeadForm, contactPhone: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                      E-mail
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="cliente@exemplo.com"
+                      value={editLeadForm.contactEmail}
+                      onChange={(e) => setEditLeadForm({ ...editLeadForm, contactEmail: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    WhatsApp / Telefone *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="(41) 99999-9999"
-                    value={editLeadForm.contactPhone}
-                    onChange={(e) => setEditLeadForm({ ...editLeadForm, contactPhone: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
+              ) : (
+                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.05] flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                    Contato e dados de envio vinculados diretamente ao cadastro do cliente acima.
+                  </span>
                 </div>
-              </div>
+              )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    E-mail do Cliente
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="cliente@exemplo.com"
-                    value={editLeadForm.contactEmail}
-                    onChange={(e) => setEditLeadForm({ ...editLeadForm, contactEmail: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Valor Estimado (R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={editLeadForm.estimatedValue}
-                    onChange={(e) => setEditLeadForm({ ...editLeadForm, estimatedValue: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                  />
-                </div>
+              <div>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Valor Estimado (R$)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={editLeadForm.estimatedValue}
+                  onChange={(e) => setEditLeadForm({ ...editLeadForm, estimatedValue: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

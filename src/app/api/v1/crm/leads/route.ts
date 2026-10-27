@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
                 companyName: true,
                 fullName: true,
                 type: true,
+                phone: true,
                 whatsapp: true,
                 email: true,
                 city: true,
@@ -122,7 +123,22 @@ export async function POST(req: NextRequest) {
       userName,
     } = body;
 
-    if (!contactName || !contactPhone) {
+    let resolvedContactName = contactName?.trim() || "";
+    let resolvedContactPhone = contactPhone?.trim() || "";
+    let resolvedContactEmail = contactEmail?.trim() || null;
+
+    if (customerId) {
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerId },
+      });
+      if (customer) {
+        resolvedContactName = customer.tradeName || customer.fullName || customer.companyName || resolvedContactName;
+        resolvedContactPhone = customer.whatsapp || customer.phone || resolvedContactPhone;
+        resolvedContactEmail = customer.email || resolvedContactEmail;
+      }
+    }
+
+    if (!resolvedContactName || !resolvedContactPhone) {
       return NextResponse.json(
         { success: false, error: "Nome e telefone de contato são obrigatórios." },
         { status: 400 }
@@ -165,10 +181,10 @@ export async function POST(req: NextRequest) {
         materials: Array.isArray(materials) ? materials : [],
         paintDetails: paintDetails?.trim() || null,
         freightDetails: freightDetails?.trim() || null,
-        title: title || `Orçamento [${finalBudgetCode}] — ${contactName}`,
-        contactName,
-        contactPhone,
-        contactEmail: contactEmail || null,
+        title: title || `Orçamento [${finalBudgetCode}] — ${resolvedContactName}`,
+        contactName: resolvedContactName,
+        contactPhone: resolvedContactPhone,
+        contactEmail: resolvedContactEmail,
         customerId: customerId || null,
         source,
         estimatedValue: estimatedValue ? Number(estimatedValue) : null,
