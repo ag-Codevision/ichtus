@@ -12,6 +12,7 @@ import {
   Calendar,
   Layers,
   Package,
+  ShoppingCart,
   DollarSign,
   Menu,
   X,
@@ -142,6 +143,13 @@ export function AdminMobileAppMenu() {
       badgeIcon: Factory,
       badgeColor: "text-emerald-500",
       items: [
+        {
+          label: "Compras",
+          description: "Insumos & Suprimentos por OS",
+          href: "/admin/compras",
+          icon: ShoppingCart,
+          active: pathname.startsWith("/admin/compras"),
+        },
         {
           label: "Linha de Produção",
           description: "8 Fases Fabris & Provas de Arte",

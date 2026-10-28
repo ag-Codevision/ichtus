@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { generateBudgetPDF } from "@/lib/documents/budget-pdf-generator";
 import { syncLeadBudgetDocument } from "@/lib/crm/budget-sync";
+import { syncServicePurchases } from "@/lib/purchases/sync-service-purchases";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -204,6 +205,15 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         activities: { orderBy: { createdAt: "desc" } },
       },
     });
+
+    // Sincroniza materiais, estoque e compras caso materials tenha sido informado
+    if (materials !== undefined && Array.isArray(materials)) {
+      try {
+        await syncServicePurchases(id, materials, body.userName);
+      } catch (purchasesErr) {
+        console.warn("[CRM] Aviso ao sincronizar materiais e compras no PATCH:", purchasesErr);
+      }
+    }
 
     // Sincroniza dinamicamente o documento oficial de orçamento e regera o PDF em tempo real
     try {

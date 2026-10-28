@@ -120,6 +120,12 @@ enum MovementType {
   MANUAL_ADJUSTMENT
 }
 
+enum PurchaseItemStatus {
+  PENDING
+  PURCHASED
+  CANCELLED
+}
+
 enum PostStatus {
   DRAFT
   PUBLISHED
@@ -282,6 +288,7 @@ model Lead {
   activities      LeadActivity[]
   serviceOrders   ServiceOrder[]
   documents       Document[]
+  purchaseItems   ServicePurchaseItem[]
 
   @@map("leads")
 }
@@ -496,6 +503,7 @@ model StockItem {
   updatedAt       DateTime        @updatedAt
 
   movements       StockMovement[]
+  purchaseItems   ServicePurchaseItem[]
 
   @@map("stock_items")
 }
@@ -560,6 +568,7 @@ model FinancialTransaction {
   bankAccount String?                  // Conta bancária / Caixa
   receiptUrl  String?
   createdAt   DateTime                 @default(now())
+  purchaseItems ServicePurchaseItem[]
 
   @@map("financial_transactions")
 }
@@ -701,4 +710,35 @@ model ProductionColumn {
   serviceOrders ServiceOrder[]
 
   @@map("production_columns")
+}
+
+// ====================================================
+// MÓDULO DE COMPRAS POR SERVIÇO / INSUMOS
+// ====================================================
+
+model ServicePurchaseItem {
+  id                     String                 @id @default(cuid())
+  leadId                 String
+  lead                   Lead                   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  stockItemId            String?
+  stockItem              StockItem?             @relation(fields: [stockItemId], references: [id], onDelete: SetNull)
+  name                   String                 // Nome do material / insumo
+  unit                   String                 @default("un")
+  quantity               Decimal                @db.Decimal(12, 3) // Quantidade a comprar
+  estimatedUnitCost      Decimal                @default(0.00) @db.Decimal(12, 2)
+  estimatedTotalCost     Decimal                @default(0.00) @db.Decimal(12, 2)
+  actualUnitCost         Decimal?               @db.Decimal(12, 2)
+  actualTotalCost        Decimal?               @db.Decimal(12, 2)
+  status                 PurchaseItemStatus     @default(PENDING)
+  purchasedAt            DateTime?              // Data e horário exato da baixa
+  purchasedBy            String?                // Usuário que realizou a compra
+  supplierName           String?                // Fornecedor onde foi adquirido
+  paymentMethod          PaymentMethod?         // Forma de pagamento
+  notes                  String?                @db.Text
+  financialTransactionId String?
+  financialTransaction   FinancialTransaction?  @relation(fields: [financialTransactionId], references: [id], onDelete: SetNull)
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+
+  @@map("service_purchase_items")
 }

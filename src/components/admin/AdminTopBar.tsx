@@ -19,6 +19,7 @@ export function AdminTopBar({ onOpenMobileMenu }: AdminTopBarProps) {
     if (pathname.startsWith("/admin/crm")) return "CRM & Base de Contatos";
     if (pathname.startsWith("/admin/agendamentos")) return "Agendamentos de Campo & Instalação";
     if (pathname.startsWith("/admin/producao")) return "Linha de Produção Fabril (8 Etapas)";
+    if (pathname.startsWith("/admin/compras")) return "Compras & Suprimentos por Serviço";
     if (pathname.startsWith("/admin/estoque")) return "Controle de Estoque & Insumos";
     if (pathname.startsWith("/admin/financeiro")) return "Gestão Financeira & DRE Fabril";
     if (pathname.startsWith("/admin/propostas")) return "Proposta Comercial Executiva";

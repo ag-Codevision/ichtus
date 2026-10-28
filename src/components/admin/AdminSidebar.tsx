@@ -13,6 +13,7 @@ import {
   Calendar,
   Layers,
   Package,
+  ShoppingCart,
   DollarSign,
   ChevronLeft,
   ChevronRight,
@@ -106,6 +107,13 @@ export function AdminSidebar({
   ];
 
   const factoryItems = [
+    {
+      label: "Compras",
+      description: "Insumos & Suprimentos por OS",
+      href: "/admin/compras",
+      icon: ShoppingCart,
+      active: pathname.startsWith("/admin/compras"),
+    },
     {
       label: "Linha de Produção",
       description: "8 Fases & Provas WACLI",

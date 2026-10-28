@@ -5,6 +5,7 @@ import { sendWhatsAppMessage } from "@/lib/whatsapp/wacli";
 import { generateNextBudgetCode } from "@/lib/crm/budget-code";
 import { generateBudgetPDF } from "@/lib/documents/budget-pdf-generator";
 import { syncLeadBudgetDocument } from "@/lib/crm/budget-sync";
+import { syncServicePurchases } from "@/lib/purchases/sync-service-purchases";
 
 /**
  * GET /api/v1/crm/leads
@@ -210,6 +211,15 @@ export async function POST(req: NextRequest) {
         userName: userName || "Equipe Icthus",
       },
     }).catch((e) => console.warn("Aviso ao registrar atividade inicial:", e));
+
+    // Sincroniza materiais com estoque e gera itens de compras quando faltante
+    if (Array.isArray(materials) && materials.length > 0) {
+      try {
+        await syncServicePurchases(lead.id, materials, userName);
+      } catch (purchasesErr) {
+        console.warn("[CRM] Falha ao sincronizar materiais e compras:", purchasesErr);
+      }
+    }
 
     // Se houver checklist inicial configurada
     if (initialChecklist && initialChecklist.title) {
