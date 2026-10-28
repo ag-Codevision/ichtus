@@ -27,19 +27,26 @@ import {
   Check,
   RotateCw,
   Sparkles,
+  Pencil,
+  Briefcase,
 } from "lucide-react";
 import { ClientSearchAutocomplete, SearchedClient } from "@/components/admin/crm/ClientSearchAutocomplete";
+import { ServiceSearchAutocomplete, SearchedService } from "@/components/admin/agendamentos/ServiceSearchAutocomplete";
+import { TeamMultiSelect } from "@/components/admin/agendamentos/TeamMultiSelect";
 
 interface Appointment {
   id: string;
   title: string;
-  type: "TECHNICAL_VISIT_MEASUREMENT" | "INTERNAL_PRODUCTION_RUN" | "EXTERNAL_INSTALLATION" | "DELIVERY_PICKUP";
+  type: "TECHNICAL_VISIT_MEASUREMENT" | "INTERNAL_PRODUCTION_RUN" | "EXTERNAL_INSTALLATION" | "DELIVERY_PICKUP" | "OTHER";
+  customType?: string | null;
   status: "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED" | "RESCHEDULED";
   scheduledAt: string;
   durationMinutes: number;
   locationAddress: string | null;
   assignedTeam: string | null;
+  assignedProviderIds?: string[];
   notes: string | null;
+  customerId?: string | null;
   customer?: {
     id?: string;
     tradeName: string | null;
@@ -47,7 +54,19 @@ interface Appointment {
     fullName?: string | null;
     phone?: string | null;
     whatsapp?: string | null;
+    street?: string | null;
+    number?: string | null;
+    neighborhood?: string | null;
+    city?: string | null;
     user?: { name: string; phone: string | null } | null;
+  } | null;
+  leadId?: string | null;
+  lead?: {
+    id: string;
+    title: string;
+    budgetCode: string | null;
+    column?: { id: string; name: string; color: string | null } | null;
+    category?: { id: string; name: string; color: string } | null;
   } | null;
   serviceOrder?: {
     code: string;
@@ -55,7 +74,7 @@ interface Appointment {
   } | null;
 }
 
-const typeConfig = {
+const typeConfig: Record<string, { label: string; shortLabel: string; icon: any; badge: string; pill: string; dot: string }> = {
   TECHNICAL_VISIT_MEASUREMENT: {
     label: "Visita Técnica & Medição",
     shortLabel: "Visita Técnica",
@@ -88,15 +107,37 @@ const typeConfig = {
     pill: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/60",
     dot: "bg-emerald-500",
   },
+  OTHER: {
+    label: "Outros",
+    shortLabel: "Outros",
+    icon: Sparkles,
+    badge: "bg-zinc-500/10 text-zinc-700 dark:text-zinc-300 border-zinc-500/20",
+    pill: "bg-zinc-100 text-zinc-700 border-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700",
+    dot: "bg-zinc-500",
+  },
 };
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; badge: string }> = {
   SCHEDULED: { label: "Agendado", badge: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
   IN_PROGRESS: { label: "Em Andamento", badge: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" },
   COMPLETED: { label: "Concluído", badge: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" },
   CANCELLED: { label: "Cancelado", badge: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" },
   RESCHEDULED: { label: "Reagendado", badge: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" },
 };
+
+function getAppointmentDisplayType(app: Appointment) {
+  if (app.type === "OTHER" && app.customType) {
+    return app.customType;
+  }
+  return typeConfig[app.type]?.label || "Compromisso";
+}
+
+function getAppointmentDisplayShortType(app: Appointment) {
+  if (app.type === "OTHER" && app.customType) {
+    return app.customType;
+  }
+  return typeConfig[app.type]?.shortLabel || "Outros";
+}
 
 const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const weekDaysFull = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
@@ -122,6 +163,7 @@ export default function AgendamentosPage() {
 
   // Modais
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -129,13 +171,17 @@ export default function AgendamentosPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
-  // Cliente selecionado no modal
+  // Seleções do formulário
   const [selectedClient, setSelectedClient] = useState<SearchedClient | null>(null);
+  const [selectedService, setSelectedService] = useState<SearchedService | null>(null);
+  const [selectedProviderIds, setSelectedProviderIds] = useState<string[]>([]);
+  const [customTeamName, setCustomTeamName] = useState<string>("");
 
-  // Formulário de Novo Agendamento
+  // Formulário de Agendamento (Criação & Edição)
   const [form, setForm] = useState({
     title: "",
     type: "TECHNICAL_VISIT_MEASUREMENT" as Appointment["type"],
+    customType: "",
     scheduledDate: new Date().toISOString().split("T")[0],
     scheduledTime: "09:00",
     durationMinutes: "60",
@@ -178,16 +224,21 @@ export default function AgendamentosPage() {
     setSelectedDate(today);
   };
 
-  // Abrir modal com dia pré-selecionado
+  // Abrir modal de novo agendamento com dia pré-selecionado
   const handleOpenNewAppointmentOnDate = (date: Date) => {
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     const dd = String(date.getDate()).padStart(2, "0");
     setSelectedDate(date);
+    setEditingAppointmentId(null);
     setSelectedClient(null);
+    setSelectedService(null);
+    setSelectedProviderIds([]);
+    setCustomTeamName("");
     setForm({
       title: "",
       type: "TECHNICAL_VISIT_MEASUREMENT",
+      customType: "",
       scheduledDate: `${yyyy}-${mm}-${dd}`,
       scheduledTime: "09:00",
       durationMinutes: "60",
@@ -196,6 +247,90 @@ export default function AgendamentosPage() {
       notes: "",
       notifyPhone: "",
     });
+    setFormError(null);
+    setIsModalOpen(true);
+  };
+
+  // Abrir modal de edição com dados existentes
+  const handleOpenEditAppointment = (app: Appointment) => {
+    setIsDetailsOpen(false);
+    setEditingAppointmentId(app.id);
+
+    const appDate = new Date(app.scheduledAt);
+    const yyyy = appDate.getFullYear();
+    const mm = String(appDate.getMonth() + 1).padStart(2, "0");
+    const dd = String(appDate.getDate()).padStart(2, "0");
+    const hh = String(appDate.getHours()).padStart(2, "0");
+    const min = String(appDate.getMinutes()).padStart(2, "0");
+
+    // Cliente
+    if (app.customer) {
+      setSelectedClient({
+        id: app.customer.id || "",
+        displayName: app.customer.tradeName || app.customer.fullName || app.customer.companyName || "Cliente",
+        companyName: app.customer.companyName,
+        tradeName: app.customer.tradeName,
+        fullName: app.customer.fullName || null,
+        type: "CUSTOMER",
+        personType: "PJ",
+        documentNumber: null,
+        phone: app.customer.phone || null,
+        whatsapp: app.customer.whatsapp || null,
+        email: null,
+        city: app.customer.city || null,
+        state: null,
+        status: "ACTIVE",
+      });
+    } else {
+      setSelectedClient(null);
+    }
+
+    // Serviço Vinculado
+    if (app.lead) {
+      setSelectedService({
+        id: app.lead.id,
+        title: app.lead.title,
+        budgetCode: app.lead.budgetCode,
+        contactName: app.customer?.fullName || "",
+        contactPhone: app.customer?.whatsapp || app.customer?.phone || "",
+        customerId: app.customerId || null,
+        customer: app.customer ? {
+          id: app.customer.id || "",
+          tradeName: app.customer.tradeName,
+          companyName: app.customer.companyName,
+          fullName: app.customer.fullName || null,
+          phone: app.customer.phone || null,
+          whatsapp: app.customer.whatsapp || null,
+          city: app.customer.city || null,
+          street: app.customer.street || null,
+          number: app.customer.number || null,
+          neighborhood: app.customer.neighborhood || null,
+        } : null,
+        category: app.lead.category ? { id: app.lead.category.id, name: app.lead.category.name, color: app.lead.category.color } : null,
+        column: app.lead.column ? { id: app.lead.column.id, name: app.lead.column.name, color: app.lead.column.color || "" } : null,
+      });
+    } else {
+      setSelectedService(null);
+    }
+
+    // Prestadores e Equipe
+    setSelectedProviderIds(app.assignedProviderIds || []);
+    setCustomTeamName(app.assignedTeam || "");
+
+    // Formulário
+    setForm({
+      title: app.title,
+      type: app.type,
+      customType: app.customType || "",
+      scheduledDate: `${yyyy}-${mm}-${dd}`,
+      scheduledTime: `${hh}:${min}`,
+      durationMinutes: String(app.durationMinutes || 60),
+      locationAddress: app.locationAddress || "",
+      assignedTeam: app.assignedTeam || "Equipe de Campo 01",
+      notes: app.notes || "",
+      notifyPhone: app.customer?.whatsapp || app.customer?.phone || "",
+    });
+
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -233,8 +368,9 @@ export default function AgendamentosPage() {
       if (data.success) {
         setAppointments((prev) => prev.filter((a) => a.id !== id));
         setIsDetailsOpen(false);
+        setIsModalOpen(false);
         setSelectedAppointment(null);
-        setSuccessToast("Agendamento excluído com sucesso.");
+        setSuccessToast("Agendamento excluído com sucesso do cronograma.");
         setTimeout(() => setSuccessToast(null), 3500);
       } else {
         alert(data.error || "Não foi possível excluir o agendamento.");
@@ -247,39 +383,63 @@ export default function AgendamentosPage() {
     }
   };
 
-  // Submissão do Novo Agendamento
-  const handleCreateAppointment = async (e: React.FormEvent) => {
+  // Submissão do Formulário (Criação ou Edição)
+  const handleSubmitAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setFormError(null);
 
     try {
+      if (form.type === "OTHER" && !form.customType.trim()) {
+        throw new Error("Por favor, descreva qual é o outro tipo de operação no campo indicado.");
+      }
+
       const scheduledAtIso = new Date(`${form.scheduledDate}T${form.scheduledTime}:00`).toISOString();
 
-      const res = await fetch("/api/v1/appointments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: form.title.trim(),
-          type: form.type,
-          scheduledAt: scheduledAtIso,
-          durationMinutes: Number(form.durationMinutes) || 60,
-          locationAddress: form.locationAddress.trim() || null,
-          assignedTeam: form.assignedTeam.trim() || "Equipe de Campo 01",
-          notes: form.notes.trim() || null,
-          customerId: selectedClient?.id || null,
-          notifyPhone: form.notifyPhone.trim() || selectedClient?.whatsapp || selectedClient?.phone || null,
-        }),
-      });
+      const payload = {
+        title: form.title.trim(),
+        type: form.type,
+        customType: form.type === "OTHER" ? form.customType.trim() : null,
+        scheduledAt: scheduledAtIso,
+        durationMinutes: Number(form.durationMinutes) || 60,
+        locationAddress: form.locationAddress.trim() || null,
+        assignedTeam: customTeamName.trim() || form.assignedTeam.trim() || "Equipe Técnica",
+        assignedProviderIds: selectedProviderIds,
+        notes: form.notes.trim() || null,
+        customerId: selectedClient?.id || null,
+        leadId: selectedService?.id || null,
+        notifyPhone: form.notifyPhone.trim() || selectedClient?.whatsapp || selectedClient?.phone || null,
+      };
+
+      let res;
+      if (editingAppointmentId) {
+        // Atualização (PATCH)
+        res = await fetch(`/api/v1/appointments/${editingAppointmentId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        // Criação (POST)
+        res = await fetch("/api/v1/appointments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
 
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data?.success) {
-        throw new Error(data?.error || data?.details || "Falha ao registrar agendamento.");
+        throw new Error(data?.error || data?.details || "Falha ao salvar o agendamento.");
       }
 
       setIsModalOpen(false);
-      setSuccessToast("Compromisso técnico agendado no calendário com sucesso!");
+      setSuccessToast(
+        editingAppointmentId
+          ? "Agendamento atualizado com sucesso no calendário!"
+          : "Compromisso técnico agendado no calendário com sucesso!"
+      );
       setTimeout(() => setSuccessToast(null), 4000);
 
       await fetchAppointments();
@@ -300,18 +460,14 @@ export default function AgendamentosPage() {
     });
   }, [appointments, statusFilter, typeFilter]);
 
-  // Estatísticas Rápidas do Mês e de Hoje
-  const today = new Date();
-  const todayAppointments = useMemo(() => {
-    return appointments.filter((a) => isSameDay(new Date(a.scheduledAt), today));
-  }, [appointments]);
-
+  // Estatísticas do Mês
   const monthStats = useMemo(() => {
-    const curY = currentDate.getFullYear();
-    const curM = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+
     const inMonth = appointments.filter((a) => {
       const d = new Date(a.scheduledAt);
-      return d.getFullYear() === curY && d.getMonth() === curM;
+      return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
     });
 
     return {
@@ -327,105 +483,86 @@ export default function AgendamentosPage() {
     return filteredAppointments.filter((a) => isSameDay(new Date(a.scheduledAt), selectedDate));
   }, [filteredAppointments, selectedDate]);
 
-  // Construção dos Dias da Grade Mensal
+  // Compromissos de Hoje
+  const today = useMemo(() => new Date(), []);
+  const todayAppointments = useMemo(() => {
+    return appointments.filter((a) => isSameDay(new Date(a.scheduledAt), today));
+  }, [appointments, today]);
+
+  // Geração dos Dias do Mês na Grade do Calendário
   const calendarDays = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
 
-    const firstDay = new Date(year, month, 1);
-    const startDayOfWeek = firstDay.getDay(); // 0 = Domingo
-    const daysInCurrentMonth = new Date(year, month + 1, 0).getDate();
-    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const lastDayDate = new Date(year, month + 1, 0).getDate();
+    const prevLastDayDate = new Date(year, month, 0).getDate();
 
-    const days: {
-      date: Date;
-      isCurrentMonth: boolean;
-      isToday: boolean;
-      isSelected: boolean;
-      appointments: Appointment[];
-    }[] = [];
+    const days = [];
 
-    // Dias do mês anterior
-    for (let i = startDayOfWeek - 1; i >= 0; i--) {
-      const d = new Date(year, month - 1, daysInPrevMonth - i);
+    // Dias do mês anterior para completar a 1ª semana
+    for (let x = firstDayIndex; x > 0; x--) {
       days.push({
-        date: d,
+        date: new Date(year, month - 1, prevLastDayDate - x + 1),
         isCurrentMonth: false,
-        isToday: isSameDay(d, today),
-        isSelected: isSameDay(d, selectedDate),
-        appointments: filteredAppointments.filter((a) => isSameDay(new Date(a.scheduledAt), d)),
       });
     }
 
     // Dias do mês atual
-    for (let day = 1; day <= daysInCurrentMonth; day++) {
-      const d = new Date(year, month, day);
+    for (let i = 1; i <= lastDayDate; i++) {
       days.push({
-        date: d,
+        date: new Date(year, month, i),
         isCurrentMonth: true,
-        isToday: isSameDay(d, today),
-        isSelected: isSameDay(d, selectedDate),
-        appointments: filteredAppointments.filter((a) => isSameDay(new Date(a.scheduledAt), d)),
       });
     }
 
-    // Dias do próximo mês para completar grade
-    const remainingDays = 42 - days.length;
-    for (let day = 1; day <= remainingDays; day++) {
-      const d = new Date(year, month + 1, day);
-      days.push({
-        date: d,
-        isCurrentMonth: false,
-        isToday: isSameDay(d, today),
-        isSelected: isSameDay(d, selectedDate),
-        appointments: filteredAppointments.filter((a) => isSameDay(new Date(a.scheduledAt), d)),
-      });
+    // Dias do próximo mês para fechar a grade (múltiplo de 7)
+    const remainingDays = 7 - (days.length % 7);
+    if (remainingDays < 7) {
+      for (let j = 1; j <= remainingDays; j++) {
+        days.push({
+          date: new Date(year, month + 1, j),
+          isCurrentMonth: false,
+        });
+      }
     }
 
     return days;
-  }, [currentDate, selectedDate, filteredAppointments]);
-
-  // Formatação do Título do Mês
-  const monthTitle = useMemo(() => {
-    const raw = currentDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-    return raw.charAt(0).toUpperCase() + raw.slice(1);
   }, [currentDate]);
 
+  const monthTitle = currentDate.toLocaleDateString("pt-BR", {
+    month: "long",
+    year: "numeric",
+  });
+
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col space-y-6 animate-in fade-in duration-300">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto min-h-screen">
       {/* Toast de Sucesso */}
       {successToast && (
-        <div className="fixed top-6 right-6 z-[120] p-4 rounded-2xl bg-emerald-500 text-white shadow-2xl text-xs font-bold flex items-center gap-2.5 animate-in slide-in-from-top-3 duration-200">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
+        <div className="fixed top-6 right-6 z-[120] bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-bold border border-white/10 dark:border-black/10 animate-in slide-in-from-top duration-300">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 dark:text-emerald-600 shrink-0" />
           <span>{successToast}</span>
         </div>
       )}
 
-      {/* CABEÇALHO PRINCIPAL DO CALENDÁRIO */}
-      <div className="p-6 sm:p-7 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FF650F] bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#FF650F] animate-pulse" />
-              Cronograma Operacional & Equipes
-            </span>
-            <span className="text-xs text-zinc-400">
-              {todayAppointments.length > 0 ? `${todayAppointments.length} atendimento(s) hoje` : "Sem visitas agendadas hoje"}
-            </span>
+      {/* CABEÇALHO DA PÁGINA */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">
+            <CalendarIcon className="w-3.5 h-3.5 text-[#FF650F]" />
+            <span>Operações & Campo</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight flex items-center gap-3">
-            <CalendarIcon className="w-7 h-7 text-[#FF650F]" />
-            Agenda & Calendário Técnico
+          <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">
+            Agendamentos & Montagens
           </h1>
-          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
-            Acompanhe visualmente visitas de medição, montagens externas de fachadas e produção CNC no calendário.
+          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+            Acompanhe o cronograma de medições, instalações externas de fachadas e produção CNC no calendário.
           </p>
         </div>
 
-        {/* Ações e Navegação */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Alternador de Visualização (Mês / Semana / Lista) */}
-          <div className="flex items-center p-1 bg-zinc-100 dark:bg-white/[0.06] rounded-2xl border border-black/[0.04] dark:border-white/[0.05]">
+        {/* Botão Novo Agendamento & Seletores de Visão */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-zinc-100 dark:bg-white/[0.06] p-1 rounded-2xl border border-black/[0.05] dark:border-white/[0.05]">
             <button
               type="button"
               onClick={() => setViewMode("month")}
@@ -468,7 +605,7 @@ export default function AgendamentosPage() {
             variant="primary"
             size="md"
             onClick={() => handleOpenNewAppointmentOnDate(selectedDate)}
-            className="gap-2 text-xs font-bold rounded-2xl shadow-sm"
+            className="gap-2 text-xs font-bold rounded-2xl shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             Novo Agendamento
@@ -536,14 +673,14 @@ export default function AgendamentosPage() {
               type="button"
               onClick={handlePrevMonth}
               title="Mês Anterior"
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-[#18191E] hover:text-zinc-900 dark:hover:text-white shadow-2xs transition-all"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-[#18191E] hover:text-zinc-900 dark:hover:text-white shadow-2xs transition-all cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={handleToday}
-              className="px-3 py-1 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-[#18191E] transition-all"
+              className="px-3 py-1 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-[#18191E] transition-all cursor-pointer"
             >
               Hoje
             </button>
@@ -551,13 +688,13 @@ export default function AgendamentosPage() {
               type="button"
               onClick={handleNextMonth}
               title="Próximo Mês"
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-[#18191E] hover:text-zinc-900 dark:hover:text-white shadow-2xs transition-all"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-[#18191E] hover:text-zinc-900 dark:hover:text-white shadow-2xs transition-all cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
-          <h2 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-white tracking-tight">
+          <h2 className="text-lg sm:text-xl font-black text-zinc-900 dark:text-white tracking-tight capitalize">
             {monthTitle}
           </h2>
         </div>
@@ -575,6 +712,7 @@ export default function AgendamentosPage() {
             <option value="EXTERNAL_INSTALLATION">Instalação Externa Fachada</option>
             <option value="INTERNAL_PRODUCTION_RUN">Produção Interna CNC</option>
             <option value="DELIVERY_PICKUP">Entrega / Retirada</option>
+            <option value="OTHER">Outros</option>
           </select>
 
           {/* Filtro de Status */}
@@ -587,6 +725,7 @@ export default function AgendamentosPage() {
             <option value="SCHEDULED">Agendado</option>
             <option value="IN_PROGRESS">Em Andamento</option>
             <option value="COMPLETED">Concluído</option>
+            <option value="CANCELLED">Cancelado</option>
           </select>
         </div>
       </div>
@@ -598,71 +737,70 @@ export default function AgendamentosPage() {
           <div className="lg:col-span-8 bg-white dark:bg-[#18191E] rounded-3xl border border-black/[0.06] dark:border-white/[0.08] shadow-sm overflow-hidden flex flex-col">
             {/* Cabeçalho dos Dias da Semana */}
             <div className="grid grid-cols-7 border-b border-black/[0.06] dark:border-white/[0.08] bg-zinc-50/70 dark:bg-white/[0.02]">
-              {weekDays.map((day, idx) => (
+              {weekDays.map((d, idx) => (
                 <div
-                  key={day}
-                  className={`py-3 text-center text-xs font-bold ${
+                  key={d}
+                  className={`py-3 text-center text-xs font-bold uppercase tracking-wider ${
                     idx === 0 || idx === 6
-                      ? "text-zinc-400 dark:text-zinc-500"
-                      : "text-zinc-700 dark:text-zinc-300"
+                      ? "text-orange-600/70 dark:text-orange-400/70"
+                      : "text-zinc-500 dark:text-zinc-400"
                   }`}
                 >
-                  {day}
+                  {d}
                 </div>
               ))}
             </div>
 
-            {/* Células dos Dias */}
-            <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-black/[0.05] dark:divide-white/[0.06] flex-1">
+            {/* Células de Dias do Calendário */}
+            <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-black/[0.04] dark:divide-white/[0.05] bg-zinc-100/40 dark:bg-black/20 flex-1">
               {calendarDays.map((cell, idx) => {
-                const dayNum = cell.date.getDate();
-                const hasAppointments = cell.appointments.length > 0;
+                const dayAppointments = filteredAppointments.filter((a) =>
+                  isSameDay(new Date(a.scheduledAt), cell.date)
+                );
+                const isCellToday = isSameDay(cell.date, today);
+                const isCellSelected = isSameDay(cell.date, selectedDate);
 
                 return (
                   <div
                     key={idx}
                     onClick={() => setSelectedDate(cell.date)}
-                    className={`min-h-[96px] sm:min-h-[115px] p-1.5 sm:p-2 flex flex-col justify-between transition-colors cursor-pointer group relative ${
+                    onDoubleClick={() => handleOpenNewAppointmentOnDate(cell.date)}
+                    className={`min-h-[92px] sm:min-h-[115px] p-2 sm:p-2.5 transition-colors relative cursor-pointer flex flex-col justify-between group ${
                       !cell.isCurrentMonth
-                        ? "bg-zinc-50/40 dark:bg-white/[0.01] text-zinc-300 dark:text-zinc-600"
-                        : cell.isSelected
-                        ? "bg-orange-500/[0.06] dark:bg-orange-500/[0.08]"
-                        : "bg-white dark:bg-[#18191E] hover:bg-zinc-50 dark:hover:bg-white/[0.03]"
-                    }`}
+                        ? "bg-zinc-50/40 dark:bg-black/40 text-zinc-300 dark:text-zinc-600"
+                        : "bg-white dark:bg-[#18191E] hover:bg-orange-500/[0.03] dark:hover:bg-orange-500/[0.05]"
+                    } ${isCellSelected ? "ring-2 ring-inset ring-[#FF650F] z-10" : ""}`}
                   >
-                    {/* Topo da Célula: Número do Dia & Botão Rápido + */}
                     <div className="flex items-center justify-between">
                       <span
-                        className={`text-xs font-bold flex items-center justify-center w-6 h-6 rounded-full transition-all ${
-                          cell.isToday
-                            ? "bg-[#FF650F] text-white shadow-xs font-black ring-2 ring-orange-500/20"
-                            : cell.isSelected
-                            ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                        className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                          isCellToday
+                            ? "bg-[#FF650F] text-white shadow-xs font-black"
                             : cell.isCurrentMonth
-                            ? "text-zinc-800 dark:text-zinc-200 group-hover:text-[#FF650F]"
-                            : "text-zinc-300 dark:text-zinc-600"
+                            ? "text-zinc-800 dark:text-zinc-200"
+                            : "text-zinc-400 dark:text-zinc-600"
                         }`}
                       >
-                        {dayNum}
+                        {cell.date.getDate()}
                       </span>
 
-                      {/* Botão sutil de adicionar ao passar o mouse */}
+                      {/* Botão rápido para criar agendamento neste dia */}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleOpenNewAppointmentOnDate(cell.date);
                         }}
-                        title={`Agendar compromisso no dia ${dayNum}`}
-                        className="opacity-0 group-hover:opacity-100 w-5 h-5 rounded-md bg-orange-500/10 hover:bg-[#FF650F] text-[#FF650F] hover:text-white flex items-center justify-center transition-all"
+                        title="Agendar neste dia"
+                        className="opacity-0 group-hover:opacity-100 w-5 h-5 rounded-md bg-orange-500/10 text-[#FF650F] hover:bg-[#FF650F] hover:text-white flex items-center justify-center transition-all"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
                     </div>
 
-                    {/* Lista de Eventos na Célula */}
-                    <div className="space-y-1 my-1 overflow-hidden">
-                      {cell.appointments.slice(0, 3).map((app) => {
+                    {/* Chips de Compromissos do Dia */}
+                    <div className="space-y-1 mt-1 flex-1 overflow-hidden">
+                      {dayAppointments.slice(0, 3).map((app) => {
                         const cfg = typeConfig[app.type] || typeConfig.TECHNICAL_VISIT_MEASUREMENT;
                         const timeStr = new Date(app.scheduledAt).toLocaleTimeString("pt-BR", {
                           hour: "2-digit",
@@ -686,22 +824,10 @@ export default function AgendamentosPage() {
                         );
                       })}
 
-                      {cell.appointments.length > 3 && (
-                        <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 pl-1 block">
-                          +{cell.appointments.length - 3} mais
+                      {dayAppointments.length > 3 && (
+                        <span className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 block text-right pr-1">
+                          +{dayAppointments.length - 3} mais
                         </span>
-                      )}
-                    </div>
-
-                    {/* Indicador inferior se tem agendamento */}
-                    <div className="h-1 flex items-center gap-1">
-                      {hasAppointments && (
-                        <div className="flex items-center gap-1">
-                          {cell.appointments.slice(0, 4).map((a, i) => {
-                            const cfg = typeConfig[a.type] || typeConfig.TECHNICAL_VISIT_MEASUREMENT;
-                            return <span key={i} className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />;
-                          })}
-                        </div>
                       )}
                     </div>
                   </div>
@@ -710,34 +836,34 @@ export default function AgendamentosPage() {
             </div>
           </div>
 
-          {/* PAINEL LATERAL: AGENDA DO DIA SELECIONADO (4 COLUNAS) */}
+          {/* COLUNA LATERAL DIREITA: DETALHES DO DIA SELECIONADO (4 COLUNAS) */}
           <div className="lg:col-span-4 space-y-4">
             <div className="p-5 rounded-3xl bg-white dark:bg-[#18191E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-black/[0.05] dark:border-white/[0.06]">
+              <div className="flex items-center justify-between pb-3 border-b border-black/[0.04] dark:border-white/[0.05]">
                 <div>
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#FF650F] block">
-                    {isSameDay(selectedDate, today) ? "Hoje" : "Dia Selecionado"}
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#FF650F] block">
+                    {weekDaysFull[selectedDate.getDay()]}
                   </span>
-                  <h3 className="text-base font-black text-zinc-900 dark:text-white capitalize">
-                    {selectedDate.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+                  <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white">
+                    {formatDate(selectedDate)}
                   </h3>
                 </div>
 
                 <Button
-                  variant="primary"
                   size="sm"
+                  variant="outline"
                   onClick={() => handleOpenNewAppointmentOnDate(selectedDate)}
-                  className="rounded-full text-xs font-bold gap-1 px-3"
+                  className="rounded-xl text-xs font-bold gap-1 border-orange-500/20 text-[#FF650F] hover:bg-orange-500/10 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Agendar</span>
                 </Button>
               </div>
 
-              {/* Lista dos Agendamentos do Dia Selecionado */}
+              {/* Lista dos Compromissos do Dia */}
               {selectedDayAppointments.length === 0 ? (
-                <div className="py-12 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-white/[0.05] text-zinc-400 flex items-center justify-center mx-auto">
+                <div className="py-12 text-center space-y-2">
+                  <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-white/[0.04] text-zinc-400 flex items-center justify-center mx-auto">
                     <CalendarIcon className="w-6 h-6" />
                   </div>
                   <div>
@@ -766,20 +892,29 @@ export default function AgendamentosPage() {
                           setSelectedAppointment(app);
                           setIsDetailsOpen(true);
                         }}
-                        className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] hover:bg-orange-500/[0.04] dark:hover:bg-orange-500/[0.08] border border-black/[0.05] dark:border-white/[0.06] hover:border-orange-500/30 transition-all cursor-pointer space-y-2 group shadow-2xs"
+                        className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] hover:bg-orange-500/[0.04] dark:hover:bg-orange-500/[0.08] border border-black/[0.05] dark:border-white/[0.06] hover:border-orange-500/30 transition-all cursor-pointer space-y-2 group shadow-2xs relative"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.badge}`}>
-                            {cfg.shortLabel}
+                            {getAppointmentDisplayShortType(app)}
                           </span>
                           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${st.badge}`}>
                             {st.label}
                           </span>
                         </div>
 
-                        <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white group-hover:text-[#FF650F] transition-colors">
+                        <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white group-hover:text-[#FF650F] transition-colors leading-snug">
                           {app.title}
                         </h4>
+
+                        {/* Chip do Serviço Vinculado (se houver) */}
+                        {app.lead && (
+                          <div className="flex items-center gap-1.5 text-[11px] bg-orange-500/10 text-[#FF650F] border border-orange-500/20 px-2 py-0.5 rounded-lg font-semibold truncate">
+                            <Briefcase className="w-3 h-3 shrink-0" />
+                            <span className="font-mono text-[10px]">#{app.lead.budgetCode || "Serviço"}</span>
+                            <span className="truncate">{app.lead.title}</span>
+                          </div>
+                        )}
 
                         <div className="space-y-1 text-xs text-zinc-500 dark:text-zinc-400">
                           <div className="flex items-center gap-1.5 font-medium text-zinc-700 dark:text-zinc-300">
@@ -796,7 +931,7 @@ export default function AgendamentosPage() {
                           )}
 
                           {app.customer && (
-                            <div className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">
+                            <div className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 truncate">
                               Cliente: {app.customer.tradeName || app.customer.fullName || app.customer.companyName || "Cliente"}
                             </div>
                           )}
@@ -804,35 +939,45 @@ export default function AgendamentosPage() {
 
                         {/* Botões Rápidos */}
                         <div className="pt-2 border-t border-black/[0.04] dark:border-white/[0.05] flex items-center justify-between">
-                          <span className="text-[10px] font-semibold text-[#FF650F] group-hover:underline flex items-center gap-1">
-                            Ver Detalhes
-                            <ChevronRight className="w-3 h-3" />
-                          </span>
-                          {app.status === "SCHEDULED" && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleUpdateStatus(app.id, "IN_PROGRESS");
-                              }}
-                              className="text-[10px] font-bold text-amber-600 hover:underline"
-                            >
-                              Iniciar Atendimento
-                            </button>
-                          )}
-                          {app.status === "IN_PROGRESS" && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleUpdateStatus(app.id, "COMPLETED");
-                              }}
-                              className="text-[10px] font-bold text-emerald-600 hover:underline flex items-center gap-0.5"
-                            >
-                              <Check className="w-3 h-3" />
-                              Concluir
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditAppointment(app);
+                            }}
+                            className="text-[11px] font-bold text-zinc-500 hover:text-[#FF650F] flex items-center gap-1 transition-colors"
+                          >
+                            <Pencil className="w-3 h-3" />
+                            <span>Editar</span>
+                          </button>
+
+                          <div className="flex items-center gap-2">
+                            {app.status === "SCHEDULED" && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUpdateStatus(app.id, "IN_PROGRESS");
+                                }}
+                                className="text-[10px] font-bold text-amber-600 hover:underline cursor-pointer"
+                              >
+                                Iniciar Atendimento
+                              </button>
+                            )}
+                            {app.status === "IN_PROGRESS" && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUpdateStatus(app.id, "COMPLETED");
+                                }}
+                                className="text-[10px] font-bold text-emerald-600 hover:underline flex items-center gap-0.5 cursor-pointer"
+                              >
+                                <Check className="w-3 h-3" />
+                                Concluir
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -849,7 +994,6 @@ export default function AgendamentosPage() {
         <div className="bg-white dark:bg-[#18191E] rounded-3xl border border-black/[0.06] dark:border-white/[0.08] shadow-sm p-4 sm:p-6 overflow-x-auto no-scrollbar">
           <div className="min-w-[800px] grid grid-cols-7 gap-3">
             {(() => {
-              // Calcula os 7 dias da semana selecionada
               const startOfWeek = new Date(selectedDate);
               startOfWeek.setDate(selectedDate.getDate() - selectedDate.getDay());
 
@@ -899,7 +1043,7 @@ export default function AgendamentosPage() {
                           handleOpenNewAppointmentOnDate(dayDate);
                         }}
                         title="Agendar neste dia"
-                        className="w-6 h-6 rounded-lg bg-orange-500/10 text-[#FF650F] hover:bg-[#FF650F] hover:text-white flex items-center justify-center transition-all"
+                        className="w-6 h-6 rounded-lg bg-orange-500/10 text-[#FF650F] hover:bg-[#FF650F] hover:text-white flex items-center justify-center transition-all cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
                       </button>
@@ -932,12 +1076,17 @@ export default function AgendamentosPage() {
                               <div className="flex items-center justify-between text-[10px] font-bold">
                                 <span className="text-[#FF650F] font-mono">{timeStr}</span>
                                 <span className={`px-1.5 py-0.2 rounded-full border text-[9px] ${cfg.badge}`}>
-                                  {cfg.shortLabel}
+                                  {getAppointmentDisplayShortType(app)}
                                 </span>
                               </div>
                               <h5 className="text-xs font-bold text-zinc-900 dark:text-white line-clamp-2 leading-snug">
                                 {app.title}
                               </h5>
+                              {app.lead && (
+                                <p className="text-[9px] font-mono font-bold text-[#FF650F] truncate">
+                                  #{app.lead.budgetCode} {app.lead.title}
+                                </p>
+                              )}
                               {app.locationAddress && (
                                 <p className="text-[10px] text-zinc-400 truncate flex items-center gap-1">
                                   <MapPin className="w-2.5 h-2.5 shrink-0" />
@@ -957,7 +1106,7 @@ export default function AgendamentosPage() {
         </div>
       )}
 
-      {/* VISUALIZAÇÃO EM LISTA / TIMELINE (LIST VIEW) */}
+      {/* VISUALIZAÇÃO EM LISTA (LIST VIEW) */}
       {viewMode === "list" && (
         <div className="bg-white dark:bg-[#18191E] rounded-3xl border border-black/[0.06] dark:border-white/[0.08] shadow-sm p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-black/[0.04] dark:border-white/[0.05]">
@@ -989,7 +1138,7 @@ export default function AgendamentosPage() {
                   >
                     <div className="flex items-center justify-between">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.badge}`}>
-                        {cfg.label}
+                        {getAppointmentDisplayType(app)}
                       </span>
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${st.badge}`}>
                         {st.label}
@@ -999,6 +1148,15 @@ export default function AgendamentosPage() {
                     <h4 className="text-sm font-bold text-zinc-900 dark:text-white leading-snug">
                       {app.title}
                     </h4>
+
+                    {/* Chip de Serviço Vinculado */}
+                    {app.lead && (
+                      <div className="flex items-center gap-1.5 text-xs bg-orange-500/10 text-[#FF650F] border border-orange-500/20 px-2.5 py-1 rounded-xl font-semibold">
+                        <Briefcase className="w-3.5 h-3.5 shrink-0" />
+                        <span className="font-mono text-[11px]">#{app.lead.budgetCode}</span>
+                        <span className="truncate">{app.lead.title}</span>
+                      </div>
+                    )}
 
                     <div className="space-y-1.5 text-xs text-zinc-600 dark:text-zinc-400">
                       <div className="flex items-center gap-2 text-zinc-900 dark:text-white font-semibold">
@@ -1015,7 +1173,7 @@ export default function AgendamentosPage() {
                       {app.assignedTeam && (
                         <div className="flex items-center gap-2">
                           <Users className="w-4 h-4 text-zinc-400 shrink-0" />
-                          <span>{app.assignedTeam}</span>
+                          <span className="truncate">{app.assignedTeam}</span>
                         </div>
                       )}
                     </div>
@@ -1025,6 +1183,33 @@ export default function AgendamentosPage() {
                         {app.notes}
                       </p>
                     )}
+
+                    {/* Botões do Card */}
+                    <div className="pt-2 border-t border-black/[0.04] dark:border-white/[0.05] flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEditAppointment(app);
+                        }}
+                        className="text-xs font-bold text-zinc-500 hover:text-[#FF650F] flex items-center gap-1 transition-colors"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span>Editar</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteAppointment(app.id);
+                        }}
+                        className="text-xs font-bold text-zinc-400 hover:text-red-500 flex items-center gap-1 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Excluir</span>
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -1034,7 +1219,7 @@ export default function AgendamentosPage() {
       )}
 
       {/* ======================================================== */}
-      {/* MODAL DE DETALHES DO AGENDAMENTO (GAVETA / POP-UP)       */}
+      {/* MODAL: DETALHES DO AGENDAMENTO SELECIONADO                */}
       {/* ======================================================== */}
       {isDetailsOpen && selectedAppointment && (
         <div
@@ -1049,7 +1234,7 @@ export default function AgendamentosPage() {
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${typeConfig[selectedAppointment.type]?.badge}`}>
-                  {typeConfig[selectedAppointment.type]?.label}
+                  {getAppointmentDisplayType(selectedAppointment)}
                 </span>
                 <h3 className="text-lg font-black text-zinc-900 dark:text-white leading-tight">
                   {selectedAppointment.title}
@@ -1058,7 +1243,7 @@ export default function AgendamentosPage() {
               <button
                 type="button"
                 onClick={() => setIsDetailsOpen(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.05]"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.05] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1081,9 +1266,62 @@ export default function AgendamentosPage() {
                 </span>
               </div>
 
+              {/* Serviço Vinculado do Kanban */}
+              {selectedAppointment.lead && (
+                <div className="space-y-1 pt-1 border-t border-black/[0.04] dark:border-white/[0.05]">
+                  <span className="text-zinc-400 font-semibold block">Serviço Vinculado (Funil Kanban):</span>
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-orange-500/5 dark:bg-orange-500/10 border border-orange-500/20">
+                    <div className="flex items-center gap-2 truncate">
+                      <Briefcase className="w-3.5 h-3.5 text-[#FF650F] shrink-0" />
+                      {selectedAppointment.lead.budgetCode && (
+                        <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-500/20 text-[#FF650F]">
+                          #{selectedAppointment.lead.budgetCode}
+                        </span>
+                      )}
+                      <span className="font-bold text-zinc-900 dark:text-white truncate">
+                        {selectedAppointment.lead.title}
+                      </span>
+                    </div>
+
+                    {selectedAppointment.lead.column && (
+                      <span
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white shrink-0"
+                        style={{ backgroundColor: selectedAppointment.lead.column.color || "#FF650F" }}
+                      >
+                        {selectedAppointment.lead.column.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Cliente Vinculado */}
+              {selectedAppointment.customer && (
+                <div className="space-y-1 pt-1 border-t border-black/[0.04] dark:border-white/[0.05]">
+                  <span className="text-zinc-400 font-semibold block">Cliente Vinculado:</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-zinc-900 dark:text-white">
+                      {selectedAppointment.customer.tradeName || selectedAppointment.customer.fullName || selectedAppointment.customer.companyName || "Cliente"}
+                    </span>
+                    {(selectedAppointment.customer.whatsapp || selectedAppointment.customer.phone || selectedAppointment.customer.user?.phone) && (
+                      <a
+                        href={`https://wa.me/${(selectedAppointment.customer.whatsapp || selectedAppointment.customer.phone || selectedAppointment.customer.user?.phone || "").replace(/\D/g, "")}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-emerald-600 hover:underline flex items-center gap-1 text-[11px] font-bold"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>Falar no WhatsApp</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Equipe / Prestadores */}
               {selectedAppointment.assignedTeam && (
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-400 font-semibold">Equipe Responsável:</span>
+                <div className="flex items-center justify-between pt-1 border-t border-black/[0.04] dark:border-white/[0.05]">
+                  <span className="text-zinc-400 font-semibold">Equipe / Responsáveis:</span>
                   <span className="font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1">
                     <Users className="w-3.5 h-3.5 text-[#FF650F]" />
                     {selectedAppointment.assignedTeam}
@@ -1111,28 +1349,6 @@ export default function AgendamentosPage() {
                 </div>
               )}
 
-              {selectedAppointment.customer && (
-                <div className="space-y-1 pt-1 border-t border-black/[0.04] dark:border-white/[0.05]">
-                  <span className="text-zinc-400 font-semibold block">Cliente Vinculado:</span>
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-zinc-900 dark:text-white">
-                      {selectedAppointment.customer.tradeName || selectedAppointment.customer.fullName || selectedAppointment.customer.companyName || "Cliente"}
-                    </span>
-                    {(selectedAppointment.customer.whatsapp || selectedAppointment.customer.phone || selectedAppointment.customer.user?.phone) && (
-                      <a
-                        href={`https://wa.me/${(selectedAppointment.customer.whatsapp || selectedAppointment.customer.phone || selectedAppointment.customer.user?.phone || "").replace(/\D/g, "")}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-emerald-600 hover:underline flex items-center gap-1 text-[11px] font-bold"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5" />
-                        <span>Falar no WhatsApp</span>
-                      </a>
-                    )}
-                  </div>
-                </div>
-              )}
-
               {selectedAppointment.notes && (
                 <div className="space-y-1 pt-1 border-t border-black/[0.04] dark:border-white/[0.05]">
                   <span className="text-zinc-400 font-semibold block">Observações Técnicas:</span>
@@ -1143,25 +1359,36 @@ export default function AgendamentosPage() {
               )}
             </div>
 
-            {/* Ações do Agendamento */}
+            {/* Ações do Agendamento (CRUD) */}
             <div className="flex items-center justify-between gap-3 pt-2">
               <button
                 type="button"
                 disabled={isDeleting}
                 onClick={() => handleDeleteAppointment(selectedAppointment.id)}
-                className="p-2.5 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-500/10 flex items-center gap-1.5 text-xs font-bold transition-all disabled:opacity-50"
+                className="p-2 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-500/10 flex items-center gap-1.5 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Excluir</span>
               </button>
 
               <div className="flex items-center gap-2">
+                {/* Botão de Editar */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenEditAppointment(selectedAppointment)}
+                  className="rounded-xl text-xs font-bold gap-1 border-orange-500/30 text-[#FF650F] hover:bg-orange-500/10 cursor-pointer"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Editar</span>
+                </Button>
+
                 {selectedAppointment.status === "SCHEDULED" && (
                   <Button
                     variant="primary"
                     size="sm"
                     onClick={() => handleUpdateStatus(selectedAppointment.id, "IN_PROGRESS")}
-                    className="rounded-xl text-xs font-bold"
+                    className="rounded-xl text-xs font-bold cursor-pointer"
                   >
                     Iniciar Atendimento
                   </Button>
@@ -1171,17 +1398,17 @@ export default function AgendamentosPage() {
                     variant="primary"
                     size="sm"
                     onClick={() => handleUpdateStatus(selectedAppointment.id, "COMPLETED")}
-                    className="rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white"
+                    className="rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
                   >
                     <Check className="w-4 h-4 mr-1" />
-                    Concluir Atendimento
+                    Concluir
                   </Button>
                 )}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setIsDetailsOpen(false)}
-                  className="rounded-xl text-xs font-bold"
+                  className="rounded-xl text-xs font-bold cursor-pointer"
                 >
                   Fechar
                 </Button>
@@ -1192,7 +1419,7 @@ export default function AgendamentosPage() {
       )}
 
       {/* ======================================================== */}
-      {/* MODAL: NOVO AGENDAMENTO TÉCNICO (M3 DIALOG)              */}
+      {/* MODAL: NOVO / EDITAR AGENDAMENTO TÉCNICO (CRUD)          */}
       {/* ======================================================== */}
       {isModalOpen && (
         <div
@@ -1207,14 +1434,20 @@ export default function AgendamentosPage() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.04] dark:border-white/[0.06] shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-orange-500/10 text-[#FF650F] flex items-center justify-center">
-                  <CalendarIcon className="w-5 h-5" />
+                  {editingAppointmentId ? (
+                    <Pencil className="w-5 h-5" />
+                  ) : (
+                    <CalendarIcon className="w-5 h-5" />
+                  )}
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white">
-                    Novo Agendamento Técnico
+                    {editingAppointmentId ? "Editar Agendamento Técnico" : "Novo Agendamento Técnico"}
                   </h3>
                   <p className="text-[11px] text-zinc-400">
-                    Defina o compromisso de campo ou montagem no calendário.
+                    {editingAppointmentId
+                      ? "Atualize as informações do compromisso técnico e da equipe."
+                      : "Defina o compromisso de campo ou montagem no calendário."}
                   </p>
                 </div>
               </div>
@@ -1222,14 +1455,14 @@ export default function AgendamentosPage() {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.05]"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-black/[0.05] dark:hover:bg-white/[0.05] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Formulário com Scroll */}
-            <form onSubmit={handleCreateAppointment} className="p-6 space-y-4 overflow-y-auto no-scrollbar flex-1">
+            <form onSubmit={handleSubmitAppointment} className="p-6 space-y-4 overflow-y-auto no-scrollbar flex-1">
               {formError && (
                 <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
@@ -1252,17 +1485,18 @@ export default function AgendamentosPage() {
                 />
               </div>
 
-              {/* Tipo de Operação com Cards Visuais */}
+              {/* Tipo de Operação com Cards Visuais + Outros */}
               <div>
                 <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1.5">
                   Tipo de Operação *
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
                     { id: "TECHNICAL_VISIT_MEASUREMENT", label: "Visita Técnica & Medição", icon: Building2 },
                     { id: "EXTERNAL_INSTALLATION", label: "Instalação Externa Fachada", icon: Users },
                     { id: "INTERNAL_PRODUCTION_RUN", label: "Produção Interna CNC", icon: Wrench },
                     { id: "DELIVERY_PICKUP", label: "Entrega / Retirada", icon: Truck },
+                    { id: "OTHER", label: "Outros", icon: Sparkles },
                   ].map((t) => {
                     const Icon = t.icon;
                     const isSelected = form.type === t.id;
@@ -1271,22 +1505,98 @@ export default function AgendamentosPage() {
                         key={t.id}
                         type="button"
                         onClick={() => setForm({ ...form, type: t.id as any })}
-                        className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all ${
+                        className={`p-2.5 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
                           isSelected
                             ? "bg-orange-500/10 border-[#FF650F] text-[#FF650F] font-bold shadow-2xs"
                             : "bg-zinc-50 dark:bg-white/[0.02] border-black/[0.06] dark:border-white/[0.08] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                         }`}
                       >
                         <Icon className="w-4 h-4 shrink-0" />
-                        <span className="text-xs">{t.label}</span>
+                        <span className="text-xs truncate">{t.label}</span>
                       </button>
                     );
                   })}
                 </div>
+
+                {/* Campo Aberto Quando Escolhe "Outros" */}
+                {form.type === "OTHER" && (
+                  <div className="mt-2.5 p-3 rounded-xl bg-orange-500/[0.05] border border-orange-500/30 animate-in fade-in duration-200">
+                    <label className="text-xs font-bold text-[#FF650F] block mb-1">
+                      Qual é o outro tipo de operação? *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: Manutenção Preventiva, Troca de Iluminação LED, Adesivação de Veículo..."
+                      value={form.customType}
+                      onChange={(e) => setForm({ ...form, customType: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg bg-white dark:bg-[#141519] border border-orange-500/30 text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#FF650F]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Serviço Vinculado (Card do Funil Kanban) */}
+              <div>
+                <ServiceSearchAutocomplete
+                  selectedService={selectedService}
+                  onSelectService={(serv) => {
+                    setSelectedService(serv);
+                    if (serv) {
+                      // Se o serviço tiver cliente vinculado e ainda não selecionou cliente, vincula automaticamente
+                      if (serv.customer) {
+                        setSelectedClient({
+                          id: serv.customer.id,
+                          displayName: serv.customer.tradeName || serv.customer.fullName || serv.customer.companyName || "Cliente",
+                          companyName: serv.customer.companyName,
+                          tradeName: serv.customer.tradeName,
+                          fullName: serv.customer.fullName,
+                          type: "CUSTOMER",
+                          personType: "PJ",
+                          documentNumber: null,
+                          phone: serv.customer.phone || null,
+                          whatsapp: serv.customer.whatsapp || null,
+                          email: null,
+                          city: serv.customer.city || null,
+                          state: null,
+                          status: "ACTIVE",
+                        });
+                      }
+
+                      // Sugere título do agendamento se estiver em branco
+                      if (!form.title.trim()) {
+                        setForm((prev) => ({
+                          ...prev,
+                          title: `Execução - ${serv.title}`,
+                        }));
+                      }
+
+                      // Se o cliente do serviço tiver endereço, preenche no local se estiver vazio
+                      if (serv.customer && (serv.customer.street || serv.customer.neighborhood || serv.customer.city)) {
+                        const parts = [
+                          serv.customer.street,
+                          serv.customer.number,
+                          serv.customer.neighborhood,
+                          serv.customer.city,
+                        ].filter(Boolean);
+                        if (parts.length > 0 && !form.locationAddress.trim()) {
+                          setForm((prev) => ({
+                            ...prev,
+                            locationAddress: parts.join(", "),
+                          }));
+                        }
+                      }
+                    }
+                  }}
+                  customerIdFilter={selectedClient?.id || null}
+                />
               </div>
 
               {/* Cliente Vinculado (CRM) */}
               <div>
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Cliente Vinculado (Opcional)
+                </label>
                 <ClientSearchAutocomplete
                   selectedClient={selectedClient}
                   onSelectClient={(client) => {
@@ -1375,22 +1685,22 @@ export default function AgendamentosPage() {
                 </div>
               </div>
 
-              {/* Equipe Responsável */}
+              {/* Equipe de Campo / Prestadores Responsáveis (Múltipla Escolha CRM) */}
               <div>
-                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Equipe de Campo / Responsável
-                </label>
-                <select
-                  value={form.assignedTeam}
-                  onChange={(e) => setForm({ ...form, assignedTeam: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-[#121316] border border-black/10 dark:border-white/10 text-xs sm:text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-[#FF650F]"
-                >
-                  <option value="Equipe de Campo 01">Equipe de Campo 01 (Visitas & Medições)</option>
-                  <option value="Equipe de Instalação Externa">Equipe de Instalação Externa (Fachadas & Altura)</option>
-                  <option value="Equipe de Serralheria & Solda">Equipe de Serralheria & Estruturas</option>
-                  <option value="Operação CNC & Pintura">Operação CNC & Acabamento</option>
-                  <option value="Logística & Entregas">Logística & Entregas</option>
-                </select>
+                <TeamMultiSelect
+                  selectedProviderIds={selectedProviderIds}
+                  onChangeProviders={(ids, names) => {
+                    setSelectedProviderIds(ids);
+                    if (names.length > 0 && !customTeamName) {
+                      setForm((prev) => ({ ...prev, assignedTeam: names.join(", ") }));
+                    }
+                  }}
+                  customTeamName={customTeamName}
+                  onChangeCustomTeamName={(name) => {
+                    setCustomTeamName(name);
+                    setForm((prev) => ({ ...prev, assignedTeam: name }));
+                  }}
+                />
               </div>
 
               {/* Observações */}
@@ -1408,24 +1718,39 @@ export default function AgendamentosPage() {
               </div>
 
               {/* Botões do Rodapé */}
-              <div className="pt-2 flex items-center justify-end gap-3 border-t border-black/[0.04] dark:border-white/[0.06]">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsModalOpen(false)}
-                  className="rounded-full px-4 text-xs font-bold"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  isLoading={isSubmitting}
-                  className="rounded-full px-5 text-xs font-bold gap-1.5"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>Confirmar Agendamento</span>
-                </Button>
+              <div className="pt-3 flex items-center justify-between border-t border-black/[0.04] dark:border-white/[0.06]">
+                {editingAppointmentId ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteAppointment(editingAppointmentId)}
+                    className="text-xs font-bold text-red-500 hover:text-red-600 flex items-center gap-1 px-2.5 py-1.5 rounded-xl hover:bg-red-500/10 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Excluir</span>
+                  </button>
+                ) : (
+                  <div />
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsModalOpen(false)}
+                    className="rounded-full px-4 text-xs font-bold cursor-pointer"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    isLoading={isSubmitting}
+                    className="rounded-full px-5 text-xs font-bold gap-1.5 cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>{editingAppointmentId ? "Salvar Alterações" : "Confirmar Agendamento"}</span>
+                  </Button>
+                </div>
               </div>
             </form>
           </div>

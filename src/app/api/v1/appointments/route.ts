@@ -6,7 +6,7 @@ import { formatDateTime } from "@/lib/utils";
 
 /**
  * GET /api/v1/appointments
- * Listagem de agendamentos com filtros
+ * Listagem de agendamentos com filtros e dados completos (cliente, serviço/lead, prestadores)
  */
 export async function GET(req: NextRequest) {
   try {
@@ -30,6 +30,15 @@ export async function GET(req: NextRequest) {
             phone: true,
             whatsapp: true,
             user: { select: { name: true, phone: true } },
+          },
+        },
+        lead: {
+          select: {
+            id: true,
+            title: true,
+            budgetCode: true,
+            column: { select: { id: true, name: true, color: true } },
+            category: { select: { id: true, name: true, color: true } },
           },
         },
         serviceOrder: {
@@ -61,13 +70,16 @@ export async function POST(req: NextRequest) {
     const {
       title,
       type = "TECHNICAL_VISIT_MEASUREMENT",
+      customType,
       status = "SCHEDULED",
       scheduledAt,
       durationMinutes = 60,
       locationAddress,
       assignedTeam,
+      assignedProviderIds = [],
       notes,
       customerId,
+      leadId,
       serviceOrderId,
       notifyPhone,
     } = body;
@@ -87,18 +99,74 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Se o cliente não foi explicitamente fornecido mas o serviço (lead) foi, herda o customerId do Lead
+    let resolvedCustomerId = customerId || null;
+    if (!resolvedCustomerId && leadId) {
+      const linkedLead = await prisma.lead.findUnique({
+        where: { id: leadId },
+        select: { customerId: true },
+      });
+      if (linkedLead?.customerId) {
+        resolvedCustomerId = linkedLead.customerId;
+      }
+    }
+
+    // Se houver prestadores selecionados e o assignedTeam não tiver sido fornecido, busca os nomes dos prestadores
+    let finalAssignedTeam = assignedTeam?.trim() || "";
+    const cleanProviderIds = Array.isArray(assignedProviderIds)
+      ? assignedProviderIds.filter(Boolean)
+      : [];
+
+    if (!finalAssignedTeam && cleanProviderIds.length > 0) {
+      const providers = await prisma.customer.findMany({
+        where: { id: { in: cleanProviderIds } },
+        select: { tradeName: true, fullName: true, companyName: true },
+      });
+      finalAssignedTeam = providers
+        .map((p) => p.tradeName || p.fullName || p.companyName)
+        .filter(Boolean)
+        .join(", ");
+    }
+
+    if (!finalAssignedTeam) {
+      finalAssignedTeam = "Equipe Técnica";
+    }
+
     const appointment = await prisma.appointment.create({
       data: {
         title: title.trim(),
         type,
+        customType: type === "OTHER" && customType ? customType.trim() : null,
         status,
         scheduledAt: parsedScheduledAt,
         durationMinutes: Number(durationMinutes) || 60,
         locationAddress: locationAddress?.trim() || null,
-        assignedTeam: assignedTeam?.trim() || "Equipe de Campo 01",
+        assignedTeam: finalAssignedTeam,
+        assignedProviderIds: cleanProviderIds,
         notes: notes?.trim() || null,
-        customerId: customerId || null,
+        customerId: resolvedCustomerId,
+        leadId: leadId || null,
         serviceOrderId: serviceOrderId || null,
+      },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            tradeName: true,
+            companyName: true,
+            fullName: true,
+            phone: true,
+            whatsapp: true,
+          },
+        },
+        lead: {
+          select: {
+            id: true,
+            title: true,
+            budgetCode: true,
+            column: { select: { id: true, name: true, color: true } },
+          },
+        },
       },
     });
 
@@ -110,11 +178,12 @@ export async function POST(req: NextRequest) {
           INTERNAL_PRODUCTION_RUN: "Produção Interna",
           EXTERNAL_INSTALLATION: "Instalação Externa da Fachada",
           DELIVERY_PICKUP: "Entrega / Retirada",
+          OTHER: appointment.customType || "Outros Serviços",
         };
         const label = typeLabels[type] || "Atendimento Técnico";
 
-        const msg = `📅 *Agendamento Confirmado — Glessios*\n\nSeu compromisso de *${label}* está confirmado para:\n🗓️ *Data e Hora:* ${formatDateTime(appointment.scheduledAt)}\n📍 *Local:* ${locationAddress || "A combinar"}\n👥 *Equipe:* ${appointment.assignedTeam}\n\nQualquer necessidade de reagendamento, nos avise por este canal!`;
-        
+        const msg = `📅 *Agendamento Confirmado — Icthus Soluções*\n\nSeu compromisso de *${label}* está confirmado para:\n🗓️ *Data e Hora:* ${formatDateTime(appointment.scheduledAt)}\n📍 *Local:* ${locationAddress || "A combinar"}\n👥 *Equipe/Responsáveis:* ${appointment.assignedTeam}\n\nQualquer necessidade de reagendamento, nos avise por este canal!`;
+
         // Disparo assíncrono não-bloqueante
         sendWhatsAppMessage({
           to: notifyPhone,

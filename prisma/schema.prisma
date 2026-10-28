@@ -94,6 +94,7 @@ enum AppointmentType {
   INTERNAL_PRODUCTION_RUN
   EXTERNAL_INSTALLATION
   DELIVERY_PICKUP
+  OTHER
 }
 
 enum AppointmentStatus {
@@ -289,6 +290,7 @@ model Lead {
   serviceOrders   ServiceOrder[]
   documents       Document[]
   purchaseItems   ServicePurchaseItem[]
+  appointments    Appointment[]
 
   @@map("leads")
 }
@@ -504,7 +506,7 @@ model StockItem {
 
   movements       StockMovement[]
   purchaseItems   ServicePurchaseItem[]
-
+  
   @@map("stock_items")
 }
 
@@ -581,15 +583,19 @@ model Appointment {
   id              String            @id @default(cuid())
   title           String            // Ex: "Instalação Fachada Luminosa"
   type            AppointmentType
+  customType          String?           // Para quando type == OTHER
   status          AppointmentStatus @default(SCHEDULED)
   customerId      String?
   customer        Customer?         @relation(fields: [customerId], references: [id])
+  leadId              String?           // Card do Serviço no Kanban do CRM
+  lead                Lead?             @relation(fields: [leadId], references: [id], onDelete: SetNull)
   serviceOrderId  String?
   serviceOrder    ServiceOrder?     @relation(fields: [serviceOrderId], references: [id])
   scheduledAt     DateTime
   durationMinutes Int               @default(60)
   locationAddress String?
-  assignedTeam    String?           // Equipe de instaladores
+  assignedTeam        String?           // Equipe de instaladores ou lista formatada
+  assignedProviderIds String[]          @default([]) // IDs dos prestadores de serviço do CRM
   notes           String?           @db.Text
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
