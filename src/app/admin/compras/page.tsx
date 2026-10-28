@@ -668,13 +668,13 @@ export default function ComprasAdminPage() {
                     <table className="w-full text-left text-xs">
                       <thead>
                         <tr className="border-b border-black/[0.06] dark:border-white/5 text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                          <th className="py-2.5 px-3">Material / Insumo</th>
-                          <th className="py-2.5 px-3">Quantidade</th>
-                          <th className="py-2.5 px-3">Est. Unitário</th>
-                          <th className="py-2.5 px-3">Previsão Total</th>
-                          <th className="py-2.5 px-3">Status</th>
-                          <th className="py-2.5 px-3">Detalhes da Compra / Financeiro</th>
-                          <th className="py-2.5 px-3 text-right">Ação</th>
+                          <th className="py-2.5 px-3 min-w-[200px]">Material / Insumo</th>
+                          <th className="py-2.5 px-3 min-w-[90px] whitespace-nowrap">Quantidade</th>
+                          <th className="py-2.5 px-3 min-w-[100px] whitespace-nowrap">Est. Unitário</th>
+                          <th className="py-2.5 px-3 min-w-[110px] whitespace-nowrap">Previsão Total</th>
+                          <th className="py-2.5 px-3 min-w-[115px] whitespace-nowrap">Status</th>
+                          <th className="py-2.5 px-3 min-w-[220px]">Detalhes da Compra / Financeiro</th>
+                          <th className="py-2.5 px-3 min-w-[125px] text-right whitespace-nowrap">Ação</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-black/[0.04] dark:divide-white/5">
@@ -706,30 +706,32 @@ export default function ComprasAdminPage() {
                               </td>
 
                               {/* Quantidade */}
-                              <td className="py-3 px-3 font-extrabold text-zinc-900 dark:text-zinc-200">
+                              <td className="py-3 px-3 font-extrabold text-zinc-900 dark:text-zinc-200 whitespace-nowrap">
                                 {Number(item.quantity)} {item.unit}
                               </td>
 
                               {/* Estimado Unitário */}
-                              <td className="py-3 px-3 text-zinc-600 dark:text-zinc-400">
+                              <td className="py-3 px-3 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
                                 {formatCurrency(Number(item.estimatedUnitCost) || 0)}
                               </td>
 
                               {/* Previsão Total */}
-                              <td className="py-3 px-3 font-semibold text-zinc-800 dark:text-zinc-300">
+                              <td className="py-3 px-3 font-semibold text-zinc-800 dark:text-zinc-300 whitespace-nowrap">
                                 {formatCurrency(Number(item.estimatedTotalCost) || 0)}
                               </td>
 
                               {/* Status */}
-                              <td className="py-3 px-3">
+                              <td className="py-3 px-3 whitespace-nowrap">
                                 {isPending && (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                                    <Clock className="w-3 h-3" /> A Comprar
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap shrink-0 shadow-2xs">
+                                    <Clock className="w-3 h-3 shrink-0" />
+                                    <span>A Comprar</span>
                                   </span>
                                 )}
                                 {isPurchased && (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-                                    <CheckCircle2 className="w-3 h-3" /> Comprado
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap shrink-0 shadow-2xs">
+                                    <CheckCircle2 className="w-3 h-3 shrink-0" />
+                                    <span>Comprado</span>
                                   </span>
                                 )}
                               </td>
@@ -772,18 +774,20 @@ export default function ComprasAdminPage() {
                               </td>
 
                               {/* Ação */}
-                              <td className="py-3 px-3 text-right">
+                              <td className="py-3 px-3 text-right whitespace-nowrap">
                                 {isPending ? (
                                   <Button
                                     size="sm"
                                     onClick={() => openBuyModal(item, group)}
-                                    className="bg-[#FF650F] hover:bg-[#e05509] text-white text-xs h-7 px-3 rounded-full font-semibold shadow-xs"
+                                    className="bg-[#FF650F] hover:bg-[#e05509] text-white text-xs h-8 px-3.5 rounded-full font-semibold shadow-xs whitespace-nowrap shrink-0 inline-flex items-center gap-1.5 cursor-pointer transition-all"
                                   >
-                                    Dar Baixa
+                                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                                    <span>Dar Baixa</span>
                                   </Button>
                                 ) : (
-                                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center justify-end gap-1">
-                                    <CheckCircle2 className="w-3.5 h-3.5" /> Baixado
+                                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold inline-flex items-center justify-end gap-1 whitespace-nowrap">
+                                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                                    <span>Baixado</span>
                                   </span>
                                 )}
                               </td>

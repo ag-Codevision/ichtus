@@ -848,7 +848,7 @@ export function LeadCardDrawerModal({
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-4xl max-h-[100vh] sm:max-h-[90vh] bg-[#F8F9FA] dark:bg-[#141519] sm:rounded-3xl border-0 sm:border border-black/[0.08] dark:border-white/[0.08] shadow-2xl flex flex-col overflow-y-auto no-scrollbar animate-in zoom-in-95 duration-200 relative"
+        className="w-full sm:max-w-5xl md:max-w-6xl xl:max-w-[1360px] max-h-[100vh] sm:max-h-[90vh] bg-[#F8F9FA] dark:bg-[#141519] sm:rounded-3xl border-0 sm:border border-black/[0.08] dark:border-white/[0.08] shadow-2xl flex flex-col overflow-y-auto no-scrollbar animate-in zoom-in-95 duration-200 relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* IMAGEM DE CAPA ESTILO TRELLO (SE HOUVER) */}
