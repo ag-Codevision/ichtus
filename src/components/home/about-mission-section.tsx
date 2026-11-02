@@ -14,11 +14,67 @@ import {
   Layers,
   FileCheck2,
 } from "lucide-react";
-
 import { M3ScrollReveal, M3ScrollStagger, M3ScrollItem } from "@/components/ui/scroll-reveal";
+import { useCMS } from "@/components/cms/cms-provider";
+import { CMSEditableText } from "@/components/cms/cms-editable-text";
+import { CMSCardActionBar, CMSAddCardButton, CMSDynamicIcon } from "@/components/cms/cms-card-controls";
+import { CMSCardEditModal, type GenericCardData } from "@/components/cms/cms-card-edit-modal";
+import type { CMSAboutPillar } from "@/lib/cms-defaults";
 
 export function AboutMissionSection() {
+  const { data, updateSection, isEditMode, isPreviewMode } = useCMS();
+  const about = data.about;
+
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingCard, setEditingCard] = useState<GenericCardData | null>(null);
+
+  const handleEditPillar = (pillar: CMSAboutPillar) => {
+    setEditingCard({
+      id: pillar.id,
+      title: pillar.title,
+      icon: pillar.icon,
+      description: pillar.description,
+    });
+    setModalOpen(true);
+  };
+
+  const handleAddPillar = () => {
+    setEditingCard({
+      id: `pil-${Date.now()}`,
+      title: "Novo Pilar",
+      icon: "Sparkles",
+      description: "Descreva este compromisso ou pilar fundamental...",
+    });
+    setModalOpen(true);
+  };
+
+  const handleDeletePillar = (id: string) => {
+    updateSection("about", (prev) => ({
+      ...prev,
+      pillars: prev.pillars.filter((p) => p.id !== id),
+    }));
+  };
+
+  const handleSavePillarModal = (saved: GenericCardData) => {
+    updateSection("about", (prev) => {
+      const existingIdx = prev.pillars.findIndex((p) => p.id === saved.id);
+      const newPillar: CMSAboutPillar = {
+        id: saved.id || `pil-${Date.now()}`,
+        title: saved.title,
+        icon: saved.icon || "Sparkles",
+        description: saved.description || "",
+      };
+
+      if (existingIdx >= 0) {
+        const next = [...prev.pillars];
+        next[existingIdx] = newPillar;
+        return { ...prev, pillars: next };
+      } else {
+        return { ...prev, pillars: [...prev.pillars, newPillar] };
+      }
+    });
+  };
 
   return (
     <section id="sobre" className="py-24 bg-[#121316] text-white border-b border-white/[0.08] relative scroll-mt-20 overflow-hidden">
@@ -34,52 +90,63 @@ export function AboutMissionSection() {
           <M3ScrollReveal variant="fadeUp" className="max-w-3xl mb-12 space-y-4">
             <Badge variant="orange" className="font-semibold tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
-              Quem Somos
+              <CMSEditableText
+                value={about.badgeText}
+                onChange={(val) => updateSection("about", { badgeText: val })}
+                placeholder="Tag..."
+              />
             </Badge>
+
             <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
-              Sobre nós
+              <CMSEditableText
+                as="span"
+                value={about.title}
+                onChange={(val) => updateSection("about", { title: val })}
+                placeholder="Título..."
+              />
             </h2>
+
             <p className="text-base text-zinc-400 max-w-2xl leading-relaxed pt-1">
-              Dedicados a construir soluções visuais e projetos sob medida que elevam a presença da sua marca com exclusividade, eficiência e pontualidade.
+              <CMSEditableText
+                as="span"
+                multiline
+                value={about.subtitle}
+                onChange={(val) => updateSection("about", { subtitle: val })}
+                placeholder="Subtítulo..."
+              />
             </p>
           </M3ScrollReveal>
 
-          {/* 3 Pilares do Sobre Nós com ScrollStagger */}
+          {/* Pilares do Sobre Nós com CRUD */}
           <M3ScrollStagger className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <M3ScrollItem className="h-full">
-              <div className="p-8 rounded-2xl bg-[#18191D] border border-white/[0.08] hover:border-[#FF650F]/50 transition-all duration-300 group h-full">
-              <div className="w-12 h-12 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center mb-6 group-hover:border-[#FF650F]/60 transition-colors">
-                <Target className="w-6 h-6 text-[#FF650F]" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-3">Superar Expectativas</h3>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                Encontrar sempre as melhores soluções para cada cliente de forma a suprir e/ou superar suas expectativas.
-              </p>
-              </div>
-            </M3ScrollItem>
+            {about.pillars.map((pillar) => (
+              <M3ScrollItem key={pillar.id} className="h-full">
+                <div className="relative h-full group">
+                  <CMSCardActionBar
+                    label="Pilar"
+                    onEdit={() => handleEditPillar(pillar)}
+                    onDelete={() => handleDeletePillar(pillar.id)}
+                  />
+
+                  <div className="p-8 rounded-2xl bg-[#18191D] border border-white/[0.08] hover:border-[#FF650F]/50 transition-all duration-300 group h-full flex flex-col justify-between">
+                    <div>
+                      <div className="w-12 h-12 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center mb-6 group-hover:border-[#FF650F]/60 transition-colors">
+                        <CMSDynamicIcon name={pillar.icon} className="w-6 h-6 text-[#FF650F]" />
+                      </div>
+                      <h3 className="text-lg font-bold text-white mb-3">{pillar.title}</h3>
+                      <p className="text-sm text-zinc-400 leading-relaxed">{pillar.description}</p>
+                    </div>
+                  </div>
+                </div>
+              </M3ScrollItem>
+            ))}
 
             <M3ScrollItem className="h-full">
-              <div className="p-8 rounded-2xl bg-[#18191D] border border-white/[0.08] hover:border-[#FF650F]/50 transition-all duration-300 group h-full">
-                <div className="w-12 h-12 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center mb-6 group-hover:border-[#FF650F]/60 transition-colors">
-                  <Layers className="w-6 h-6 text-[#FF650F]" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-3">Tudo em um Só Lugar</h3>
-                <p className="text-sm text-zinc-400 leading-relaxed">
-                  Oferecer o maior número de produtos possível para que o cliente possa encontrar tudo o que precisa em um só lugar e possa manter-se focado em suas atividades.
-                </p>
-              </div>
-            </M3ScrollItem>
-
-            <M3ScrollItem className="h-full">
-              <div className="p-8 rounded-2xl bg-[#18191D] border border-white/[0.08] hover:border-[#FF650F]/50 transition-all duration-300 group h-full">
-                <div className="w-12 h-12 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center mb-6 group-hover:border-[#FF650F]/60 transition-colors">
-                  <Clock className="w-6 h-6 text-[#FF650F]" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-3">Melhor Custo-Benefício</h3>
-                <p className="text-sm text-zinc-400 leading-relaxed">
-                  Oferecer serviços de qualidade, com excelência, com melhor custo benefício e dentro do menor tempo possível.
-                </p>
-              </div>
+              <CMSAddCardButton
+                onClick={handleAddPillar}
+                label="+ Adicionar Pilar Sobre Nós"
+                className="h-full min-h-[200px]"
+              />
             </M3ScrollItem>
           </M3ScrollStagger>
         </div>
@@ -93,7 +160,7 @@ export function AboutMissionSection() {
               <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-black/95">
                 <p className="text-[#FF650F] font-bold text-lg mb-2">Vídeo Institucional</p>
                 <p className="text-sm text-zinc-400 max-w-md mb-6">
-                  Vídeo institucional demonstrando o parque fabril, precisão dos cortes CNC e instalação de letreiros e fachadas.
+                  {about.video.subtitle || "Vídeo demonstrando o parque fabril e a precisão técnica da ICTHUS."}
                 </p>
                 <button
                   onClick={() => setIsVideoPlaying(false)}
@@ -104,17 +171,14 @@ export function AboutMissionSection() {
               </div>
             ) : (
               <>
-                {/* Poster de Fundo com Vídeo */}
                 <div
                   className="absolute inset-0 bg-cover bg-center opacity-45 group-hover:opacity-55 group-hover:scale-105 transition-all duration-700"
                   style={{
-                    backgroundImage:
-                      "url('https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1600&q=80')",
+                    backgroundImage: `url('${about.video.posterUrl || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1600&q=80"}')`,
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0E0F11] via-[#0E0F11]/60 to-transparent" />
 
-                {/* Conteúdo Central e Botão Play */}
                 <div className="relative z-10 flex flex-col items-center text-center px-6 space-y-4">
                   <button
                     onClick={() => setIsVideoPlaying(true)}
@@ -124,13 +188,40 @@ export function AboutMissionSection() {
                     <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-white" />
                   </button>
                   <span className="text-xs uppercase tracking-widest font-bold text-[#FF650F] font-mono">
-                    Espaço para Vídeo Institucional
+                    <CMSEditableText
+                      value={about.video.badge}
+                      onChange={(val) =>
+                        updateSection("about", (prev) => ({
+                          ...prev,
+                          video: { ...prev.video, badge: val },
+                        }))
+                      }
+                    />
                   </span>
                   <h3 className="text-xl sm:text-3xl font-extrabold text-white max-w-xl">
-                    Conheça de perto nosso processo criativo e fabril
+                    <CMSEditableText
+                      as="span"
+                      value={about.video.title}
+                      onChange={(val) =>
+                        updateSection("about", (prev) => ({
+                          ...prev,
+                          video: { ...prev.video, title: val },
+                        }))
+                      }
+                    />
                   </h3>
                   <p className="text-xs sm:text-sm text-zinc-400 max-w-md">
-                    Descubra como transformamos conceitos e matérias-primas nobres em identidades visuais de grande impacto.
+                    <CMSEditableText
+                      as="span"
+                      multiline
+                      value={about.video.subtitle}
+                      onChange={(val) =>
+                        updateSection("about", (prev) => ({
+                          ...prev,
+                          video: { ...prev.video, subtitle: val },
+                        }))
+                      }
+                    />
                   </p>
                 </div>
               </>
@@ -142,111 +233,40 @@ export function AboutMissionSection() {
             BLOCO 3: MISSÃO, VISÃO E VALORES (GRID DE 3 COLUNAS)
             ==================================================== */}
         <M3ScrollStagger className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch mt-20">
-          {/* CARD MISSÃO */}
-          <M3ScrollItem className="h-full">
-            <div className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] flex flex-col justify-start space-y-4 hover:border-[#FF650F]/50 transition-colors shadow-xl h-full">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#FF650F] flex items-center justify-center text-white shadow-md">
-                  <Target className="w-5 h-5" />
+          {about.missionCards.map((card) => (
+            <M3ScrollItem key={card.id} className="h-full">
+              <div className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] flex flex-col justify-start space-y-4 hover:border-[#FF650F]/50 transition-colors shadow-xl h-full">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#FF650F] flex items-center justify-center text-white shadow-md">
+                    <CMSDynamicIcon name={card.icon} className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-2xl font-extrabold text-white">{card.title}</h3>
                 </div>
-                <h3 className="text-2xl font-extrabold text-white">Missão</h3>
+                <p className="text-sm text-zinc-300 leading-relaxed pt-2">
+                  <CMSEditableText
+                    as="span"
+                    multiline
+                    value={card.description}
+                    onChange={(val) =>
+                      updateSection("about", (prev) => {
+                        const idx = prev.missionCards.findIndex((m) => m.id === card.id);
+                        if (idx >= 0) {
+                          const next = [...prev.missionCards];
+                          next[idx] = { ...next[idx], description: val };
+                          return { ...prev, missionCards: next };
+                        }
+                        return prev;
+                      })
+                    }
+                  />
+                </p>
               </div>
-              <ul className="space-y-3 pt-2">
-                <li className="flex items-start gap-3 text-sm text-zinc-300 leading-relaxed">
-                  <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
-                  <span>
-                    Encontrar sempre as melhores soluções para cada cliente de forma a suprir e/ou superar suas expectativas.
-                  </span>
-                </li>
-                <li className="flex items-start gap-3 text-sm text-zinc-300 leading-relaxed">
-                  <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
-                  <span>
-                    Oferecer o maior número de produtos possível para que o cliente possa encontrar tudo o que precisa em um só lugar e possa manter-se focado em suas atividades.
-                  </span>
-                </li>
-                <li className="flex items-start gap-3 text-sm text-zinc-300 leading-relaxed">
-                  <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
-                  <span>
-                    Oferecer serviços de qualidade, com excelência, com melhor custo benefício e dentro do menor tempo possível.
-                  </span>
-                </li>
-              </ul>
-            </div>
-          </M3ScrollItem>
-
-          {/* CARD VISÃO */}
-          <M3ScrollItem className="h-full">
-            <div className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] flex flex-col justify-start space-y-4 hover:border-[#FF650F]/50 transition-colors shadow-xl h-full">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center text-[#FF650F]">
-                  <Eye className="w-5 h-5" />
-                </div>
-                <h3 className="text-2xl font-extrabold text-white">Visão</h3>
-              </div>
-              <ul className="space-y-3 pt-2">
-                <li className="flex items-start gap-3 text-sm text-zinc-300 leading-relaxed">
-                  <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
-                  <span>
-                    Tornar-se uma empresa referência em soluções Criativas, e nos relacionamentos interno e externo.
-                  </span>
-                </li>
-                <li className="flex items-start gap-3 text-sm text-zinc-300 leading-relaxed">
-                  <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
-                  <span>
-                    Proporcionar a melhor experiência aos clientes desde o momento de sua chegada e durante todo o processo produtivo e / ou criativo.
-                  </span>
-                </li>
-              </ul>
-            </div>
-          </M3ScrollItem>
-
-          {/* CARD VALORES */}
-          <M3ScrollItem className="h-full">
-            <div className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] flex flex-col justify-start space-y-6 hover:border-[#FF650F]/50 transition-colors shadow-xl h-full">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center text-[#FF650F]">
-                  <Award className="w-5 h-5" />
-                </div>
-                <h3 className="text-2xl font-extrabold text-white">Valores</h3>
-              </div>
-
-              <div className="space-y-3 pt-1">
-                <div className="p-3.5 rounded-2xl bg-[#121316] border border-white/[0.06]">
-                  <h4 className="text-xs font-extrabold text-[#FF650F] uppercase tracking-wider mb-1 flex items-center gap-2">
-                    <Award className="w-3.5 h-3.5 text-[#FF650F]" />
-                    QUALIDADE :
-                  </h4>
-                  <p className="text-xs text-zinc-400 leading-relaxed">
-                    Todos os produtos e serviços são feitos com máxima qualidade, desde matérias primas, até o acabamento manual.
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-[#121316] border border-white/[0.06]">
-                  <h4 className="text-xs font-extrabold text-[#FF650F] uppercase tracking-wider mb-1 flex items-center gap-2">
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#FF650F]" />
-                    CONFIANÇA :
-                  </h4>
-                  <p className="text-xs text-zinc-400 leading-relaxed">
-                    A confiança é a base de uma parceria sólida. Trabalhamos para que a confiança em nossos processos seja sempre crescente.
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-[#121316] border border-white/[0.06]">
-                  <h4 className="text-xs font-extrabold text-[#FF650F] uppercase tracking-wider mb-1 flex items-center gap-2">
-                    <FileCheck2 className="w-3.5 h-3.5 text-[#FF650F]" />
-                    TRANSPARÊNCIA :
-                  </h4>
-                  <p className="text-xs text-zinc-400 leading-relaxed">
-                    Trabalhamos de forma transparente com prazos reais. A Verdade é um dos produtos que amamos entregar.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </M3ScrollItem>
+            </M3ScrollItem>
+          ))}
         </M3ScrollStagger>
 
         {/* ====================================================
-            BLOCO 4: FRASE ABAIXO DE MISSÃO, VISÃO E VALORES
+            BLOCO 4: FRASE INSTITUCIONAL
             ==================================================== */}
         <M3ScrollReveal variant="fadeUp" className="mt-16 pt-12 border-t border-white/[0.08] text-center max-w-3xl mx-auto">
           <p className="text-lg sm:text-2xl font-serif italic text-white leading-relaxed">
@@ -257,6 +277,18 @@ export function AboutMissionSection() {
           </span>
         </M3ScrollReveal>
       </div>
+
+      {/* Modal de Edição de Pilar */}
+      <CMSCardEditModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSavePillarModal}
+        initialCard={editingCard}
+        sectionTitle="Pilar Sobre Nós"
+        hasIcon={true}
+        hasTag={false}
+        hasButton={false}
+      />
     </section>
   );
 }

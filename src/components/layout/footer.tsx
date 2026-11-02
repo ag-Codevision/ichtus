@@ -1,8 +1,19 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, Mail, MapPin, Phone } from "lucide-react";
+import { useOptionalCMS } from "@/components/cms/cms-provider";
+import { DEFAULT_CONTACT_CONTENT } from "@/lib/cms-defaults";
 
 export function Footer() {
+  const cms = useOptionalCMS();
+  const contact = cms?.data?.contact_info || DEFAULT_CONTACT_CONTENT;
+
+  const whatsappLink = `https://wa.me/${contact.whatsapp?.number || "5551981192976"}?text=${encodeURIComponent(
+    contact.whatsapp?.defaultMessage || "Olá! Gostaria de saber mais sobre as soluções da Glessios."
+  )}`;
+
   return (
     <footer className="bg-[#0E0F11] text-zinc-400 border-t border-white/[0.08] pt-16 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -27,7 +38,7 @@ export function Footer() {
             <div className="pt-2 flex items-center gap-4 text-xs text-zinc-400">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Atendimento Ativo — Porto Alegre & Todo o Brasil
+                {contact.footerNotice || "Atendimento Ativo — Porto Alegre & Todo o Brasil"}
               </span>
             </div>
           </div>
@@ -111,7 +122,7 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Coluna 4: Contato Direto */}
+          {/* Coluna 4: Contato Direto Centralizado */}
           <div className="flex flex-col space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-white">
               Entre em Contato
@@ -120,36 +131,41 @@ export function Footer() {
               <div className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-[#FF650F] shrink-0 mt-0.5" />
                 <span>
-                  Rua Buenos Aires, 437 / 203<br />
-                  Jardim Botânico / Porto Alegre / RS<br />
-                  CEP: 90670-130 / Brasil
+                  {contact.address?.street}, {contact.address?.number}
+                  {contact.address?.complement ? ` / ${contact.address.complement}` : ""}<br />
+                  {contact.address?.neighborhood} / {contact.address?.city} / {contact.address?.state}<br />
+                  CEP: {contact.address?.zip} / {contact.address?.country}
                 </span>
               </div>
+
+              {/* WhatsApp Principal */}
               <div className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-[#FF650F] shrink-0" />
-                <a href="https://wa.me/5551981192976" className="hover:text-[#FF650F] transition-colors">
-                  +55 51 98119.2976 (w)
+                <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="hover:text-[#FF650F] transition-colors">
+                  {contact.whatsapp?.formatted || "+55 51 98119.2976"} (w)
                 </a>
               </div>
-              <div className="flex items-center gap-2.5">
-                <Phone className="w-4 h-4 text-[#FF650F] shrink-0" />
-                <a href="tel:+555135746167" className="hover:text-[#FF650F] transition-colors">
-                  55 51 3574.6167
-                </a>
-              </div>
+
+              {/* Telefones Secundários */}
+              {contact.phones?.map((phone) => (
+                <div key={phone.id} className="flex items-center gap-2.5">
+                  <Phone className="w-4 h-4 text-[#FF650F] shrink-0" />
+                  <a href={`tel:${phone.number}`} className="hover:text-[#FF650F] transition-colors">
+                    {phone.formatted}
+                  </a>
+                </div>
+              ))}
+
+              {/* E-mails Dinâmicos */}
               <div className="flex flex-col gap-1 pt-1">
-                <div className="flex items-center gap-2.5">
-                  <Mail className="w-4 h-4 text-[#FF650F] shrink-0" />
-                  <a href="mailto:glessios@hotmail.com" className="hover:text-[#FF650F] transition-colors">
-                    glessios@hotmail.com
-                  </a>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <Mail className="w-4 h-4 text-[#FF650F] shrink-0" />
-                  <a href="mailto:glessios@gmail.com" className="hover:text-[#FF650F] transition-colors">
-                    glessios@gmail.com
-                  </a>
-                </div>
+                {contact.emails?.map((mail) => (
+                  <div key={mail.id} className="flex items-center gap-2.5">
+                    <Mail className="w-4 h-4 text-[#FF650F] shrink-0" />
+                    <a href={`mailto:${mail.email}`} className="hover:text-[#FF650F] transition-colors">
+                      {mail.email}
+                    </a>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

@@ -32,6 +32,7 @@ import {
 import { ProjectMediaShowcase } from "@/components/portfolio/project-gallery-view";
 import { PortfolioHeroBackground } from "@/components/portfolio/portfolio-hero-background";
 import { M3ScrollReveal, M3ScrollStagger, M3ScrollItem } from "@/components/ui/scroll-reveal";
+import { PortfolioDetailEditButton } from "@/components/portfolio/portfolio-detail-edit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -490,6 +491,7 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
             </div>
           </M3ScrollReveal>
         </section>
+        <PortfolioDetailEditButton project={project} />
       </main>
 
       <Footer />

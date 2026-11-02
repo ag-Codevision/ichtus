@@ -1,91 +1,127 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import {
-  Globe,
-  Handshake,
-  Truck,
-  Palette,
-  Compass,
-  Kanban,
-  ArrowRight,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
-
-const ACTION_AREAS = [
-  {
-    icon: Globe,
-    title: "PRODUTOS WEB",
-    description:
-      "Mantenha-se visível no ambiente digital! Uma boa vitrine digital pode abrir mais portas do que você imagina. Oferecemos diversas soluções para ajudá-los a marcar presença no mundo digital.",
-    tag: "Presença Digital",
-  },
-  {
-    icon: Handshake,
-    title: "PARCERIAS",
-    description:
-      "Não se preocupe, se precisar de algum produto ou serviço que não esteja em nosso catálogo, ficaremos felizes em indicar algum de nossos parceiros de confiança.",
-    tag: "Rede Homologada",
-  },
-  {
-    icon: Truck,
-    title: "PRODUÇÃO E ENTREGA",
-    description:
-      "Entregamos produtos acabados e com mão de obra incluída, o máximo de comodidade para você e para sua empresa. Tudo em um só lugar, menos dor de cabeça e mais tempo para o que é necessário.",
-    tag: "Chave na Mão",
-  },
-  {
-    icon: Palette,
-    title: "CRIAÇÃO E DESENVOLVIMENTO",
-    description:
-      "Se você vai começar um novo negócio ou está precisando modernizar sua marca, conte conosco para criar tudo... desde a nova logo, até as peças necessárias para os materiais de rotina, papelaria, sinalização etc.",
-    tag: "Branding & Peças",
-  },
-  {
-    icon: Compass,
-    title: "CONSULTORIA",
-    description:
-      "Oferecemos consultoria em assuntos relacionados à imagem de seu negócio, comunicação visual, padronização de identidade visual, sinalização Interna e Externa. Soluções é nossa especialidade!",
-    tag: "Estratégia Visual",
-  },
-  {
-    icon: Kanban,
-    title: "GERENCIAMENTO DE PROJETOS",
-    description:
-      "Nossa equipe pode ajudar a gerenciar seu novo projeto de comunicação visual, novas lojas, novas filiais, franquias, trabalhos que exijam cuidados com os padrões estabelecidos pela franquiadora ou pelo manual da marca.",
-    tag: "Expansão & Franquias",
-  },
-];
-
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { M3ScrollReveal, M3ScrollStagger, M3ScrollItem } from "@/components/ui/scroll-reveal";
+import { useCMS } from "@/components/cms/cms-provider";
+import { CMSEditableText } from "@/components/cms/cms-editable-text";
+import { CMSCardActionBar, CMSAddCardButton, CMSDynamicIcon } from "@/components/cms/cms-card-controls";
+import { CMSCardEditModal, type GenericCardData } from "@/components/cms/cms-card-edit-modal";
+import type { CMSActionAreaCard } from "@/lib/cms-defaults";
 
 export function ActionAreasSection() {
+  const { data, updateSection, isEditMode, isPreviewMode } = useCMS();
+  const actionAreas = data.action_areas;
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingCard, setEditingCard] = useState<GenericCardData | null>(null);
+
+  const handleEditCard = (card: CMSActionAreaCard) => {
+    setEditingCard({
+      id: card.id,
+      title: card.title,
+      icon: card.icon,
+      description: card.description,
+      tag: card.tag,
+      buttonText: "Consultar esta área",
+      buttonLink: "/#contato",
+    });
+    setModalOpen(true);
+  };
+
+  const handleAddCard = () => {
+    setEditingCard({
+      id: `act-${Date.now()}`,
+      title: "NOVA ÁREA",
+      icon: "Sparkles",
+      description: "Descreva a nova área de atuação e especialidades...",
+      tag: "Novo Segmento",
+      buttonText: "Consultar esta área",
+      buttonLink: "/#contato",
+    });
+    setModalOpen(true);
+  };
+
+  const handleDeleteCard = (cardId: string) => {
+    updateSection("action_areas", (prev) => ({
+      ...prev,
+      cards: prev.cards.filter((c) => c.id !== cardId),
+    }));
+  };
+
+  const handleSaveCardModal = (saved: GenericCardData) => {
+    updateSection("action_areas", (prev) => {
+      const existingIdx = prev.cards.findIndex((c) => c.id === saved.id);
+      const newCardItem: CMSActionAreaCard = {
+        id: saved.id || `act-${Date.now()}`,
+        title: saved.title,
+        icon: saved.icon || "Sparkles",
+        description: saved.description || "",
+        tag: saved.tag || "Especialidade",
+      };
+
+      if (existingIdx >= 0) {
+        const nextCards = [...prev.cards];
+        nextCards[existingIdx] = newCardItem;
+        return { ...prev, cards: nextCards };
+      } else {
+        return { ...prev, cards: [...prev.cards, newCardItem] };
+      }
+    });
+  };
+
   return (
-    <section id="atuacao" className="py-24 bg-[#121316] border-b border-white/[0.08] relative scroll-mt-20 text-white">
+    <section
+      id="atuacao"
+      className="py-24 bg-[#121316] border-b border-white/[0.08] relative scroll-mt-20 text-white"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Cabeçalho com M3ScrollReveal */}
+        {/* Cabeçalho */}
         <M3ScrollReveal variant="fadeUp" className="max-w-3xl mb-16 space-y-4">
           <Badge variant="orange" className="font-semibold tracking-wider">
             <Sparkles className="w-3.5 h-3.5" />
-            Áreas de atuação
+            <CMSEditableText
+              value={actionAreas.badgeText}
+              onChange={(val) => updateSection("action_areas", { badgeText: val })}
+              placeholder="Tag da seção..."
+            />
           </Badge>
+
           <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
-            Como podemos te ajudar?
+            <CMSEditableText
+              as="span"
+              value={actionAreas.title}
+              onChange={(val) => updateSection("action_areas", { title: val })}
+              placeholder="Título..."
+            />
           </h2>
+
           <p className="text-base text-zinc-400 max-w-2xl leading-relaxed pt-1">
-            Estrutura completa para atender às suas necessidades, desde a concepção de marca e web até a fabricação, logística e instalação final.
+            <CMSEditableText
+              as="span"
+              multiline
+              value={actionAreas.subtitle}
+              onChange={(val) => updateSection("action_areas", { subtitle: val })}
+              placeholder="Subtítulo..."
+            />
           </p>
         </M3ScrollReveal>
 
-        {/* Grid com os 6 cards de áreas de atuação com M3ScrollStagger e M3ScrollItem */}
+        {/* Grid com os cards de áreas de atuação */}
         <M3ScrollStagger className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {ACTION_AREAS.map((area, idx) => {
-            const Icon = area.icon;
-            return (
-              <M3ScrollItem key={idx} className="h-full">
+          {actionAreas.cards.map((area) => (
+            <M3ScrollItem key={area.id} className="h-full">
+              <div className="relative h-full group">
+                {/* Ações flutuantes do Card */}
+                <CMSCardActionBar
+                  label="Área"
+                  onEdit={() => handleEditCard(area)}
+                  onDelete={() => handleDeleteCard(area.id)}
+                />
+
                 <SpotlightCard
                   isDark={true}
                   className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] flex flex-col justify-between group hover:border-[#FF650F]/50 hover:shadow-xl transition-all duration-300 h-full"
@@ -93,7 +129,10 @@ export function ActionAreasSection() {
                   <div>
                     <div className="flex items-center justify-between mb-6">
                       <div className="w-12 h-12 rounded-2xl bg-[#121316] border border-white/[0.08] flex items-center justify-center group-hover:bg-[#FF650F] transition-all duration-300">
-                        <Icon className="w-6 h-6 text-[#FF650F] group-hover:text-white transition-colors" />
+                        <CMSDynamicIcon
+                          name={area.icon}
+                          className="w-6 h-6 text-[#FF650F] group-hover:text-white transition-colors"
+                        />
                       </div>
                       <span className="text-[11px] font-semibold tracking-wider text-[#FF650F] uppercase font-mono px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20">
                         {area.tag}
@@ -111,7 +150,13 @@ export function ActionAreasSection() {
 
                   <div className="pt-6 mt-6 border-t border-white/[0.08] flex items-center justify-between">
                     <Link
-                      href="/#orcamento"
+                      href="/#contato"
+                      onClick={(e) => {
+                        if (isEditMode && !isPreviewMode) {
+                          e.preventDefault();
+                          handleEditCard(area);
+                        }
+                      }}
                       className="text-xs font-bold text-zinc-300 group-hover:text-[#FF650F] flex items-center gap-1.5 transition-colors"
                     >
                       Consultar esta área
@@ -119,11 +164,32 @@ export function ActionAreasSection() {
                     </Link>
                   </div>
                 </SpotlightCard>
-              </M3ScrollItem>
-            );
-          })}
+              </div>
+            </M3ScrollItem>
+          ))}
+
+          {/* Botão de Adicionar Card */}
+          <M3ScrollItem className="h-full">
+            <CMSAddCardButton
+              onClick={handleAddCard}
+              label="+ Adicionar Área de Atuação"
+              className="h-full min-h-[300px]"
+            />
+          </M3ScrollItem>
         </M3ScrollStagger>
       </div>
+
+      {/* Modal de Edição de Card */}
+      <CMSCardEditModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSaveCardModal}
+        initialCard={editingCard}
+        sectionTitle="Área de Atuação"
+        hasIcon={true}
+        hasTag={true}
+        hasButton={false}
+      />
     </section>
   );
 }

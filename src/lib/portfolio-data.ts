@@ -650,19 +650,91 @@ export const PORTFOLIO_PROJECTS: ProjectDetailItem[] = [
  * Recupera um projeto por slug ou por ID, com suporte a consulta no banco de dados Prisma
  * e fallback automático para a base detalhada local.
  */
+
+function mapDbProjectToDetailItem(dbp: any, fallbackLocal?: ProjectDetailItem): ProjectDetailItem {
+  const coverImage = dbp.coverImage || dbp.featuredImage || fallbackLocal?.coverImage || fallbackLocal?.featuredImage || '/images/hero-fallback.webp';
+  const featuredImage = dbp.featuredImage || fallbackLocal?.featuredImage || coverImage;
+  
+  let galleryImages = fallbackLocal?.galleryImages || [];
+  if (Array.isArray(dbp.galleryImages) && dbp.galleryImages.length > 0) {
+    galleryImages = dbp.galleryImages.map((img: any, i: number) => {
+      if (typeof img === 'string') {
+        return {
+          url: img,
+          caption: `Registro ${i + 1} da execução do projeto ${dbp.title}`,
+          category: 'Finalizado' as const,
+        };
+      }
+      return img;
+    });
+  }
+
+  let videos = fallbackLocal?.videos || [];
+  if (Array.isArray(dbp.videos) && dbp.videos.length > 0) {
+    videos = dbp.videos;
+  } else if (!fallbackLocal && coverImage) {
+    videos = [
+      {
+        id: `vid-db-${dbp.id}`,
+        title: `Showcase — ${dbp.title}`,
+        description: 'Showcase dos detalhes de acabamento e iluminação realizados pela equipe ICTHUS.',
+        videoUrl: '/videos/hero-background.mp4',
+        thumbnailUrl: featuredImage,
+        duration: '0:30',
+        tag: 'Apresentação da Obra',
+      },
+    ];
+  }
+
+  let technicalSpecs = fallbackLocal?.technicalSpecs || [];
+  if (Array.isArray(dbp.technicalSpecs) && dbp.technicalSpecs.length > 0) {
+    technicalSpecs = dbp.technicalSpecs;
+  } else if (!fallbackLocal) {
+    technicalSpecs = [
+      { label: 'Categoria', value: dbp.category || 'Comunicação Visual' },
+      { label: 'Cliente', value: dbp.clientName || 'Cliente ICTHUS' },
+      { label: 'Localização', value: dbp.location || 'Porto Alegre, RS' },
+    ];
+  }
+
+  const testimonial = dbp.testimonial || fallbackLocal?.testimonial;
+
+  return {
+    id: dbp.id,
+    slug: dbp.slug,
+    title: dbp.title,
+    subtitle: dbp.subtitle || fallbackLocal?.subtitle || `${dbp.category} executada com excelência para ${dbp.clientName || 'Cliente Especial'}.`,
+    category: dbp.category,
+    clientName: dbp.clientName || fallbackLocal?.clientName || 'Cliente ICTHUS',
+    clientSegment: dbp.clientSegment || fallbackLocal?.clientSegment || 'Comunicação Visual Corporativa',
+    location: dbp.location || fallbackLocal?.location || 'Porto Alegre, RS',
+    year: dbp.year || (dbp.completedAt ? dbp.completedAt.getFullYear().toString() : fallbackLocal?.year || '2026'),
+    executionTime: dbp.executionTime || fallbackLocal?.executionTime || 'Sob Medida',
+    dimensions: dbp.dimensions || fallbackLocal?.dimensions || 'Conforme Projeto Aprovado',
+    warranty: dbp.warranty || fallbackLocal?.warranty || 'Garantia Integral ICTHUS',
+    coverImage,
+    featuredImage,
+    galleryImages,
+    videos,
+    description: dbp.description || fallbackLocal?.description || '',
+    challenge: dbp.challenge || fallbackLocal?.challenge || 'Desenvolver uma solução sob medida com acabamento impecável e alta durabilidade.',
+    solution: dbp.solution || fallbackLocal?.solution || 'Aplicação dos mais nobres materiais do setor com projeto de engenharia e montagem técnica.',
+    results: (Array.isArray(dbp.results) && dbp.results.length > 0) ? dbp.results : (fallbackLocal?.results || [
+      'Destaque e valorização da marca do cliente perante seu público.',
+      'Entrega pontual com controle rígido de qualidade em fábrica.',
+      'Durabilidade e resistência garantidas.',
+    ]),
+    materials: (Array.isArray(dbp.materials) && dbp.materials.length > 0) ? dbp.materials : (fallbackLocal?.materials || (dbp.tags?.length ? dbp.tags : ['ACM', 'LED', 'Acrílico'])),
+    technicalSpecs,
+    testimonial,
+    tags: (Array.isArray(dbp.tags) && dbp.tags.length > 0) ? dbp.tags : (fallbackLocal?.tags || [dbp.category]),
+  };
+}
+
 export async function getProjectBySlugOrId(identifier: string): Promise<ProjectDetailItem | null> {
   const decoded = decodeURIComponent(identifier).trim();
 
-  // 1. Busca primeiro na base de dados de alta riqueza
-  const foundLocal = PORTFOLIO_PROJECTS.find(
-    (p) => p.slug === decoded || p.id === decoded || p.slug.toLowerCase() === decoded.toLowerCase()
-  );
-
-  if (foundLocal) {
-    return foundLocal;
-  }
-
-  // 2. Se não estiver local, busca no banco de dados Prisma
+  // 1. Tenta buscar no banco de dados primeiro para priorizar edições feitas no CMS
   try {
     const dbProject = await prisma.portfolioProject.findFirst({
       where: {
@@ -671,131 +743,40 @@ export async function getProjectBySlugOrId(identifier: string): Promise<ProjectD
     });
 
     if (dbProject) {
-      return {
-        id: dbProject.id,
-        slug: dbProject.slug,
-        title: dbProject.title,
-        subtitle: `${dbProject.category} executada com excelência para ${dbProject.clientName || "Cliente Especial"}.`,
-        category: dbProject.category,
-        clientName: dbProject.clientName || "Cliente Glessios",
-        clientSegment: "Comunicação Visual Corporativa",
-        location: "Porto Alegre, RS",
-        year: dbProject.completedAt ? dbProject.completedAt.getFullYear().toString() : "2026",
-        executionTime: "Sob Medida",
-        dimensions: "Conforme Projeto Aprovado",
-        warranty: "Garantia Integral Glessios",
-        coverImage: dbProject.featuredImage,
-        featuredImage: dbProject.featuredImage,
-        galleryImages: (dbProject.galleryImages && dbProject.galleryImages.length > 0
-          ? dbProject.galleryImages
-          : [dbProject.featuredImage]
-        ).map((url, i) => ({
-          url,
-          caption: `Foto ${i + 1} da execução do projeto ${dbProject.title}`,
-          category: "Finalizado",
-        })),
-        videos: [
-          {
-            id: `vid-db-${dbProject.id}`,
-            title: `Vídeo da Obra — ${dbProject.title}`,
-            description: "Showcase dos detalhes de acabamento e iluminação realizados pela equipe Glessios.",
-            videoUrl: "/videos/hero-background.mp4",
-            thumbnailUrl: dbProject.featuredImage,
-            duration: "0:30",
-            tag: "Apresentação da Obra",
-          },
-        ],
-        description: dbProject.description,
-        challenge: "Desenvolver uma solução sob medida com acabamento impecável e alta durabilidade.",
-        solution: "Aplicação dos mais nobres materiais do setor com projeto de engenharia e montagem técnica.",
-        results: [
-          "Destaque e valorização da marca do cliente perante seu público.",
-          "Entrega pontual com controle rígido de qualidade em fábrica.",
-          "Durabilidade e resistência garantidas.",
-        ],
-        materials: dbProject.tags && dbProject.tags.length > 0 ? dbProject.tags : ["ACM", "LED", "Acrílico"],
-        technicalSpecs: [
-          { label: "Categoria", value: dbProject.category },
-          { label: "Cliente", value: dbProject.clientName || "Cliente Glessios" },
-          { label: "Garantia", value: "Garantia com suporte técnico Glessios" },
-        ],
-        tags: dbProject.tags || [dbProject.category],
-      };
+      const foundLocal = PORTFOLIO_PROJECTS.find(
+        (p) => p.slug === decoded || p.id === decoded || p.slug.toLowerCase() === decoded.toLowerCase()
+      );
+      return mapDbProjectToDetailItem(dbProject, foundLocal);
     }
   } catch (error) {
-    console.warn("Aviso ao buscar projeto no banco de dados:", error);
+    console.warn('Aviso ao buscar projeto no banco de dados:', error);
   }
 
-  return null;
+  // 2. Fallback para base detalhada estática local
+  const foundLocal = PORTFOLIO_PROJECTS.find(
+    (p) => p.slug === decoded || p.id === decoded || p.slug.toLowerCase() === decoded.toLowerCase()
+  );
+
+  return foundLocal || null;
 }
 
-/**
- * Retorna todos os projetos para listagem e sitemap
- */
 export async function getAllProjects(): Promise<ProjectDetailItem[]> {
   try {
     const dbProjects = await prisma.portfolioProject.findMany({
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
 
     if (dbProjects && dbProjects.length > 0) {
-      // Mescla projetos locais com os do banco que não estão na lista
-      const localSlugs = new Set(PORTFOLIO_PROJECTS.map((p) => p.slug));
-      const additionalProjects: ProjectDetailItem[] = dbProjects
-        .filter((dbp) => !localSlugs.has(dbp.slug))
-        .map((dbp) => ({
-          id: dbp.id,
-          slug: dbp.slug,
-          title: dbp.title,
-          subtitle: `${dbp.category} executada com excelência para ${dbp.clientName || "Cliente Especial"}.`,
-          category: dbp.category,
-          clientName: dbp.clientName || "Cliente Glessios",
-          clientSegment: "Comunicação Visual Corporativa",
-          location: "Porto Alegre, RS",
-          year: dbp.completedAt ? dbp.completedAt.getFullYear().toString() : "2026",
-          executionTime: "Sob Medida",
-          dimensions: "Conforme Projeto Aprovado",
-          warranty: "Garantia Integral Glessios",
-          coverImage: dbp.featuredImage,
-          featuredImage: dbp.featuredImage,
-          galleryImages: (dbp.galleryImages && dbp.galleryImages.length > 0
-            ? dbp.galleryImages
-            : [dbp.featuredImage]
-          ).map((url, i) => ({
-            url,
-            caption: `Foto ${i + 1} do projeto ${dbp.title}`,
-            category: "Finalizado",
-          })),
-          videos: [
-            {
-              id: `vid-db-${dbp.id}`,
-              title: `Vídeo da Obra — ${dbp.title}`,
-              description: "Showcase dos detalhes de acabamento e iluminação realizados pela equipe Glessios.",
-              videoUrl: "/videos/hero-background.mp4",
-              thumbnailUrl: dbp.featuredImage,
-              duration: "0:30",
-              tag: "Apresentação da Obra",
-            },
-          ],
-          description: dbp.description,
-          challenge: "Desenvolver uma solução sob medida com acabamento impecável e alta durabilidade.",
-          solution: "Aplicação dos mais nobres materiais do setor com projeto de engenharia e montagem técnica.",
-          results: [
-            "Destaque e valorização da marca do cliente perante seu público.",
-            "Entrega pontual com controle rígido de qualidade em fábrica.",
-          ],
-          materials: dbp.tags && dbp.tags.length > 0 ? dbp.tags : ["ACM", "LED", "Acrílico"],
-          technicalSpecs: [
-            { label: "Categoria", value: dbp.category },
-            { label: "Cliente", value: dbp.clientName || "Cliente Glessios" },
-          ],
-          tags: dbp.tags || [dbp.category],
-        }));
+      const mappedDbProjects = dbProjects.map((dbp) => {
+        const fallback = PORTFOLIO_PROJECTS.find((p) => p.slug === dbp.slug);
+        return mapDbProjectToDetailItem(dbp, fallback);
+      });
 
-      return [...PORTFOLIO_PROJECTS, ...additionalProjects];
+      const remainingLocals = PORTFOLIO_PROJECTS.filter((p) => !dbProjects.some((dbp) => dbp.slug === p.slug));
+      return [...mappedDbProjects, ...remainingLocals];
     }
   } catch (error) {
-    console.warn("Aviso ao buscar lista de projetos no banco de dados:", error);
+    console.warn('Aviso ao buscar lista de projetos no banco de dados:', error);
   }
 
   return PORTFOLIO_PROJECTS;

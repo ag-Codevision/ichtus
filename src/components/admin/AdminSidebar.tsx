@@ -23,6 +23,7 @@ import {
   Users,
   Settings,
   Sliders,
+  Globe,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -131,6 +132,13 @@ export function AdminSidebar({
   ];
 
   const systemItems = [
+    {
+      label: "CMS do Site",
+      description: "Editor On-Page e Conteúdo",
+      href: "/admin/cms",
+      icon: Globe,
+      active: pathname.startsWith("/admin/cms"),
+    },
     {
       label: "Configurações",
       description: "WhatsApp, Portal & Sistema",

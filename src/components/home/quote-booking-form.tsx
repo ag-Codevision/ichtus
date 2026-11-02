@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { M3ScrollReveal } from "@/components/ui/scroll-reveal";
+import { useCMS } from "@/components/cms/cms-provider";
 import {
   ArrowRight,
   CheckCircle2,
@@ -16,9 +17,13 @@ import {
   MessageSquare,
   Building2,
   Calendar,
+  Edit2,
 } from "lucide-react";
 
 export function QuoteBookingForm() {
+  const { data, isEditMode, isPreviewMode, setContactModalOpen } = useCMS();
+  const contact = data.contact_info;
+
   const [formData, setFormData] = useState({
     contactName: "",
     contactPhone: "",
@@ -58,11 +63,11 @@ export function QuoteBookingForm() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const resData = await res.json();
+      if (res.ok && resData.success) {
         setIsSuccess(true);
       } else {
-        setErrorMessage(data.error || "Ocorreu um erro ao enviar sua mensagem.");
+        setErrorMessage(resData.error || "Ocorreu um erro ao enviar sua mensagem.");
       }
     } catch {
       setErrorMessage("Erro ao conectar com o servidor. Tente novamente ou chame no WhatsApp.");
@@ -70,6 +75,10 @@ export function QuoteBookingForm() {
       setIsLoading(false);
     }
   };
+
+  const whatsappLink = `https://wa.me/${contact.whatsapp?.number || "5551981192976"}?text=${encodeURIComponent(
+    contact.whatsapp?.defaultMessage || "Olá! Gostaria de saber mais sobre as soluções da Glessios."
+  )}`;
 
   return (
     <div id="contato" className="scroll-mt-24 text-white">
@@ -92,13 +101,26 @@ export function QuoteBookingForm() {
         <M3ScrollReveal variant="fadeUp" delay={0.05} className="lg:col-span-5 space-y-6">
           <SpotlightCard
             isDark={true}
-            className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] space-y-6 shadow-xl"
+            className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] space-y-6 shadow-xl relative group"
           >
+            {/* Botão de Edição Rápida de Contato no Modo CMS */}
+            {isEditMode && !isPreviewMode && (
+              <button
+                type="button"
+                onClick={() => setContactModalOpen(true)}
+                className="absolute top-4 right-4 px-3 py-1.5 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg transition-transform hover:scale-105 z-20"
+                title="Editar informações de contato em todo o site"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                Editar Contatos
+              </button>
+            )}
+
             <h3 className="text-xl font-extrabold text-white pb-3 border-b border-white/[0.08]">
               Canais Diretos de Atendimento
             </h3>
 
-            {/* Telefones & WhatsApp */}
+            {/* Telefones & WhatsApp Dinâmicos */}
             <div className="space-y-4">
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-xl bg-[#FF650F] flex items-center justify-center text-white shrink-0 shadow-md">
@@ -109,23 +131,27 @@ export function QuoteBookingForm() {
                     WhatsApp (Atendimento Rápido)
                   </span>
                   <a
-                    href="https://wa.me/5551981192976"
+                    href={whatsappLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block text-base sm:text-lg font-extrabold text-white hover:text-[#FF650F] transition-colors"
                   >
-                    +55 51 98119.2976 (w)
+                    {contact.whatsapp?.formatted || "+55 51 98119.2976"}
                   </a>
-                  <a
-                    href="tel:+555135746167"
-                    className="block text-sm text-zinc-400 hover:text-white transition-colors mt-0.5"
-                  >
-                    55 51 3574.6167
-                  </a>
+
+                  {contact.phones?.map((phone) => (
+                    <a
+                      key={phone.id}
+                      href={`tel:${phone.number}`}
+                      className="block text-sm text-zinc-400 hover:text-white transition-colors mt-0.5"
+                    >
+                      {phone.formatted} {phone.label ? `(${phone.label})` : ""}
+                    </a>
+                  ))}
                 </div>
               </div>
 
-              {/* Endereço */}
+              {/* Endereço Dinâmico */}
               <div className="flex items-start gap-4 pt-3 border-t border-white/[0.08]">
                 <div className="w-10 h-10 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center text-[#FF650F] shrink-0">
                   <MapPin className="w-5 h-5" />
@@ -135,38 +161,36 @@ export function QuoteBookingForm() {
                     Endereço
                   </span>
                   <p className="text-sm font-semibold text-white mt-0.5">
-                    Rua Buenos Aires, 437 / 203
+                    {contact.address?.street}, {contact.address?.number}
+                    {contact.address?.complement ? ` - ${contact.address.complement}` : ""}
                   </p>
                   <p className="text-xs text-zinc-400">
-                    Jardim Botânico / Porto Alegre / RS
+                    {contact.address?.neighborhood} / {contact.address?.city} / {contact.address?.state}
                   </p>
                   <p className="text-xs text-[#FF650F] font-mono mt-0.5">
-                    CEP: 90670-130 / Brasil
+                    CEP: {contact.address?.zip} / {contact.address?.country}
                   </p>
                 </div>
               </div>
 
-              {/* E-mails */}
+              {/* E-mails Dinâmicos */}
               <div className="flex items-start gap-4 pt-3 border-t border-white/[0.08]">
                 <div className="w-10 h-10 rounded-xl bg-[#121316] border border-white/[0.08] flex items-center justify-center text-[#FF650F] shrink-0">
                   <Mail className="w-5 h-5" />
                 </div>
-                <div>
-                  <span className="text-xs uppercase font-bold tracking-wider text-zinc-400">
+                <div className="space-y-1">
+                  <span className="text-xs uppercase font-bold tracking-wider text-zinc-400 block">
                     E-mails
                   </span>
-                  <a
-                    href="mailto:glessios@hotmail.com"
-                    className="block text-sm font-semibold text-white hover:text-[#FF650F] transition-colors mt-0.5"
-                  >
-                    glessios@hotmail.com
-                  </a>
-                  <a
-                    href="mailto:glessios@gmail.com"
-                    className="block text-sm font-semibold text-white hover:text-[#FF650F] transition-colors"
-                  >
-                    glessios@gmail.com
-                  </a>
+                  {contact.emails?.map((mail) => (
+                    <a
+                      key={mail.id}
+                      href={`mailto:${mail.email}`}
+                      className="block text-sm font-semibold text-white hover:text-[#FF650F] transition-colors"
+                    >
+                      {mail.email}
+                    </a>
+                  ))}
                 </div>
               </div>
             </div>
@@ -174,7 +198,7 @@ export function QuoteBookingForm() {
             {/* Botão WhatsApp */}
             <div className="pt-2">
               <a
-                href="https://wa.me/5551981192976?text=Ol%C3%A1!%20Gostaria%20de%20saber%20mais%20sobre%20as%20solu%C3%A7%C3%B5es%20da%20Glessios."
+                href={whatsappLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg transition-all"
@@ -211,7 +235,7 @@ export function QuoteBookingForm() {
 
                 <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
                   <a
-                    href={`https://wa.me/5551981192976?text=Ol%C3%A1,%20meu%20nome%20%C3%A9%20${encodeURIComponent(formData.contactName)}%20e%20acabei%20de%20enviar%20uma%20mensagem%20pelo%20site.`}
+                    href={`https://wa.me/${contact.whatsapp?.number || "5551981192976"}?text=Ol%C3%A1,%20meu%20nome%20%C3%A9%20${encodeURIComponent(formData.contactName)}%20e%20acabei%20de%20enviar%20uma%20mensagem%20pelo%20site.`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow transition-all"
@@ -382,7 +406,7 @@ export function QuoteBookingForm() {
                   )}
                 </div>
 
-                {/* Botão Enviar solicitado na copy */}
+                {/* Botão Enviar */}
                 <Button
                   type="submit"
                   variant="primary"

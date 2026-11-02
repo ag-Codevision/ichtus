@@ -607,16 +607,50 @@ model Appointment {
 // PORTFÓLIO & BLOG AUTÔNOMO COM IA
 // ====================================================
 
+model SiteContent {
+  id        String   @id @default(cuid())
+  section   String   @unique // hero, solutions, about, action_areas, services, team, testimonials, contact_info
+  data      Json     // Conteudo estruturado tipado da secao
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@map("site_contents")
+}
+
+model PortfolioCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@map("portfolio_categories")
+}
+
 model PortfolioProject {
   id             String    @id @default(cuid())
   title          String
   slug           String    @unique
-  category       String    // "Fachadas", "Envelopamento", "Luminosos", "Stands"
+  subtitle       String?
+  category       String    // Fachadas, Envelopamento, Luminosos, Stands
   clientName     String?
+  clientSegment  String?
+  location       String?   @default("Porto Alegre, RS")
+  year           String?   @default("2026")
+  executionTime  String?
+  dimensions     String?
+  warranty       String?
   description    String    @db.Text
+  challenge      String?   @db.Text
+  solution       String?   @db.Text
+  results        String[]  @default([])
+  materials      String[]  @default([])
+  technicalSpecs Json?     // Lista de { label, value }
+  testimonial    Json?     // { quote, author, role, company, rating }
   featuredImage  String
-  galleryImages  String[]  // URLs adicionais
-  tags           String[]
+  coverImage     String?
+  galleryImages  String[]  @default([])
+  videos         Json?     // Lista de { id, title, videoUrl, thumbnailUrl, duration, tag }
+  tags           String[]  @default([])
   isFeatured     Boolean   @default(false)
   completedAt    DateTime?
   createdAt      DateTime  @default(now())

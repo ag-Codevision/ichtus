@@ -1,79 +1,144 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
-import {
-  Sparkles,
-  Compass,
-  Layers,
-  Box,
-  Kanban,
-  ArrowRight,
-  ChevronRight,
-} from "lucide-react";
+import { Sparkles, ArrowRight } from "lucide-react";
 import Link from "next/link";
-
-const FOUR_PILLARS = [
-  {
-    title: "Consultoria",
-    icon: Compass,
-    description: "Orientação especializada para otimizar custos, tempo e a imagem do seu negócio.",
-    targetHash: "#servicos",
-  },
-  {
-    title: "Projetos",
-    icon: Layers,
-    description: "Concepção técnica e estrutural de sinalização, fachadas e identidade corporativa.",
-    targetHash: "#portfolio",
-  },
-  {
-    title: "Produtos",
-    icon: Box,
-    description: "Letreiros, placas, painéis, troféus e itens acabados com máxima qualidade.",
-    targetHash: "#portfolio",
-  },
-  {
-    title: "Gerenciamento",
-    icon: Kanban,
-    description: "Acompanhamento integral do cronograma, fabricação, montagem e pós-entrega.",
-    targetHash: "#atuacao",
-  },
-];
-
 import { M3ScrollReveal, M3ScrollStagger, M3ScrollItem } from "@/components/ui/scroll-reveal";
+import { useCMS } from "@/components/cms/cms-provider";
+import { CMSEditableText } from "@/components/cms/cms-editable-text";
+import { CMSEditableButton } from "@/components/cms/cms-editable-button";
+import { CMSCardActionBar, CMSAddCardButton, CMSDynamicIcon } from "@/components/cms/cms-card-controls";
+import { CMSCardEditModal, type GenericCardData } from "@/components/cms/cms-card-edit-modal";
+import type { CMSSolutionsCard } from "@/lib/cms-defaults";
 
 export function SolutionsIntroSection() {
+  const { data, updateSection, isEditMode, isPreviewMode } = useCMS();
+  const solutions = data.solutions;
+
+  // Estado do Modal de Edição de Card
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingCard, setEditingCard] = useState<GenericCardData | null>(null);
+
+  const handleEditCard = (card: CMSSolutionsCard) => {
+    setEditingCard({
+      id: card.id,
+      title: card.title,
+      icon: card.icon,
+      description: card.description,
+      targetHash: card.targetHash,
+      buttonLink: card.targetHash,
+    });
+    setModalOpen(true);
+  };
+
+  const handleAddCard = () => {
+    setEditingCard({
+      id: `sol-${Date.now()}`,
+      title: "Nova Solução",
+      icon: "Sparkles",
+      description: "Descreva a nova solução ou pilar estratégico oferecido...",
+      targetHash: "#portfolio",
+      buttonLink: "#portfolio",
+    });
+    setModalOpen(true);
+  };
+
+  const handleDeleteCard = (cardId: string) => {
+    updateSection("solutions", (prev) => ({
+      ...prev,
+      cards: prev.cards.filter((c) => c.id !== cardId),
+    }));
+  };
+
+  const handleSaveCardModal = (saved: GenericCardData) => {
+    updateSection("solutions", (prev) => {
+      const existingIdx = prev.cards.findIndex((c) => c.id === saved.id);
+      const newCardItem: CMSSolutionsCard = {
+        id: saved.id || `sol-${Date.now()}`,
+        title: saved.title,
+        icon: saved.icon || "Sparkles",
+        description: saved.description || "",
+        targetHash: saved.targetHash || saved.buttonLink || "#portfolio",
+      };
+
+      if (existingIdx >= 0) {
+        const nextCards = [...prev.cards];
+        nextCards[existingIdx] = newCardItem;
+        return { ...prev, cards: nextCards };
+      } else {
+        return { ...prev, cards: [...prev.cards, newCardItem] };
+      }
+    });
+  };
+
   return (
-    <section id="solucoes" className="py-24 bg-[#F8F9FA] text-zinc-900 border-b border-zinc-200/90 relative scroll-mt-20 overflow-hidden">
+    <section
+      id="solucoes"
+      className="py-24 bg-[#F8F9FA] text-zinc-900 border-b border-zinc-200/90 relative scroll-mt-20 overflow-hidden"
+    >
       {/* Sutil difusão âmbar decorativa de fundo */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-orange-500/5 blur-[150px] rounded-full pointer-events-none -z-10" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Cabeçalho Editorial com M3ScrollReveal (Entrada e saída suaves por rolagem) */}
+        {/* Cabeçalho Editorial */}
         <M3ScrollReveal variant="fadeUp" className="max-w-4xl mx-auto text-center space-y-6">
           <Badge variant="orange-light" className="py-1.5 px-4 font-semibold tracking-wider">
             <Sparkles className="w-3.5 h-3.5 text-[#FF650F]" />
-            NOSSO TRABALHO É PENSAR EM SOLUÇÕES, DEIXE-NOS TE AJUDAR
+            <CMSEditableText
+              value={solutions.badgeText}
+              onChange={(val) => updateSection("solutions", { badgeText: val })}
+              placeholder="Tag da seção..."
+            />
           </Badge>
 
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-zinc-900 leading-tight">
-            NÓS TEMOS A SOLUÇÃO QUE VOCÊ PROCURA
+            <CMSEditableText
+              as="span"
+              value={solutions.title}
+              onChange={(val) => updateSection("solutions", { title: val })}
+              placeholder="Título da seção..."
+            />
           </h2>
 
           <div className="space-y-4 text-base sm:text-lg text-zinc-600 max-w-3xl mx-auto leading-relaxed">
-            <p>
-              Estamos sempre tentando manter nosso pacote de serviços atualizado, com novidades e com o que há de mais moderno em soluções, nos mantemos constantemente inspirados para atender a cada cliente com a exclusividade e atenção merecida. Cada cliente é único e não nos contentamos com soluções genéricas.
-            </p>
+            {solutions.paragraphs.map((para, idx) => (
+              <p key={idx}>
+                <CMSEditableText
+                  as="span"
+                  multiline
+                  value={para}
+                  onChange={(val) => {
+                    const nextParas = [...solutions.paragraphs];
+                    nextParas[idx] = val;
+                    updateSection("solutions", { paragraphs: nextParas });
+                  }}
+                  placeholder="Parágrafo descritivo..."
+                />
+              </p>
+            ))}
+
             <p className="font-semibold text-zinc-900">
-              Venha para nosso mundo e descubra tudo o que podemos fazer por você ou por sua empresa.
+              <CMSEditableText
+                as="span"
+                value={solutions.closingHighlight}
+                onChange={(val) => updateSection("solutions", { closingHighlight: val })}
+                placeholder="Frase de destaque final..."
+              />
             </p>
           </div>
 
           {/* Botão de Ação Centralizado */}
           <div className="pt-6 flex items-center justify-center">
-            <Link href="/#contato">
+            <CMSEditableButton
+              label="COMEÇAR"
+              url="/#contato"
+              onSave={(newLabel, newUrl) => {
+                // Salva link / label caso necessário
+              }}
+            >
               <Button
                 variant="primary"
                 size="lg"
@@ -82,24 +147,39 @@ export function SolutionsIntroSection() {
                 COMEÇAR
                 <ArrowRight className="w-4 h-4" />
               </Button>
-            </Link>
+            </CMSEditableButton>
           </div>
         </M3ScrollReveal>
 
-        {/* Os 4 Pilares com M3ScrollStagger e M3ScrollItem (Entrada/saída escalonada no scroll) */}
+        {/* Pilares com CRUD de Cards */}
         <M3ScrollStagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-16">
-          {FOUR_PILLARS.map((p, idx) => {
-            const Icon = p.icon;
-            return (
-              <M3ScrollItem key={idx} className="h-full">
-                <Link href={p.targetHash} className="h-full block">
+          {solutions.cards.map((p) => (
+            <M3ScrollItem key={p.id} className="h-full">
+              <div className="relative h-full group">
+                {/* Ações flutuantes do Card (Editar / Excluir) */}
+                <CMSCardActionBar
+                  label="Pilar"
+                  onEdit={() => handleEditCard(p)}
+                  onDelete={() => handleDeleteCard(p.id)}
+                />
+
+                <Link
+                  href={p.targetHash}
+                  onClick={(e) => {
+                    if (isEditMode && !isPreviewMode) {
+                      e.preventDefault();
+                      handleEditCard(p);
+                    }
+                  }}
+                  className="h-full block"
+                >
                   <SpotlightCard
                     isDark={false}
                     className="p-8 rounded-3xl bg-white border border-zinc-200/90 flex flex-col justify-between group hover:border-[#FF650F]/50 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1 h-full"
                   >
                     <div>
                       <div className="w-14 h-14 rounded-2xl bg-orange-50 border border-orange-200/60 flex items-center justify-center text-[#FF650F] group-hover:bg-[#FF650F] group-hover:text-white transition-all mb-6 shadow-sm">
-                        <Icon className="w-7 h-7" />
+                        <CMSDynamicIcon name={p.icon} className="w-7 h-7" />
                       </div>
                       <h3 className="text-2xl font-extrabold text-zinc-900 mb-2 group-hover:text-[#FF650F] transition-colors">
                         {p.title}
@@ -115,11 +195,32 @@ export function SolutionsIntroSection() {
                     </div>
                   </SpotlightCard>
                 </Link>
-              </M3ScrollItem>
-            );
-          })}
+              </div>
+            </M3ScrollItem>
+          ))}
+
+          {/* Botão de Adicionar Card */}
+          <M3ScrollItem className="h-full">
+            <CMSAddCardButton
+              onClick={handleAddCard}
+              label="+ Adicionar Novo Pilar"
+              className="h-full min-h-[300px]"
+            />
+          </M3ScrollItem>
         </M3ScrollStagger>
       </div>
+
+      {/* Modal de Edição de Card */}
+      <CMSCardEditModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSaveCardModal}
+        initialCard={editingCard}
+        sectionTitle="Soluções e Pilares"
+        hasIcon={true}
+        hasButton={true}
+        hasTag={false}
+      />
     </section>
   );
 }
