@@ -85,7 +85,28 @@ export async function getAllSiteContent(): Promise<CMSCompleteSiteData> {
       about: map.has("about") ? { ...DEFAULT_ABOUT_CONTENT, ...map.get("about") } : DEFAULT_ABOUT_CONTENT,
       action_areas: map.has("action_areas") ? { ...DEFAULT_ACTION_AREAS_CONTENT, ...map.get("action_areas") } : DEFAULT_ACTION_AREAS_CONTENT,
       services: map.has("services") ? { ...DEFAULT_SERVICES_CONTENT, ...map.get("services") } : DEFAULT_SERVICES_CONTENT,
-      team: map.has("team") ? { ...DEFAULT_TEAM_CONTENT, ...map.get("team") } : DEFAULT_TEAM_CONTENT,
+      team: (() => {
+        const raw = map.has("team") ? { ...DEFAULT_TEAM_CONTENT, ...map.get("team") } : DEFAULT_TEAM_CONTENT;
+        if (!raw.members || !Array.isArray(raw.members) || raw.members.length === 0) {
+          if (raw.leader) {
+            raw.members = [
+              {
+                id: raw.leader.id || "leader-gg",
+                name: raw.leader.name || "Glessios Gusso",
+                role: raw.leader.role || "Diretor Geral",
+                badge: raw.leader.badge || "Direção & Estratégia",
+                bio: raw.leader.bio || "",
+                photoUrl: raw.leader.photoUrl || "",
+                initials: raw.leader.initials || "GG",
+                highlights: raw.leader.highlights || [],
+              },
+            ];
+          } else {
+            raw.members = DEFAULT_TEAM_CONTENT.members;
+          }
+        }
+        return raw;
+      })(),
       testimonials: map.has("testimonials") ? { ...DEFAULT_TESTIMONIALS_CONTENT, ...map.get("testimonials") } : DEFAULT_TESTIMONIALS_CONTENT,
       contact_info: map.has("contact_info") ? { ...DEFAULT_CONTACT_CONTENT, ...map.get("contact_info") } : DEFAULT_CONTACT_CONTENT,
       portfolio: map.has("portfolio") ? { ...DEFAULT_PORTFOLIO_SECTION_CONTENT, ...map.get("portfolio") } : DEFAULT_PORTFOLIO_SECTION_CONTENT,

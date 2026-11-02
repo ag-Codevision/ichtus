@@ -125,22 +125,29 @@ export interface CMSServicesContent {
   cards: CMSServiceCard[];
 }
 
+export interface CMSTeamMemberHighlight {
+  id: string;
+  icon: string;
+  text: string;
+}
+
+export interface CMSTeamMember {
+  id: string;
+  name: string;
+  role: string;
+  badge: string;
+  bio: string;
+  photoUrl?: string;
+  initials?: string;
+  highlights?: CMSTeamMemberHighlight[];
+}
+
 export interface CMSTeamContent {
   badgeText: string;
   title: string;
   subtitle: string;
-  leader: {
-    name: string;
-    role: string;
-    badge: string;
-    bio: string;
-    initials: string;
-    highlights: Array<{
-      id: string;
-      icon: string;
-      text: string;
-    }>;
-  };
+  members: CMSTeamMember[];
+  leader?: CMSTeamMember;
 }
 
 export interface CMSTestimonialCard {
@@ -537,11 +544,36 @@ export const DEFAULT_TEAM_CONTENT: CMSTeamContent = {
   badgeText: "Liderança & Compromisso",
   title: "Nossa Equipe",
   subtitle: "Profissionais dedicados a pensar nas soluções mais inteligentes e funcionais para o seu negócio.",
+  members: [
+    {
+      id: "leader-gg",
+      name: "Glessios Gusso",
+      role: "Diretor Geral",
+      badge: "Direção & Estratégia",
+      bio: "Com mais de 12 anos de experiência na concepção e gerenciamento de soluções visuais e projetos industriais, Glessios Gusso lidera pessoalmente a garantia de que cada cliente receba atenção exclusiva e soluções sob medida.",
+      photoUrl: "",
+      initials: "GG",
+      highlights: [
+        {
+          id: "hl-1",
+          icon: "ShieldCheck",
+          text: "Atendimento Direto",
+        },
+        {
+          id: "hl-2",
+          icon: "Building",
+          text: "Porto Alegre & Todo o Brasil",
+        },
+      ],
+    },
+  ],
   leader: {
+    id: "leader-gg",
     name: "Glessios Gusso",
     role: "Diretor Geral",
     badge: "Direção & Estratégia",
     bio: "Com mais de 12 anos de experiência na concepção e gerenciamento de soluções visuais e projetos industriais, Glessios Gusso lidera pessoalmente a garantia de que cada cliente receba atenção exclusiva e soluções sob medida.",
+    photoUrl: "",
     initials: "GG",
     highlights: [
       {
