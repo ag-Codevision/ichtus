@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Edit3 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 import { CMSPortfolioModal } from "@/components/cms/cms-portfolio-modal";
 import type { ProjectDetailItem } from "@/lib/portfolio-data";
 
@@ -12,17 +11,18 @@ interface PortfolioDetailEditButtonProps {
 }
 
 export function PortfolioDetailEditButton({ project }: PortfolioDetailEditButtonProps) {
-  const searchParams = useSearchParams();
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const searchParams = new URLSearchParams(window.location.search);
     const isEditQuery = searchParams.get("cms_edit") === "true";
-    const hasAdminCookie = typeof document !== "undefined" && document.cookie.includes("glessios_admin_session");
+    const hasAdminCookie = document.cookie.includes("glessios_admin_session");
     if (isEditQuery && hasAdminCookie) {
       setIsAdminMode(true);
     }
-  }, [searchParams]);
+  }, []);
 
   if (!isAdminMode) return null;
 

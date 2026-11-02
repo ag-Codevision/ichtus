@@ -28,18 +28,12 @@ export function CMSEditableText({
   const editableRef = useRef<HTMLElement>(null);
   const containerRef = useRef<HTMLSpanElement>(null);
 
-  // Se não estiver em modo de edição ou estiver no modo preview visitante, renderiza normal
-  if (!isEditMode || isPreviewMode) {
-    return <Component className={className}>{value || placeholder}</Component>;
-  }
-
-  // Quando entrar em modo de edição, sincroniza o texto e foca no cursor
+  // 1. Sincroniza o conteúdo ao entrar no modo de edição e posiciona o cursor
   useEffect(() => {
     if (isEditing && editableRef.current) {
       editableRef.current.innerText = value;
       editableRef.current.focus();
 
-      // Posiciona o cursor no final do texto para digitação natural
       try {
         const range = document.createRange();
         const selection = window.getSelection();
@@ -48,12 +42,12 @@ export function CMSEditableText({
         selection?.removeAllRanges();
         selection?.addRange(range);
       } catch (err) {
-        // Fallback silencioso
+        // Fallback para navegadores legados
       }
     }
   }, [isEditing, value]);
 
-  // Handler para Salvar (Confirmar)
+  // 2. Confirmação (Salva a alteração)
   const handleConfirm = useCallback(() => {
     if (!editableRef.current) return;
     const newText = editableRef.current.innerText.trim();
@@ -61,7 +55,7 @@ export function CMSEditableText({
     setIsEditing(false);
   }, [onChange]);
 
-  // Handler para Cancelar (Reverte texto e sai)
+  // 3. Cancelamento (Restaura o texto original sem salvar)
   const handleCancel = useCallback(() => {
     if (editableRef.current) {
       editableRef.current.innerText = value;
@@ -69,7 +63,7 @@ export function CMSEditableText({
     setIsEditing(false);
   }, [value]);
 
-  // Listener para CLIQUE FORA (Click Outside) -> cancela e reverte automaticamente
+  // 4. Click Outside (Clicar fora descarta alterações e sai da edição automaticamente)
   useEffect(() => {
     if (!isEditing) return;
 
@@ -78,19 +72,17 @@ export function CMSEditableText({
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
       ) {
-        // Clicou fora: cancela e descarta as edições sem salvar
         handleCancel();
       }
     }
 
-    // Registra no mousedown para capturar antes de outros cliques na página
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isEditing, handleCancel]);
 
-  // Teclas de atalho: Enter para salvar (se não multiline), Escape para cancelar
+  // 5. Teclas de atalho (Enter salva em linha única, Escape cancela)
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !multiline && !e.shiftKey) {
       e.preventDefault();
@@ -100,6 +92,14 @@ export function CMSEditableText({
       handleCancel();
     }
   };
+
+  // =========================================================================
+  // ATENÇÃO: Verificação de modo de edição SEMPRE DEPOIS de todos os Hooks
+  // Isso evita o erro Minified React error #310 (Rendered more hooks than previous render)
+  // =========================================================================
+  if (!isEditMode || isPreviewMode) {
+    return <Component className={className}>{value || placeholder}</Component>;
+  }
 
   return (
     <span
