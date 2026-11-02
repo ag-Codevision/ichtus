@@ -561,3 +561,26 @@ body {
 }
 
 
+
+/* Animação de Entrada fluida para páginas e seções de Blog (GPU-accelerated, zero-runtime) */
+@keyframes blogEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-blog-in {
+  animation: blogEntrance 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animation-delay-75 { animation-delay: 75ms; }
+.animation-delay-150 { animation-delay: 150ms; }
+.animation-delay-225 { animation-delay: 225ms; }
+.animation-delay-300 { animation-delay: 300ms; }
+.animation-delay-375 { animation-delay: 375ms; }
+.animation-delay-450 { animation-delay: 450ms; }

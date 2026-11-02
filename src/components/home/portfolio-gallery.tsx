@@ -39,7 +39,7 @@ export function PortfolioGallery() {
             Galeria de Soluções
           </Badge>
           <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-zinc-900">
-            Nosso Portfolio
+            Nosso Portfólio
           </h2>
           <p className="text-sm md:text-base text-zinc-600 max-w-2xl leading-relaxed pt-1">
             Cada cliente é único. Não nos contentamos com soluções genéricas: desenvolvemos projetos exclusivos com o que há de mais moderno. Clique em qualquer trabalho para ver a apresentação completa com fotos, vídeos e detalhes técnicos da obra.

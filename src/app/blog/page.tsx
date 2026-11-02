@@ -1,20 +1,19 @@
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import prisma from "@/lib/prisma";
-import { formatDate } from "@/lib/utils";
-import { Sparkles, Clock, ArrowRight, BookOpen } from "lucide-react";
-import Image from "next/image";
+import { ArrowRight, Building2, PhoneCall } from "lucide-react";
 import Link from "next/link";
 import { PostStatus, BlogPost } from "@prisma/client";
+import { BlogFilterGrid } from "@/components/blog/blog-filter-grid";
+import { DEMO_BLOG_POSTS } from "@/lib/demo-blog-posts";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Blog de Tendências em Comunicação Visual & Arquitetura | ICTHUS Soluções e Design",
+  title: "Blog de Tendências em Fachadas, ACM e Engenharia Visual | ICTHUS Soluções e Design",
   description:
-    "Artigos aprofundados sobre fachadas comerciais em ACM, letreiros LED indireto, corte router CNC e sinalização corporativa de alto impacto.",
+    "Artigos e guias técnicos aprofundados sobre fachadas comerciais em ACM, letreiros luminosos em LED, usinagem CNC e projetos corporativos de alto padrão.",
 };
 
 export default async function BlogIndexPage() {
@@ -23,154 +22,67 @@ export default async function BlogIndexPage() {
     posts = await prisma.blogPost.findMany({
       where: { status: PostStatus.PUBLISHED },
       orderBy: { publishedAt: "desc" },
-      take: 12,
+      take: 24,
     });
   } catch (error) {
-    console.warn("Aviso: banco de dados inacessível durante build estático ou inicialização:", error);
+    console.warn("Aviso: banco de dados inacessível durante consulta do blog, carregando dados de demonstração:", error);
   }
 
-  const featuredPost = posts[0];
-  const gridPosts = posts.slice(1);
+  // Se não houver posts no banco, utiliza os artigos técnicos de demonstração
+  if (posts.length === 0) {
+    posts = DEMO_BLOG_POSTS;
+  }
 
   return (
-    <div className="min-h-screen flex flex-col bg-glessios-black text-glessios-text-body">
+    <div className="min-h-screen flex flex-col bg-glessios-black text-glessios-text-body selection:bg-glessios-orange/30 selection:text-white">
       <Navbar />
 
-      <main className="flex-grow pt-28 pb-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Cabeçalho do Blog */}
-          <div className="max-w-3xl mb-14 space-y-4">
-            <Badge variant="orange" className="font-semibold tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" />
-              Inteligência Artificial & Engenharia Visual
-            </Badge>
-            <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-glessios-text-heading">
-              Tendências, materiais e arquitetura de fachadas.
-            </h1>
-            <p className="text-base text-glessios-text-body leading-relaxed">
-              Análises técnicas e novidades do setor de comunicação visual redigidas com apoio de IA autônoma e curadoria de engenharia da ICTHUS Soluções e Design.
-            </p>
-          </div>
+      <main className="flex-grow pt-24 pb-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          {/* Grid Interativo com Cards Lado a Lado & Busca (Início Direto) */}
+          <section aria-label="Artigos de Comunicação Visual">
+            <BlogFilterGrid posts={posts} />
+          </section>
 
-          {/* Post em Destaque Principal */}
-          {featuredPost && (
-            <div className="mb-16">
-              <Link
-                href={`/blog/${featuredPost.slug}`}
-                className="group block rounded-3xl bg-glessios-graphite border border-glessios-border-dark overflow-hidden transition-all duration-300 hover:border-glessios-orange/60 hover:shadow-card-hover"
-              >
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-                  <div className="lg:col-span-7 relative h-72 sm:h-96 lg:h-auto min-h-[340px] bg-black">
-                    <Image
-                      src={featuredPost.coverImageUrl}
-                      alt={featuredPost.imageAlt}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-700"
-                      sizes="(max-width: 1024px) 100vw, 60vw"
-                      priority
-                    />
-                    <div className="absolute top-4 left-4">
-                      <Badge variant="orange" className="bg-glessios-orange text-white border-none font-bold">
-                        Destaque da Semana
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-5 p-8 sm:p-10 flex flex-col justify-between space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-4 text-xs text-glessios-text-body font-mono">
-                        <span>{formatDate(featuredPost.publishedAt)}</span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-glessios-orange" />
-                          {featuredPost.readingTimeMin} min de leitura
-                        </span>
-                      </div>
-
-                      <h2 className="text-2xl sm:text-3xl font-extrabold text-glessios-text-heading group-hover:text-white transition-colors leading-snug">
-                        {featuredPost.title}
-                      </h2>
-
-                      <p className="text-sm text-glessios-text-body leading-relaxed line-clamp-3">
-                        {featuredPost.excerpt}
-                      </p>
-                    </div>
-
-                    <div className="pt-6 border-t border-glessios-border-dark flex items-center justify-between">
-                      <div className="flex flex-wrap gap-1.5">
-                        {featuredPost.tags.slice(0, 2).map((tag: string, i: number) => (
-                          <span key={i} className="text-xs bg-white/[0.05] text-glessios-text-body px-2.5 py-1 rounded-md">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                      <span className="text-sm font-semibold text-glessios-orange flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                        Ler Artigo Completo
-                        <ArrowRight className="w-4 h-4" />
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            </div>
-          )}
-
-          {/* Grid de Artigos Recentes */}
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-glessios-orange" />
-              Mais Artigos & Guias Técnicos
-            </h3>
-
-            {gridPosts.length === 0 && !featuredPost && (
-              <div className="p-12 text-center rounded-2xl bg-glessios-graphite border border-glessios-border-dark">
-                <p className="text-sm text-glessios-text-body">
-                  Nenhum artigo publicado ainda. O motor de IA gerará a próxima edição automaticamente.
+          {/* Banner de Conversão e Consultoria Técnica no Rodapé do Blog */}
+          <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-glessios-graphite via-glessios-charcoal to-glessios-black border border-glessios-border-orange/60 p-8 sm:p-12 shadow-orange-glow">
+            <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
+              <div className="space-y-3 text-center lg:text-left max-w-2xl">
+                <span className="text-xs font-bold tracking-widest uppercase text-glessios-orange flex items-center justify-center lg:justify-start gap-1.5">
+                  <Building2 className="w-4 h-4" />
+                  Projeto Arquitetônico Personalizado
+                </span>
+                <h3 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+                  Precisa de uma fachada comercial de alto impacto?
+                </h3>
+                <p className="text-sm sm:text-base text-glessios-text-body leading-relaxed">
+                  Converse com nossos especialistas para desenvolver seu estudo preliminar 3D, especificações de materiais
+                  e orçamento sob medida para o seu negócio.
                 </p>
               </div>
-            )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {gridPosts.map((post) => (
-                <Link
-                  key={post.id}
-                  href={`/blog/${post.slug}`}
-                  className="group rounded-2xl bg-glessios-graphite border border-glessios-border-dark overflow-hidden transition-all duration-300 hover:border-glessios-orange/50 hover:shadow-card-hover hover:-translate-y-1 flex flex-col justify-between"
-                >
-                  <div className="relative h-52 w-full bg-black">
-                    <Image
-                      src={post.coverImageUrl}
-                      alt={post.imageAlt}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                    />
-                  </div>
-
-                  <div className="p-6 flex flex-col flex-grow justify-between space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3 text-xs text-glessios-text-body font-mono">
-                        <span>{formatDate(post.publishedAt)}</span>
-                        <span>•</span>
-                        <span>{post.readingTimeMin} min</span>
-                      </div>
-                      <h4 className="text-lg font-bold text-glessios-text-heading group-hover:text-white transition-colors line-clamp-2">
-                        {post.title}
-                      </h4>
-                      <p className="text-xs text-glessios-text-body line-clamp-2 leading-relaxed">
-                        {post.excerpt}
-                      </p>
-                    </div>
-
-                    <div className="pt-4 border-t border-glessios-border-dark flex items-center justify-between text-xs">
-                      <span className="text-glessios-orange font-medium">Ler artigo</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-glessios-orange group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </div>
+              <div className="flex flex-col sm:flex-row items-center gap-3.5 w-full lg:w-auto shrink-0">
+                <Link href="/#orcamento" className="w-full sm:w-auto">
+                  <Button variant="primary" size="lg" className="w-full sm:w-auto gap-2 text-sm font-bold shadow-lg">
+                    Solicitar Estudo 3D
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
                 </Link>
-              ))}
+
+                <a
+                  href="https://wa.me/5541996556102?text=Olá!%20Li%20os%20artigos%20no%20blog%20da%20ICTHUS%20e%20gostaria%20de%20um%20orçamento%20de%20fachada."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto"
+                >
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto gap-2 text-sm font-semibold border-white/20 hover:border-glessios-orange">
+                    <PhoneCall className="w-4 h-4 text-glessios-orange" />
+                    Falar com Engenheiro
+                  </Button>
+                </a>
+              </div>
             </div>
-          </div>
+          </section>
         </div>
       </main>
 
