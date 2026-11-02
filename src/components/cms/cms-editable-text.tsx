@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useCMS } from "./cms-provider";
 import { Edit2, Check, X } from "lucide-react";
 
@@ -25,112 +25,139 @@ export function CMSEditableText({
 }: CMSEditableTextProps) {
   const { isEditMode, isPreviewMode } = useCMS();
   const [isEditing, setIsEditing] = useState(false);
-  const [tempValue, setTempValue] = useState(value);
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    setTempValue(value);
-  }, [value]);
-
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditing]);
+  const editableRef = useRef<HTMLElement>(null);
+  const containerRef = useRef<HTMLSpanElement>(null);
 
   // Se não estiver em modo de edição ou estiver no modo preview visitante, renderiza normal
   if (!isEditMode || isPreviewMode) {
     return <Component className={className}>{value || placeholder}</Component>;
   }
 
-  const handleSave = () => {
-    const trimmed = tempValue.trim();
-    onChange(trimmed);
-    setIsEditing(false);
-  };
+  // Quando entrar em modo de edição, sincroniza o texto e foca no cursor
+  useEffect(() => {
+    if (isEditing && editableRef.current) {
+      editableRef.current.innerText = value;
+      editableRef.current.focus();
 
-  const handleCancel = () => {
-    setTempValue(value);
-    setIsEditing(false);
-  };
+      // Posiciona o cursor no final do texto para digitação natural
+      try {
+        const range = document.createRange();
+        const selection = window.getSelection();
+        range.selectNodeContents(editableRef.current);
+        range.collapse(false);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      } catch (err) {
+        // Fallback silencioso
+      }
+    }
+  }, [isEditing, value]);
 
+  // Handler para Salvar (Confirmar)
+  const handleConfirm = useCallback(() => {
+    if (!editableRef.current) return;
+    const newText = editableRef.current.innerText.trim();
+    onChange(newText);
+    setIsEditing(false);
+  }, [onChange]);
+
+  // Handler para Cancelar (Reverte texto e sai)
+  const handleCancel = useCallback(() => {
+    if (editableRef.current) {
+      editableRef.current.innerText = value;
+    }
+    setIsEditing(false);
+  }, [value]);
+
+  // Listener para CLIQUE FORA (Click Outside) -> cancela e reverte automaticamente
+  useEffect(() => {
+    if (!isEditing) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        // Clicou fora: cancela e descarta as edições sem salvar
+        handleCancel();
+      }
+    }
+
+    // Registra no mousedown para capturar antes de outros cliques na página
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isEditing, handleCancel]);
+
+  // Teclas de atalho: Enter para salvar (se não multiline), Escape para cancelar
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !multiline) {
+    if (e.key === "Enter" && !multiline && !e.shiftKey) {
       e.preventDefault();
-      handleSave();
+      handleConfirm();
     } else if (e.key === "Escape") {
+      e.preventDefault();
       handleCancel();
     }
   };
 
-  if (isEditing) {
-    return (
-      <div className="relative inline-block w-full z-30 my-1 animate-fadeIn">
-        {label && (
-          <span className="block text-[10px] font-bold uppercase tracking-wider text-[#FF650F] mb-1">
-            {label}
-          </span>
-        )}
-        {multiline ? (
-          <textarea
-            ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-            value={tempValue}
-            onChange={(e) => setTempValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            rows={4}
-            className="w-full p-2.5 rounded-lg bg-zinc-900 text-white border-2 border-[#FF650F] focus:outline-none text-sm leading-relaxed shadow-xl font-normal"
-            placeholder={placeholder}
-          />
-        ) : (
-          <input
-            ref={inputRef as React.RefObject<HTMLInputElement>}
-            type="text"
-            value={tempValue}
-            onChange={(e) => setTempValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="w-full p-2 rounded-lg bg-zinc-900 text-white border-2 border-[#FF650F] focus:outline-none text-base shadow-xl font-normal"
-            placeholder={placeholder}
-          />
-        )}
-        <div className="flex items-center gap-1.5 mt-1.5 justify-end">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold flex items-center gap-1 transition-colors"
-          >
-            <X className="w-3 h-3" />
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="px-3 py-1 rounded bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-bold flex items-center gap-1 transition-colors shadow"
-          >
-            <Check className="w-3 h-3" />
-            Confirmar
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <span
-      onClick={() => setIsEditing(true)}
-      title="Clique para editar este texto"
-      className="relative group/edit cursor-pointer inline-block max-w-full"
+      ref={containerRef}
+      className="relative inline-block max-w-full group/edit align-baseline"
     >
-      <Component className={`${className} transition-all duration-200 group-hover/edit:text-orange-200`}>
+      <Component
+        ref={editableRef as any}
+        contentEditable={isEditing}
+        suppressContentEditableWarning
+        onKeyDown={isEditing ? handleKeyDown : undefined}
+        onClick={!isEditing ? () => setIsEditing(true) : undefined}
+        title={!isEditing ? "Clique para editar este texto diretamente na página" : undefined}
+        className={`${className} ${
+          isEditing
+            ? "outline-none ring-2 ring-[#FF650F] ring-offset-2 ring-offset-[#121316] rounded-md px-1.5 py-0.5 bg-[#FF650F]/15 cursor-text select-text"
+            : "cursor-pointer group-hover/edit:text-orange-200 transition-colors"
+        }`}
+      >
         {value || <span className="italic text-zinc-400">{placeholder}</span>}
       </Component>
 
-      {/* Indicador visual elegante de edição */}
-      <span className="absolute -top-2.5 -right-3 hidden group-hover/edit:flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#FF650F] text-white text-[10px] font-bold shadow-lg z-20 pointer-events-none scale-90">
-        <Edit2 className="w-2.5 h-2.5" />
-        Editar
-      </span>
-      <span className="absolute inset-0 border border-dashed border-[#FF650F]/70 rounded pointer-events-none opacity-0 group-hover/edit:opacity-100 transition-opacity" />
+      {/* Indicador visual de hover antes de clicar */}
+      {!isEditing && (
+        <>
+          <span className="absolute -top-2.5 -right-3 hidden group-hover/edit:flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#FF650F] text-white text-[10px] font-bold shadow-lg z-20 pointer-events-none scale-90">
+            <Edit2 className="w-2.5 h-2.5" />
+            Editar
+          </span>
+          <span className="absolute inset-0 border border-dashed border-[#FF650F]/70 rounded pointer-events-none opacity-0 group-hover/edit:opacity-100 transition-opacity" />
+        </>
+      )}
+
+      {/* Barra de Ações Flutuante (Apenas em Edição): Confirmar ou Cancelar */}
+      {isEditing && (
+        <span
+          className="absolute left-0 top-full mt-2 z-[999] flex items-center gap-2 p-1.5 rounded-xl bg-[#18191D] border border-white/20 shadow-2xl animate-fadeIn whitespace-nowrap text-xs font-sans normal-case select-none"
+          onMouseDown={(e) => e.stopPropagation()} // impede que o clique nos botões acione o clique fora
+        >
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white font-medium flex items-center gap-1.5 transition-colors shadow-sm"
+          >
+            <X className="w-3.5 h-3.5 text-zinc-400" />
+            <span>Cancelar</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleConfirm}
+            className="px-3.5 py-1.5 rounded-lg bg-[#FF650F] hover:bg-orange-600 text-white font-bold flex items-center gap-1.5 transition-all shadow-md shadow-orange-500/20 hover:scale-[1.02]"
+          >
+            <Check className="w-3.5 h-3.5" />
+            <span>Confirmar</span>
+          </button>
+        </span>
+      )}
     </span>
   );
 }
