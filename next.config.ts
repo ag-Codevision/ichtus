@@ -59,6 +59,13 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  webpack: (config, { dev }) => {
+    if (!dev) {
+      // Desativa cache em disco durante build de produção para economizar inodes e evitar ENOSPC em containers
+      config.cache = false;
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

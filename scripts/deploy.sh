@@ -45,6 +45,7 @@ docker image prune -f 2>/dev/null || true
 echo "📦 Construindo containers de produção com isolamento sequencial de recursos..."
 $DOCKER_COMPOSE -f docker-compose.prod.yml build migrator
 $DOCKER_COMPOSE -f docker-compose.prod.yml build whatsapp
+docker builder prune -f 2>/dev/null || true
 $DOCKER_COMPOSE -f docker-compose.prod.yml build app
 
 echo "🔄 Subindo serviços isolados (PostgreSQL e Next.js)..."

@@ -21,9 +21,10 @@ RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Desativa telemetria durante o build
+# Desativa telemetria e cache excessivo de disco durante o build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV NEXT_DISABLE_WEBPACK_CACHE=1
 
 # Gera o Prisma Client
 RUN npx prisma generate
