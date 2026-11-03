@@ -85,6 +85,8 @@ export interface CMSAboutContent {
     posterUrl: string;
   };
   missionCards: CMSAboutMissionCard[];
+  quoteText?: string;
+  quoteAuthor?: string;
   differentialsBadge: string;
   differentialsTitle: string;
   differentials: CMSAboutDifferential[];
@@ -182,6 +184,9 @@ export interface CMSContactEmail {
 }
 
 export interface CMSGlobalContactContent {
+  badgeText?: string;
+  title?: string;
+  subtitle?: string;
   whatsapp: {
     number: string;
     formatted: string;
@@ -372,6 +377,8 @@ export const DEFAULT_ABOUT_CONTENT: CMSAboutContent = {
       description: "Ética, responsabilidade com os compromissos assumidos, rigor técnico na fabricação, valorização das pessoas e melhoria contínua de processos.",
     },
   ],
+  quoteText: "« Não existem clientes ou trabalhos pequenos, Cada cliente é único e especial, e as conexões que se estabelecem são imprevisíveis! »",
+  quoteAuthor: "— Glessios Gusso",
   differentialsBadge: "Por que nos escolher",
   differentialsTitle: "Diferenciais que Comprovam Nossa Qualidade",
   differentials: [
@@ -626,6 +633,9 @@ export const DEFAULT_TESTIMONIALS_CONTENT: CMSTestimonialsContent = {
 };
 
 export const DEFAULT_CONTACT_CONTENT: CMSGlobalContactContent = {
+  badgeText: "Fale Conosco",
+  title: "Entre em contato",
+  subtitle: "Nosso trabalho é pensar em soluções, deixe-nos te ajudar. Retornamos com rapidez e atenção dedicada.",
   whatsapp: {
     number: "5551981192976",
     formatted: "+55 51 98119.2976",

@@ -9,6 +9,7 @@ import { DEFAULT_CONTACT_CONTENT } from "@/lib/cms-defaults";
 export function Footer() {
   const cms = useOptionalCMS();
   const contact = cms?.data?.contact_info || DEFAULT_CONTACT_CONTENT;
+  const about = cms?.data?.about;
 
   const whatsappLink = `https://wa.me/${contact.whatsapp?.number || "5551981192976"}?text=${encodeURIComponent(
     contact.whatsapp?.defaultMessage || "Olá! Gostaria de saber mais sobre as soluções da Glessios."
@@ -33,7 +34,7 @@ export function Footer() {
               Nosso trabalho é pensar em soluções, deixe-nos te ajudar. Atendimento exclusivo, com inovação e modernidade para cada cliente.
             </p>
             <p className="text-xs font-serif italic text-zinc-300">
-              « Não existem clientes ou trabalhos pequenos, cada cliente é único e especial! »
+              {about?.quoteText || "« Não existem clientes ou trabalhos pequenos, cada cliente é único e especial! »"}
             </p>
             <div className="pt-2 flex items-center gap-4 text-xs text-zinc-400">
               <span className="flex items-center gap-1.5">

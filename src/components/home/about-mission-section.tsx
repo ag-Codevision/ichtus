@@ -240,7 +240,24 @@ export function AboutMissionSection() {
                   <div className="w-10 h-10 rounded-xl bg-[#FF650F] flex items-center justify-center text-white shadow-md">
                     <CMSDynamicIcon name={card.icon} className="w-5 h-5" />
                   </div>
-                  <h3 className="text-2xl font-extrabold text-white">{card.title}</h3>
+                  <h3 className="text-2xl font-extrabold text-white">
+                    <CMSEditableText
+                      as="span"
+                      value={card.title}
+                      onChange={(val) =>
+                        updateSection("about", (prev) => {
+                          const idx = prev.missionCards.findIndex((m) => m.id === card.id);
+                          if (idx >= 0) {
+                            const next = [...prev.missionCards];
+                            next[idx] = { ...next[idx], title: val };
+                            return { ...prev, missionCards: next };
+                          }
+                          return prev;
+                        })
+                      }
+                      placeholder="Título..."
+                    />
+                  </h3>
                 </div>
                 <p className="text-sm text-zinc-300 leading-relaxed pt-2">
                   <CMSEditableText
@@ -270,10 +287,31 @@ export function AboutMissionSection() {
             ==================================================== */}
         <M3ScrollReveal variant="fadeUp" className="mt-16 pt-12 border-t border-white/[0.08] text-center max-w-3xl mx-auto">
           <p className="text-lg sm:text-2xl font-serif italic text-white leading-relaxed">
-            « Não existem clientes ou trabalhos pequenos, Cada cliente é único e especial, e as conexões que se estabelecem são imprevisíveis! »
+            <CMSEditableText
+              as="span"
+              value={about.quoteText || "« Não existem clientes ou trabalhos pequenos, Cada cliente é único e especial, e as conexões que se estabelecem são imprevisíveis! »"}
+              onChange={(val) =>
+                updateSection("about", (prev) => ({
+                  ...prev,
+                  quoteText: val,
+                }))
+              }
+              placeholder="Digite a frase institucional..."
+              multiline
+            />
           </p>
           <span className="block mt-4 text-sm font-bold text-[#FF650F] font-mono uppercase tracking-widest">
-            — Glessios Gusso
+            <CMSEditableText
+              as="span"
+              value={about.quoteAuthor || "— Glessios Gusso"}
+              onChange={(val) =>
+                updateSection("about", (prev) => ({
+                  ...prev,
+                  quoteAuthor: val,
+                }))
+              }
+              placeholder="— Autor da Frase"
+            />
           </span>
         </M3ScrollReveal>
       </div>

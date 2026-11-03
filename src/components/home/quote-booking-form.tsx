@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { M3ScrollReveal } from "@/components/ui/scroll-reveal";
 import { useCMS } from "@/components/cms/cms-provider";
+import { CMSEditableText } from "@/components/cms/cms-editable-text";
 import {
   ArrowRight,
   CheckCircle2,
@@ -21,7 +22,7 @@ import {
 } from "lucide-react";
 
 export function QuoteBookingForm() {
-  const { data, isEditMode, isPreviewMode, setContactModalOpen } = useCMS();
+  const { data, updateSection, isEditMode, isPreviewMode, setContactModalOpen } = useCMS();
   const contact = data.contact_info;
 
   const [formData, setFormData] = useState({
@@ -86,13 +87,28 @@ export function QuoteBookingForm() {
       <M3ScrollReveal variant="fadeUp" className="text-center max-w-2xl mx-auto mb-16 space-y-4">
         <Badge variant="orange" className="font-semibold tracking-wider">
           <Sparkles className="w-3.5 h-3.5" />
-          Fale Conosco
+          <CMSEditableText
+            value={contact.badgeText || "Fale Conosco"}
+            onChange={(val) => updateSection("contact_info", { badgeText: val })}
+            placeholder="Tag..."
+          />
         </Badge>
         <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
-          Entre em contato
+          <CMSEditableText
+            as="span"
+            value={contact.title || "Entre em contato"}
+            onChange={(val) => updateSection("contact_info", { title: val })}
+            placeholder="Título..."
+          />
         </h2>
         <p className="text-sm sm:text-base text-zinc-400">
-          Nosso trabalho é pensar em soluções, deixe-nos te ajudar. Retornamos com rapidez e atenção dedicada.
+          <CMSEditableText
+            as="span"
+            multiline
+            value={contact.subtitle || "Nosso trabalho é pensar em soluções, deixe-nos te ajudar. Retornamos com rapidez e atenção dedicada."}
+            onChange={(val) => updateSection("contact_info", { subtitle: val })}
+            placeholder="Subtítulo..."
+          />
         </p>
       </M3ScrollReveal>
 
