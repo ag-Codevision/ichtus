@@ -78,6 +78,10 @@ $cmd6 = "./scripts/deploy.sh"
 $fullRemoteCmd = "$cmd1 && $cmd2 && $cmd3 && $cmd4 && $cmd5 && $cmd6"
 
 ssh -o StrictHostKeyChecking=no -p $vpsPort "$vpsUser@$vpsHost" $fullRemoteCmd
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Deploy na VPS falhou com código de saída $LASTEXITCODE"
+    exit $LASTEXITCODE
+}
 
 Write-Host ""
 Write-Host "=================================================================" -ForegroundColor Green

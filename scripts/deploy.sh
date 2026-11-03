@@ -42,8 +42,10 @@ echo "🧹 Executando limpeza preventiva de cache do Docker..."
 docker builder prune -af 2>/dev/null || true
 docker image prune -f 2>/dev/null || true
 
-echo "📦 Construindo containers de produção com isolamento de recursos..."
-$DOCKER_COMPOSE -f docker-compose.prod.yml build
+echo "📦 Construindo containers de produção com isolamento sequencial de recursos..."
+$DOCKER_COMPOSE -f docker-compose.prod.yml build migrator
+$DOCKER_COMPOSE -f docker-compose.prod.yml build whatsapp
+$DOCKER_COMPOSE -f docker-compose.prod.yml build app
 
 echo "🔄 Subindo serviços isolados (PostgreSQL e Next.js)..."
 $DOCKER_COMPOSE -f docker-compose.prod.yml up -d

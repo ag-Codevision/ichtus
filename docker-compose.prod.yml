@@ -27,8 +27,7 @@ services:
   migrator:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: deps
+      dockerfile: Dockerfile.migrator
     container_name: glessios_migrator
     restart: "no"
     depends_on:

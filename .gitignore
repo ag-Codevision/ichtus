@@ -38,6 +38,10 @@ whatsapp-service/node_modules/
 
 # IDE & OS
 .vscode/
-.idea/
+.idea
 .DS_Store
 Thumbs.db
+
+# TestSprite
+.testsprite/
+testsprite-plans/

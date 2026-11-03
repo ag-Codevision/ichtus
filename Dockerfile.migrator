@@ -1,0 +1,19 @@
+# -----------------------------------------------------------------------------
+# Dockerfile Leve para Migrações Prisma e Seed — Glessios Comunicação Visual
+# -----------------------------------------------------------------------------
+FROM node:20-alpine
+
+WORKDIR /app
+RUN apk add --no-cache openssl libc6-compat
+
+# Copia arquivos de configuração e schema
+COPY package.json package-lock.json tsconfig.json* ./
+COPY prisma ./prisma/
+
+# Instala apenas as dependências mínimas para migrações e seed
+RUN npm install prisma@6.19.3 @prisma/client@6.19.3 tsx bcryptjs @types/bcryptjs typescript @types/node --no-save --omit=dev
+
+# Gera o Prisma Client
+RUN npx prisma generate
+
+CMD ["sh", "-c", "npx prisma db push && npx tsx prisma/seed.ts"]

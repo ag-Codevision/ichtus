@@ -37,6 +37,9 @@ whatsapp-service/auth_info
 .env*.local
 .env
 .agents
+.testsprite
+testsprite-plans
+public/uploads
 .vscode
 .idea
 *.log
