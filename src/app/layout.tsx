@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ToastProvider } from "@/components/ui/toast";
 import { WhatsAppButton } from "@/components/layout/whatsapp-button";
 import { MobileAppMenu } from "@/components/layout/mobile-app-menu";
+import { CookieConsent } from "@/components/cookies/cookie-consent";
 
 export const metadata: Metadata = {
   title: "ICTHUS Soluções e Design | Comunicação Visual & Fachadas Premium",
@@ -75,6 +76,7 @@ export default function RootLayout({
           {children}
           <WhatsAppButton />
           <MobileAppMenu />
+          <CookieConsent />
           </ToastProvider>
         </ThemeProvider>
       </body>

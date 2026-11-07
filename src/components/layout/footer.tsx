@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, Mail, MapPin, Phone } from "lucide-react";
+import { ArrowUpRight, Mail, MapPin, Phone, Cookie } from "lucide-react";
 import { useOptionalCMS } from "@/components/cms/cms-provider";
 import { DEFAULT_CONTACT_CONTENT } from "@/lib/cms-defaults";
+import { openCookiePreferences } from "@/lib/cookie-consent";
 
 export function Footer() {
   const cms = useOptionalCMS();
@@ -172,8 +173,33 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="pt-8 flex flex-col items-center justify-center text-center gap-3 text-xs text-zinc-500">
-          <p className="text-zinc-400">
+        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-400 border-t border-white/[0.04] mt-8">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-zinc-400">
+            <Link
+              href="/politica-de-privacidade"
+              className="hover:text-[#FF650F] transition-colors"
+            >
+              Política de Privacidade (LGPD)
+            </Link>
+            <span className="text-zinc-600">•</span>
+            <Link
+              href="/termos-de-uso"
+              className="hover:text-[#FF650F] transition-colors"
+            >
+              Termos de Uso
+            </Link>
+            <span className="text-zinc-600">•</span>
+            <button
+              type="button"
+              onClick={() => openCookiePreferences()}
+              className="hover:text-[#FF650F] transition-colors inline-flex items-center gap-1 cursor-pointer"
+            >
+              <Cookie className="w-3.5 h-3.5 text-[#FF650F]" />
+              Preferências de Cookies
+            </button>
+          </div>
+
+          <p className="text-zinc-400 text-center sm:text-right">
             Criado com 💜 por{" "}
             <a
               href="https://agenciacodevision.com.br"
@@ -183,7 +209,7 @@ export function Footer() {
             >
               Agência Codevision
             </a>{" "}
-            © {new Date().getFullYear()} Icthus • Soluções e Design. Todos os direitos reservados.
+            © {new Date().getFullYear()} Icthus • Soluções e Design.
           </p>
         </div>
       </div>
