@@ -117,7 +117,7 @@ export function QuoteBookingForm() {
         <M3ScrollReveal variant="fadeUp" delay={0.05} className="lg:col-span-5 space-y-6">
           <SpotlightCard
             isDark={true}
-            className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] space-y-6 shadow-xl relative group"
+            className="p-8 rounded-3xl bg-[#18191D] border border-white/[0.08] space-y-6 shadow-xl relative group overflow-hidden"
           >
             {/* Botão de Edição Rápida de Contato no Modo CMS */}
             {isEditMode && !isPreviewMode && (

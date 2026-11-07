@@ -72,17 +72,18 @@ export function SpotlightCard({
         }}
       />
       
-      {/* Borda reflexiva orgânica com precisão de cantos */}
+      {/* Borda reflexiva orgânica com precisão milimétrica de cantos */}
       <div
-        className="pointer-events-none absolute inset-0 rounded-[inherit] transition-opacity duration-300 z-20"
+        className="pointer-events-none absolute -inset-px rounded-[inherit] transition-opacity duration-300 z-20"
         style={{
           opacity,
           border: "1px solid transparent",
           background: `radial-gradient(${spotlightSize * 0.75}px circle at ${position.x}px ${position.y}px, ${
             isDark ? "rgba(255, 101, 15, 0.35)" : "rgba(255, 101, 15, 0.25)"
           }, transparent 70%) border-box`,
-          WebkitMask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
+          WebkitMask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0) border-box",
           WebkitMaskComposite: "xor",
+          mask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0) border-box",
           maskComposite: "exclude",
         }}
       />
