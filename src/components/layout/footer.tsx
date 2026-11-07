@@ -185,15 +185,6 @@ export function Footer() {
             </a>{" "}
             © {new Date().getFullYear()} Icthus • Soluções e Design. Todos os direitos reservados.
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-3 text-zinc-500">
-            <Link href="/portal/login" className="hover:text-[#FF650F] transition-colors">
-              Portal do Cliente
-            </Link>
-            <span>•</span>
-            <Link href="/glessios/login" className="hover:text-[#FF650F] transition-colors">
-              Acesso Administrativo
-            </Link>
-          </div>
         </div>
       </div>
     </footer>
