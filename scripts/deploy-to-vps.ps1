@@ -50,7 +50,7 @@ $tempArchive = Join-Path $env:TEMP "icthus-deploy-$timestamp.tar.gz"
 Write-Host "Gerando pacote tar.gz do projeto local..." -ForegroundColor Cyan
 Push-Location $projectRoot
 try {
-    tar --exclude=".git" --exclude="*node_modules*" --exclude="*auth_info*" --exclude=".next" --exclude="*.log" --exclude="*.tmp" -czf $tempArchive .
+    tar --exclude=".git" --exclude="*node_modules*" --exclude="*auth_info*" --exclude=".next" --exclude="*.log" --exclude="*.tmp" --exclude=".agents" --exclude=".testsprite" --exclude="testsprite-plans" --exclude="*.pdf" -czf $tempArchive .
     if (-not (Test-Path $tempArchive)) {
         Write-Error "Falha ao criar arquivo de pacote em $tempArchive"
         exit 1
@@ -62,7 +62,8 @@ try {
 }
 
 # 4. Enviar pacote para a VPS via SCP
-Write-Host "Enviando pacote para $vpsUser@${vpsHost}:$vpsDeployPath..." -ForegroundColor Cyan
+Write-Host "Removendo arquivo anterior e enviando novo pacote para $vpsUser@${vpsHost}:$vpsDeployPath..." -ForegroundColor Cyan
+ssh -o StrictHostKeyChecking=no -p $vpsPort "$vpsUser@$vpsHost" "rm -f $vpsDeployPath/deploy.tar.gz"
 scp -O -o StrictHostKeyChecking=no -P $vpsPort $tempArchive "$vpsUser@${vpsHost}:$vpsDeployPath/deploy.tar.gz"
 scp -O -o StrictHostKeyChecking=no -P $vpsPort "$projectRoot\.dockerignore" "$vpsUser@${vpsHost}:$vpsDeployPath/.dockerignore"
 Remove-Item $tempArchive -Force -ErrorAction SilentlyContinue
