@@ -3,8 +3,8 @@
 # Plataforma Web Integrada (Next.js 15 App Router + Prisma ORM + PostgreSQL)
 # -----------------------------------------------------------------------------
 
-# Estágio 1: Dependências
-FROM node:20-alpine AS deps
+# Estágio 1: Compilação / Builder
+FROM node:20-alpine AS builder
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
@@ -12,13 +12,8 @@ COPY package.json package-lock.json tsconfig.json* ./
 COPY prisma ./prisma/
 
 RUN npm ci --no-audit --maxsockets 3 && npm cache clean --force
+RUN npx prisma generate
 
-# Estágio 2: Compilação / Builder
-FROM node:20-alpine AS builder
-WORKDIR /app
-RUN apk add --no-cache openssl
-
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Desativa telemetria e cache excessivo de disco durante o build
@@ -26,13 +21,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV NEXT_DISABLE_WEBPACK_CACHE=1
 
-# Gera o Prisma Client
-RUN npx prisma generate
-
-# Executa o build de produção standalone
 RUN npm run build
 
-# Estágio 3: Runner de Produção
+# Estágio 2: Runner de Produção
 FROM node:20-alpine AS runner
 WORKDIR /app
 
