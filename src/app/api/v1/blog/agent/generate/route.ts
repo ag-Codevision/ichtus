@@ -4,26 +4,51 @@ import { runAutonomousBlogCycle } from "@/lib/blog-ai/orchestrator";
 export const dynamic = "force-dynamic";
 
 /**
- * POST /api/v1/blog/agent/generate
- * Dispara um ciclo de geração e publicação com IA
- * Aceita chamada manual autenticada pelo painel ou cron com Bearer token CRON_SECRET
+ * Helper comum para processar requisições de geração autônoma (POST ou GET)
  */
-export async function POST(request: NextRequest) {
+async function handleGenerate(request: NextRequest, isGetMethod = false) {
   try {
     const authHeader = request.headers.get("authorization");
-    const cronSecret = process.env.CRON_SECRET;
+    const { searchParams } = new URL(request.url);
+    const queryKey = searchParams.get("key");
+    const cronSecret = process.env.CRON_SECRET || "c593749da9104553bbd4a708c03062c8d0710350ca4fac707f4e0ad9e653d4dc";
 
-    // Se houver CRON_SECRET configurado e vier de chamada cron externa, valida o token
-    const isCronRequest = authHeader && cronSecret && authHeader === `Bearer ${cronSecret}`;
+    // Valida se a chamada veio autenticada como Cron (Header Bearer ou query ?key=)
+    const isCronAuthorized =
+      (authHeader && authHeader === `Bearer ${cronSecret}`) ||
+      (queryKey && queryKey === cronSecret);
 
-    const body = await request.json().catch(() => ({}));
-    const { topicId, forcePublish } = body;
+    let topicId: string | undefined;
+    let forcePublish: boolean | undefined;
+    let ignoreSchedule: boolean | undefined;
 
-    console.log(`[API Blog Agent Generate] Iniciando ciclo autônomo (Cron: ${Boolean(isCronRequest)})...`);
+    if (!isGetMethod) {
+      const body = await request.json().catch(() => ({}));
+      topicId = body.topicId;
+      forcePublish = typeof body.forcePublish === "boolean" ? body.forcePublish : undefined;
+      ignoreSchedule = typeof body.ignoreSchedule === "boolean" ? body.ignoreSchedule : undefined;
+    } else {
+      topicId = searchParams.get("topicId") || undefined;
+      forcePublish = searchParams.get("forcePublish") === "true";
+      ignoreSchedule = searchParams.get("ignoreSchedule") === "true";
+    }
+
+    // Se for chamada de Cron externa (cron-job.org / vps crontab), respeita a cadência por padrão.
+    // Se for chamada direta do painel admin (sem header de cron e sem query key de cron), roda imediatamente.
+    const shouldIgnoreSchedule = typeof ignoreSchedule === "boolean"
+      ? ignoreSchedule
+      : Boolean(topicId || !isCronAuthorized);
+
+    console.log(
+      `[API Blog Agent Generate] Disparo recebido (${isGetMethod ? "GET" : "POST"}). CronAutorizado: ${Boolean(
+        isCronAuthorized
+      )} | IgnoraCadência: ${shouldIgnoreSchedule}`
+    );
 
     const result = await runAutonomousBlogCycle({
       forcedTopicId: topicId,
-      forcePublish: typeof forcePublish === "boolean" ? forcePublish : undefined,
+      forcePublish,
+      ignoreSchedule: shouldIgnoreSchedule,
     });
 
     if (!result.success) {
@@ -56,4 +81,20 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * POST /api/v1/blog/agent/generate
+ * Dispara um ciclo via POST (Painel Admin ou Webhook)
+ */
+export async function POST(request: NextRequest) {
+  return handleGenerate(request, false);
+}
+
+/**
+ * GET /api/v1/blog/agent/generate
+ * Suporta monitoramento e acionamento via cron-job.org (método GET com ?key=...)
+ */
+export async function GET(request: NextRequest) {
+  return handleGenerate(request, true);
 }

@@ -28,7 +28,19 @@ import {
   Check,
   ChevronRight,
   BookOpen,
+  X,
+  Minus,
 } from "lucide-react";
+
+const WEEK_DAYS = [
+  { key: "MON", label: "Seg", full: "Segunda-feira" },
+  { key: "TUE", label: "Ter", full: "Terça-feira" },
+  { key: "WED", label: "Qua", full: "Quarta-feira" },
+  { key: "THU", label: "Qui", full: "Quinta-feira" },
+  { key: "FRI", label: "Sex", full: "Sexta-feira" },
+  { key: "SAT", label: "Sáb", full: "Sábado" },
+  { key: "SUN", label: "Dom", full: "Domingo" },
+];
 
 interface BlogTopic {
   id: string;
@@ -96,6 +108,7 @@ export default function AdminBlogPage() {
   const [singleCategory, setSingleCategory] = useState("Fachadas e Comunicação Visual");
   const [singlePriority, setSinglePriority] = useState<"LOW" | "MEDIUM" | "HIGH" | "URGENT">("MEDIUM");
   const [bulkTitles, setBulkTitles] = useState("");
+  const [newHourInput, setNewHourInput] = useState("09:00");
 
   // Feedback Notification
   const [feedback, setFeedback] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
@@ -103,6 +116,64 @@ export default function AdminBlogPage() {
   const showFeedback = (type: "success" | "error" | "info", message: string) => {
     setFeedback({ type, message });
     setTimeout(() => setFeedback(null), 6000);
+  };
+
+  // Funções Auxiliares de Cadência (Dias e Horários)
+  const handleToggleDay = (dayKey: string) => {
+    if (!config) return;
+    const current = config.allowedDays || [];
+    let updated: string[];
+    if (current.includes(dayKey)) {
+      if (current.length === 1) {
+        showFeedback("info", "Mantenha ao menos 1 dia da semana ativo para o robô.");
+        return;
+      }
+      updated = current.filter((d) => d !== dayKey);
+    } else {
+      updated = [...current, dayKey];
+    }
+    setConfig({ ...config, allowedDays: updated });
+  };
+
+  const handleSetDaysPreset = (preset: "all" | "weekdays" | "weekend") => {
+    if (!config) return;
+    let days: string[] = [];
+    if (preset === "all") {
+      days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+    } else if (preset === "weekdays") {
+      days = ["MON", "TUE", "WED", "THU", "FRI"];
+    } else if (preset === "weekend") {
+      days = ["SAT", "SUN"];
+    }
+    setConfig({ ...config, allowedDays: days });
+  };
+
+  const handleAddHour = (hourToAdd?: string) => {
+    if (!config) return;
+    const hour = (hourToAdd || newHourInput).trim();
+    if (!hour || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(hour)) {
+      showFeedback("error", "Informe um horário válido no formato HH:mm (ex: 14:30)");
+      return;
+    }
+    const current = config.preferredHours || [];
+    if (current.includes(hour)) {
+      showFeedback("info", `O horário ${hour} já está cadastrado.`);
+      return;
+    }
+    const updated = Array.from(new Set([...current, hour])).sort();
+    setConfig({ ...config, preferredHours: updated });
+    setNewHourInput("12:00");
+  };
+
+  const handleRemoveHour = (hourToRemove: string) => {
+    if (!config) return;
+    const current = config.preferredHours || [];
+    if (current.length === 1) {
+      showFeedback("info", "Mantenha ao menos 1 horário cadastrado.");
+      return;
+    }
+    const updated = current.filter((h) => h !== hourToRemove);
+    setConfig({ ...config, preferredHours: updated });
   };
 
   // Carrega Dados Iniciais
@@ -429,16 +500,25 @@ export default function AdminBlogPage() {
         {/* Card 3: Cadência de Agendamento */}
         <div className="p-5 rounded-2xl bg-gradient-to-br from-[#18191D] to-[#121316] border border-white/10 flex flex-col justify-between">
           <div className="flex items-center justify-between text-zinc-400 text-xs font-semibold uppercase tracking-wider">
-            <span>Cadência Diária</span>
+            <span>Cadência de Postagem</span>
             <Calendar className="w-4 h-4 text-[#FF650F]" />
           </div>
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold text-white">{config?.postsPerDay || 1}</span>
             <span className="text-xs text-zinc-400">post(s) por dia</span>
           </div>
-          <p className="text-xs text-zinc-500 mt-2">
-            {config?.isActive ? "🟢 Automação ativa" : "⏸️ Pausado"}
-          </p>
+          <div className="text-[11px] text-zinc-400 mt-2 space-y-0.5">
+            <p className="font-semibold text-zinc-300">
+              {config?.allowedDays?.length === 7
+                ? "Todos os dias"
+                : config?.allowedDays?.length === 5 && !config?.allowedDays.includes("SAT") && !config?.allowedDays.includes("SUN")
+                ? "Dias úteis (Seg-Sex)"
+                : `${config?.allowedDays?.length || 0} dias/semana`}
+            </p>
+            <p className="truncate text-zinc-500 font-mono">
+              {config?.preferredHours?.length ? `Horários: ${config.preferredHours.join(", ")}` : "Horário padrão"}
+            </p>
+          </div>
         </div>
 
         {/* Card 4: Banco de Imagens Pexels */}
@@ -709,26 +789,62 @@ export default function AdminBlogPage() {
               </label>
             </div>
 
-            {/* Configuração de Posts por Dia */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-white/10">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-white flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[#FF650F]" />
-                  <span>Cadência de Postagens por Dia</span>
-                </label>
-                <p className="text-xs text-zinc-400">
-                  Defina quantos artigos a IA deve redigir e publicar a cada 24 horas.
-                </p>
-                <div className="flex items-center gap-3 pt-2">
+            {/* SEÇÃO 1: CADÊNCIA DE POSTAGENS E HORÁRIOS */}
+            <div className="space-y-6 pb-6 border-b border-white/10">
+              {/* Quantidade de Posts por Dia */}
+              <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <label className="text-sm font-bold text-white flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-[#FF650F]" />
+                      <span>Quantidade de Posts por Dia</span>
+                    </label>
+                    <p className="text-xs text-zinc-400">
+                      Defina a meta de artigos que o robô produzirá e publicará a cada 24 horas.
+                    </p>
+                  </div>
+
+                  {/* Stepper Numérico (- / +) */}
+                  <div className="flex items-center gap-3 bg-black/40 border border-white/10 rounded-2xl p-1.5 self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, postsPerDay: Math.max(1, (config.postsPerDay || 1) - 1) })}
+                      disabled={(config.postsPerDay || 1) <= 1}
+                      className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-white flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Diminuir posts por dia"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <div className="px-4 text-center min-w-[120px]">
+                      <span className="text-xl font-black text-white">{config.postsPerDay || 1}</span>
+                      <span className="text-xs text-zinc-400 block font-semibold">
+                        {(config.postsPerDay || 1) === 1 ? "post por dia" : "posts por dia"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, postsPerDay: Math.min(10, (config.postsPerDay || 1) + 1) })}
+                      disabled={(config.postsPerDay || 1) >= 10}
+                      className="w-9 h-9 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white flex items-center justify-center transition-colors shadow-lg shadow-orange-500/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Aumentar posts por dia"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Presets Rápidos */}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mr-1">Atalhos:</span>
                   {[1, 2, 3, 5].map((num) => (
                     <button
                       type="button"
                       key={num}
                       onClick={() => setConfig({ ...config, postsPerDay: num })}
-                      className={`px-5 py-2.5 rounded-xl font-extrabold text-sm transition-all ${
-                        config.postsPerDay === num
-                          ? "bg-[#FF650F] text-white shadow-lg shadow-orange-500/25"
-                          : "bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/5"
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        (config.postsPerDay || 1) === num
+                          ? "bg-[#FF650F] text-white shadow-md shadow-orange-500/20"
+                          : "bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/5"
                       }`}
                     >
                       {num} post{num > 1 ? "s" : ""}/dia
@@ -737,6 +853,178 @@ export default function AdminBlogPage() {
                 </div>
               </div>
 
+              {/* Dias da Semana Permitidos */}
+              <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <label className="text-sm font-bold text-white flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-[#FF650F]" />
+                      <span>Dias da Semana Autorizados</span>
+                    </label>
+                    <p className="text-xs text-zinc-400">
+                      Escolha os dias em que a IA tem permissão para disparar publicações no blog.
+                    </p>
+                  </div>
+
+                  {/* Presets de Dias */}
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => handleSetDaysPreset("weekdays")}
+                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] font-bold text-zinc-300 border border-white/5 transition-colors"
+                    >
+                      Dias Úteis (Seg-Sex)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSetDaysPreset("weekend")}
+                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] font-bold text-zinc-300 border border-white/5 transition-colors"
+                    >
+                      Finais de Semana
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSetDaysPreset("all")}
+                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] font-bold text-zinc-300 border border-white/5 transition-colors"
+                    >
+                      Todos os Dias
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grade dos 7 Dias da Semana */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 pt-2">
+                  {WEEK_DAYS.map((day) => {
+                    const isSelected = (config.allowedDays || []).includes(day.key);
+                    return (
+                      <button
+                        type="button"
+                        key={day.key}
+                        onClick={() => handleToggleDay(day.key)}
+                        className={`p-3.5 rounded-2xl text-center border transition-all flex flex-col items-center justify-center gap-1 ${
+                          isSelected
+                            ? "bg-gradient-to-b from-[#FF650F] to-[#e05508] text-white border-orange-400/40 shadow-lg shadow-orange-500/25 scale-[1.02]"
+                            : "bg-black/30 hover:bg-white/5 text-zinc-400 border-white/5 hover:border-white/10"
+                        }`}
+                      >
+                        <span className="text-xs font-black uppercase tracking-wider">{day.label}</span>
+                        <span className={`text-[10px] font-medium ${isSelected ? "text-white/80" : "text-zinc-400"}`}>
+                          {day.full.split("-")[0]}
+                        </span>
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full mt-0.5 ${
+                            isSelected ? "bg-white" : "bg-zinc-700"
+                          }`}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Horários das Postagens */}
+              <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-bold text-white flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-[#FF650F]" />
+                    <span>Horários Programados de Publicação</span>
+                  </label>
+                  <p className="text-xs text-zinc-400">
+                    Cadastre os horários do dia em que você deseja que os artigos entrem no ar (Horário de Brasília).
+                  </p>
+                </div>
+
+                {/* Campo de Adição de Horário */}
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-3 py-2">
+                    <Clock className="w-4 h-4 text-zinc-400" />
+                    <input
+                      type="time"
+                      value={newHourInput}
+                      onChange={(e) => setNewHourInput(e.target.value)}
+                      className="bg-transparent text-white font-mono text-sm font-bold focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleAddHour()}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-[#FF650F] text-white text-xs font-bold transition-all border border-white/10 hover:border-transparent shadow-md"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Adicionar Horário</span>
+                  </button>
+
+                  {/* Sugestões Rápidas de Horários Comerciais */}
+                  <div className="flex flex-wrap items-center gap-1.5 sm:ml-auto">
+                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mr-1">Sugestões:</span>
+                    {["08:30", "11:30", "14:00", "17:30", "20:00"].map((h) => (
+                      <button
+                        type="button"
+                        key={h}
+                        onClick={() => handleAddHour(h)}
+                        className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-mono font-semibold border border-white/5 transition-colors"
+                      >
+                        +{h}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Lista de Horários Ativos em Tags Removíveis */}
+                <div className="pt-2">
+                  <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-2">
+                    Horários Ativos ({(config.preferredHours || []).length}):
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {(config.preferredHours || []).map((hour) => (
+                      <div
+                        key={hour}
+                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-zinc-900 to-zinc-800 border border-white/10 text-white shadow-sm"
+                      >
+                        <Clock className="w-3.5 h-3.5 text-[#FF650F]" />
+                        <span className="text-xs font-extrabold font-mono tracking-wider">{hour}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveHour(hour)}
+                          className="w-4 h-4 rounded-full bg-white/10 hover:bg-red-500/80 hover:text-white text-zinc-400 flex items-center justify-center transition-colors ml-1"
+                          title={`Remover horário ${hour}`}
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Alerta / Dica de Coerência entre Horários e Posts/Dia */}
+                <div className="p-3.5 rounded-xl bg-black/30 border border-white/5 flex items-center gap-3 text-xs">
+                  {(config.preferredHours || []).length >= (config.postsPerDay || 1) ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span className="text-zinc-300">
+                        <strong className="text-emerald-400">Cadência balanceada:</strong> você tem{" "}
+                        {(config.preferredHours || []).length} horários cadastrados para{" "}
+                        {config.postsPerDay || 1} post(s) diários.
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span className="text-zinc-300">
+                        <strong className="text-amber-400">Dica de distribuição:</strong> você definiu{" "}
+                        {config.postsPerDay || 1} posts por dia, mas possui apenas{" "}
+                        {(config.preferredHours || []).length} horário(s) cadastrado(s). Adicione mais horários para
+                        distribuir as postagens ao longo do dia.
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* SEÇÃO 2: MODO DE PUBLICAÇÃO & AUTORIA */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-white/10">
               {/* Modo de Publicação (Direto vs Rascunho) */}
               <div className="space-y-2">
                 <label className="text-sm font-bold text-white flex items-center gap-2">
@@ -747,7 +1035,7 @@ export default function AdminBlogPage() {
                   Escolha se os artigos entram no ar imediatamente ou ficam em rascunho para sua aprovação.
                 </p>
                 <div className="flex flex-col gap-2 pt-1">
-                  <label className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:border-white/10">
+                  <label className="flex items-center gap-3 p-3.5 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:border-white/10 transition-colors">
                     <input
                       type="radio"
                       name="autoPublish"
@@ -760,12 +1048,12 @@ export default function AdminBlogPage() {
                         🚀 Publicação Direta (100% Autônomo)
                       </span>
                       <span className="text-[11px] text-zinc-400">
-                        O post é gerado, recebe a foto do Pexels e vai ao ar automaticamente no blog público.
+                        O post é gerado, recebe a foto em alta definição do Pexels e entra no ar automaticamente.
                       </span>
                     </div>
                   </label>
 
-                  <label className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:border-white/10">
+                  <label className="flex items-center gap-3 p-3.5 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:border-white/10 transition-colors">
                     <input
                       type="radio"
                       name="autoPublish"
@@ -775,64 +1063,51 @@ export default function AdminBlogPage() {
                     />
                     <div>
                       <span className="text-xs font-bold text-white block">
-                        📝 Modo Revisor (Rascunho)
+                        📝 Modo Revisor (Salvar como Rascunho)
                       </span>
                       <span className="text-[11px] text-zinc-400">
-                        O post é salvo como DRAFT. Você revisa e publica com 1 clique.
+                        O post é salvo como DRAFT. Você revisa no painel e publica com 1 clique.
                       </span>
                     </div>
                   </label>
                 </div>
               </div>
-            </div>
 
-            {/* Banco de Imagens & Autoria */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-white/10">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-white flex items-center gap-2">
-                  <ImageIcon className="w-4 h-4 text-[#FF650F]" />
-                  <span>Provedor de Banco de Imagens Gratuito</span>
-                </label>
-                <p className="text-xs text-zinc-400">
-                  Fotos profissionais integradas via API oficial com atribuição legal ao fotógrafo.
-                </p>
-                <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span className="text-xs font-bold text-white">Pexels API Oficial</span>
+              {/* Banco de Imagens & Autoria */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-white flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-[#FF650F]" />
+                    <span>Banco de Imagens Oficial</span>
+                  </label>
+                  <p className="text-xs text-zinc-400">
+                    Fotos em alta definição integradas via API oficial com atribuição legal ao fotógrafo.
+                  </p>
+                  <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span className="text-xs font-bold text-white">Pexels API Oficial</span>
+                    </div>
+                    <span className="text-[11px] text-emerald-400 font-semibold">Chave Conectada</span>
                   </div>
-                  <span className="text-[11px] text-emerald-400 font-semibold">Chave Conectada</span>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-white flex items-center gap-2">
-                  <Settings className="w-4 h-4 text-[#FF650F]" />
-                  <span>Assinatura de Autoria Padrão</span>
-                </label>
-                <p className="text-xs text-zinc-400">
-                  Nome exibido como autor técnico nos artigos do blog.
-                </p>
-                <input
-                  type="text"
-                  value={config.defaultAuthor}
-                  onChange={(e) => setConfig({ ...config, defaultAuthor: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Informações Técnicas do Trigger Cron */}
-            <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-2">
-              <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-[#FF650F]" />
-                Webhook para Cron Job Automatizado (VPS Linux / Cronjob.org)
-              </span>
-              <p className="text-[11px] text-zinc-400">
-                Para disparar o agente de forma agendada na VPS, configure o crontab ou serviço externo para chamar:
-              </p>
-              <div className="p-2.5 rounded-lg bg-black/60 font-mono text-[11px] text-zinc-300 overflow-x-auto select-all">
-                curl -X POST https://icthusbrasil.com/api/v1/blog/agent/generate -H &quot;Authorization: Bearer c593749da9104553bbd4a708c03062c8d0710350ca4fac707f4e0ad9e653d4dc&quot;
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-white flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-[#FF650F]" />
+                    <span>Assinatura de Autoria Padrão</span>
+                  </label>
+                  <p className="text-xs text-zinc-400">
+                    Nome exibido como autor técnico nos artigos do blog.
+                  </p>
+                  <input
+                    type="text"
+                    value={config.defaultAuthor}
+                    onChange={(e) => setConfig({ ...config, defaultAuthor: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+                    placeholder="Ex: Engenharia ICTHUS"
+                  />
+                </div>
               </div>
             </div>
 

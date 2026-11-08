@@ -24,6 +24,9 @@ export async function GET() {
   }
 }
 
+const VALID_DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+const TIME_REGEX = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+
 /**
  * PUT /api/v1/blog/agent/config
  * Atualiza regras de agendamento e comportamento do agente
@@ -35,9 +38,26 @@ export async function PUT(request: NextRequest) {
 
     const data: any = {};
     if (typeof body.isActive === "boolean") data.isActive = body.isActive;
-    if (typeof body.postsPerDay === "number") data.postsPerDay = Math.max(1, Math.min(10, body.postsPerDay));
-    if (Array.isArray(body.allowedDays)) data.allowedDays = body.allowedDays;
-    if (Array.isArray(body.preferredHours)) data.preferredHours = body.preferredHours;
+    if (typeof body.postsPerDay === "number") data.postsPerDay = Math.max(1, Math.min(10, Math.floor(body.postsPerDay)));
+    
+    if (Array.isArray(body.allowedDays)) {
+      // Filtra apenas dias válidos e mantém ordem consistente
+      const filteredDays = body.allowedDays.filter((d: any) => typeof d === "string" && VALID_DAYS.includes(d.toUpperCase())).map((d: string) => d.toUpperCase());
+      data.allowedDays = filteredDays.length > 0 ? Array.from(new Set(filteredDays)) : ["MON", "TUE", "WED", "THU", "FRI"];
+    }
+
+    if (Array.isArray(body.preferredHours)) {
+      // Filtra horários válidos no formato HH:mm e ordena cronologicamente
+      const cleanHours = Array.from(
+        new Set(
+          body.preferredHours
+            .filter((h: any) => typeof h === "string" && TIME_REGEX.test(h.trim()))
+            .map((h: string) => h.trim())
+        )
+      ).sort();
+      data.preferredHours = cleanHours.length > 0 ? cleanHours : ["09:00", "15:00"];
+    }
+
     if (typeof body.autoPublish === "boolean") data.autoPublish = body.autoPublish;
     if (typeof body.imageProvider === "string") data.imageProvider = body.imageProvider;
     if (typeof body.defaultAuthor === "string") data.defaultAuthor = body.defaultAuthor;

@@ -44,13 +44,117 @@ export async function getOrCreateBlogAgentConfig() {
 }
 
 /**
+ * Valida se o momento atual é elegível para execução automática segundo a cadência configurada:
+ * - Agente ativo (isActive: true)
+ * - Dia da semana permitido (allowedDays)
+ * - Horário dentro da janela programada (preferredHours) com tolerância de +/- 30 minutos
+ * - Quantidade de postagens hoje não ultrapassou postsPerDay
+ */
+export async function checkScheduleEligibility(config: any): Promise<{
+  eligible: boolean;
+  reason?: string;
+}> {
+  if (!config.isActive) {
+    return { eligible: false, reason: "O agente autônomo está pausado nas configurações." };
+  }
+
+  const now = new Date();
+  const brasiliaDateStr = now.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }); // YYYY-MM-DD
+  const brasiliaTimeStr = now.toLocaleTimeString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }); // "HH:mm"
+
+  // Dia da semana em Brasília (SUN, MON, TUE, WED, THU, FRI, SAT)
+  const dayFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    weekday: "short",
+  });
+  const currentDayKey = dayFormatter.format(now).toUpperCase(); // "MON", "TUE", etc.
+
+  // 1. Validar Dia da Semana
+  const allowedDays: string[] = (config.allowedDays && config.allowedDays.length > 0)
+    ? config.allowedDays.map((d: string) => d.toUpperCase())
+    : ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+
+  if (!allowedDays.includes(currentDayKey)) {
+    return {
+      eligible: false,
+      reason: `Hoje (${currentDayKey}) não está entre os dias permitidos para publicação (${allowedDays.join(", ")}).`,
+    };
+  }
+
+  // 2. Validar Limite de Postagens Diárias
+  const startOfDay = new Date(`${brasiliaDateStr}T00:00:00-03:00`);
+  const postsCountToday = await prisma.blogPost.count({
+    where: {
+      publishedAt: {
+        gte: startOfDay,
+      },
+    },
+  });
+
+  const limitPerDay = config.postsPerDay || 1;
+  if (postsCountToday >= limitPerDay) {
+    return {
+      eligible: false,
+      reason: `Limite diário atingido: ${postsCountToday} de ${limitPerDay} post(s) já foram publicados hoje.`,
+    };
+  }
+
+  // 3. Validar Horários Programados
+  const preferredHours: string[] = (config.preferredHours && config.preferredHours.length > 0)
+    ? config.preferredHours
+    : ["09:00", "15:00"];
+
+  const [currH, currM] = brasiliaTimeStr.split(":").map(Number);
+  const currentMinutes = currH * 60 + currM;
+
+  // Tolerância: de 5 minutos antes até 35 minutos após o horário previsto
+  const isMatchingSlot = preferredHours.some((hourStr: string) => {
+    const [slotH, slotM] = hourStr.split(":").map(Number);
+    const slotMinutes = slotH * 60 + slotM;
+    const diff = currentMinutes - slotMinutes;
+    return diff >= -5 && diff <= 35;
+  });
+
+  if (!isMatchingSlot) {
+    return {
+      eligible: false,
+      reason: `Horário atual (${brasiliaTimeStr} Brasília) fora da janela dos horários cadastrados (${preferredHours.join(", ")}).`,
+    };
+  }
+
+  return { eligible: true };
+}
+
+/**
  * Executa um ciclo completo de geração e publicação autônoma
  */
 export async function runAutonomousBlogCycle(options?: {
   forcedTopicId?: string;
   forcePublish?: boolean;
+  ignoreSchedule?: boolean;
 }): Promise<CycleResult> {
   const config = await getOrCreateBlogAgentConfig();
+
+  // Se não for manual e não forçar bypass de cadência, valida elegibilidade de dia/hora/limite
+  if (!options?.forcedTopicId && !options?.ignoreSchedule) {
+    const eligibility = await checkScheduleEligibility(config);
+    if (!eligibility.eligible) {
+      console.log(`[Blog Agent] Ciclo agendado aguardando janela: ${eligibility.reason}`);
+      await prisma.blogAgentConfig.update({
+        where: { id: config.id },
+        data: { lastStatus: "IDLE", lastError: null },
+      });
+      return {
+        success: true,
+        message: `Cadência respeitada: ${eligibility.reason}`,
+      };
+    }
+  }
 
   // Atualiza status para RUNNING
   await prisma.blogAgentConfig.update({
