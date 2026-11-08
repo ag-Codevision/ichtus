@@ -72,34 +72,40 @@ async function callLLM(options: {
   const maxTokens = options.maxTokens || 3500;
   const temperature = options.temperature || 0.4;
 
-  // 1. Tenta via Omniroute local (se disponível, resposta em 2-3s)
-  try {
-    const omnirouteRes = await fetch("http://localhost:5000/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "antigravity/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: options.systemPrompt },
-          { role: "user", content: options.userPrompt },
-        ],
-        stream: false,
-        max_tokens: maxTokens,
-        temperature,
-      }),
-      signal: AbortSignal.timeout(45000),
-    });
+  // 1. Tenta via Omniroute local apenas em desenvolvimento ou se OMNIROUTE_URL estiver definido
+  const omnirouteUrl = process.env.OMNIROUTE_URL;
+  const isLocalDev = process.env.NODE_ENV !== "production" || Boolean(omnirouteUrl);
 
-    if (omnirouteRes.ok) {
-      const data = await omnirouteRes.json();
-      const content = data.choices?.[0]?.message?.content;
-      if (content) {
-        console.log("[AI Engine] Sucesso via Omniroute Local (Gemini).");
-        return content;
+  if (isLocalDev) {
+    try {
+      const url = omnirouteUrl || "http://localhost:5000/v1/chat/completions";
+      const omnirouteRes = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "antigravity/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: options.systemPrompt },
+            { role: "user", content: options.userPrompt },
+          ],
+          stream: false,
+          max_tokens: maxTokens,
+          temperature,
+        }),
+        signal: AbortSignal.timeout(3000), // Timeout curto de 3s para fallback instantâneo
+      });
+
+      if (omnirouteRes.ok) {
+        const data = await omnirouteRes.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) {
+          console.log("[AI Engine] Sucesso via Omniroute Local (Gemini).");
+          return content;
+        }
       }
+    } catch {
+      console.info("[AI Engine] Omniroute indisponível, migrando imediatamente para NVIDIA NIM...");
     }
-  } catch (err: any) {
-    console.info("[AI Engine] Omniroute indisponível ou timeout, migrando para NVIDIA NIM...");
   }
 
   // 2. Fallback oficial: NVIDIA NIM API
@@ -243,13 +249,28 @@ Responda EXCLUSIVAMENTE em formato JSON VÁLIDO no seguinte formato:
 
   const userPrompt = `Gere ${count} pautas estratégicas focadas em atrair orçamentos para a ICTHUS.`;
 
-  const rawContent = await callLLM({
-    systemPrompt,
-    userPrompt,
-    maxTokens: 2000,
-    temperature: 0.7,
-  });
+  try {
+    const rawContent = await callLLM({
+      systemPrompt,
+      userPrompt,
+      maxTokens: 2000,
+      temperature: 0.7,
+    });
 
-  const parsed = safeJsonParse(rawContent);
-  return parsed.topics || [];
+    const parsed = safeJsonParse(rawContent);
+    if (parsed.topics && Array.isArray(parsed.topics) && parsed.topics.length > 0) {
+      return parsed.topics;
+    }
+  } catch (err) {
+    console.warn("[AI Engine] Erro na geração dinâmica de pautas via LLM, aplicando acervo estratégico curado:", err);
+  }
+
+  // Fallback estratégico de alta conversão
+  return DEFAULT_TOPIC_IDEAS.slice(0, count).map((ideaTitle, idx) => ({
+    title: ideaTitle,
+    category: idx % 2 === 0 ? "Fachadas Comerciais" : "Letreiros & Iluminação",
+    keywords: ["fachadas em acm", "letreiro luminoso", "comunicação visual", "curitiba"],
+    targetAudience: "Empresários, Lojistas e Arquitetos",
+    tone: "Técnico Especialista & Conversão",
+  }));
 }
