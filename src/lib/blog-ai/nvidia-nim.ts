@@ -129,7 +129,7 @@ async function callLLM(options: {
       max_tokens: maxTokens,
       temperature,
     }),
-    signal: AbortSignal.timeout(120000),
+    signal: AbortSignal.timeout(180000), // 3 minutos para gerações extensas
   });
 
   if (!nvidiaRes.ok) {
@@ -204,7 +204,7 @@ ESTRUTURA DO JSON DE RESPOSTA:
   const rawContent = await callLLM({
     systemPrompt,
     userPrompt,
-    maxTokens: 3500,
+    maxTokens: 2500,
     temperature: 0.35,
   });
 

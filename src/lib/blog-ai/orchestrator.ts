@@ -179,6 +179,14 @@ export async function runAutonomousBlogCycle(options?: {
   } catch (error: any) {
     console.error("[Blog Agent] Erro durante o ciclo autônomo:", error);
 
+    // Se a pauta ficou em progresso, reverte para PENDING para permitir nova tentativa
+    if (topicToUse) {
+      await prisma.blogTopic.update({
+        where: { id: topicToUse.id },
+        data: { status: TopicStatus.PENDING },
+      }).catch(() => null);
+    }
+
     // Registra falha no config
     await prisma.blogAgentConfig.update({
       where: { id: config.id },
