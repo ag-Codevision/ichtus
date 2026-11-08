@@ -58,8 +58,9 @@ export async function runAutonomousBlogCycle(options?: {
     data: { lastStatus: "RUNNING", lastError: null },
   });
 
+  let topicToUse: any = null;
+
   try {
-    let topicToUse: any = null;
 
     if (options?.forcedTopicId) {
       topicToUse = await prisma.blogTopic.findUnique({
