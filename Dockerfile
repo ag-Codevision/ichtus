@@ -11,7 +11,7 @@ WORKDIR /app
 COPY package.json package-lock.json tsconfig.json* ./
 COPY prisma ./prisma/
 
-RUN npm ci
+RUN npm ci --no-audit --maxsockets 3 && npm cache clean --force
 
 # Estágio 2: Compilação / Builder
 FROM node:20-alpine AS builder
