@@ -24,6 +24,7 @@ import {
   Settings,
   Sliders,
   Globe,
+  Sparkles,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -132,6 +133,13 @@ export function AdminSidebar({
   ];
 
   const systemItems = [
+    {
+      label: "Blog Autônomo IA",
+      description: "Mini-Cérebro e Pautas",
+      href: "/admin/blog",
+      icon: Sparkles,
+      active: pathname.startsWith("/admin/blog"),
+    },
     {
       label: "CMS do Site",
       description: "Editor On-Page e Conteúdo",

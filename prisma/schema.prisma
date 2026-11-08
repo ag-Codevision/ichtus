@@ -133,6 +133,13 @@ enum PostStatus {
   ARCHIVED
 }
 
+enum TopicStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  PAUSED
+}
+
 // ====================================================
 // USUÁRIOS E AUTENTICAÇÃO
 // ====================================================
@@ -680,6 +687,45 @@ model BlogPost {
   updatedAt         DateTime   @updatedAt
 
   @@map("blog_posts")
+}
+
+// ====================================================
+// BLOG AUTOMATIZADO COM IA & MINI-CÉREBRO
+// ====================================================
+
+model BlogTopic {
+  id                  String        @id @default(cuid())
+  title               String
+  category            String?       @default("Fachadas e Comunicação Visual")
+  keywords            String[]      @default([])
+  targetAudience      String?       @default("Empresários, Lojistas e Arquitetos")
+  tone                String?       @default("Técnico Especialista e Conversão")
+  status              TopicStatus   @default(PENDING)
+  priority            PriorityLevel @default(MEDIUM)
+  postsGeneratedCount Int           @default(0)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  @@map("blog_topics")
+}
+
+model BlogAgentConfig {
+  id             String    @id @default("default-config")
+  isActive       Boolean   @default(true)
+  postsPerDay    Int       @default(1)
+  allowedDays    String[]  @default(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"])
+  preferredHours String[]  @default(["09:00", "15:00"])
+  autoPublish    Boolean   @default(true)
+  imageProvider  String    @default("PEXELS")
+  defaultAuthor  String    @default("Engenharia ICTHUS")
+  lastRunAt      DateTime?
+  lastPostTitle  String?
+  lastStatus     String?   @default("IDLE")
+  lastError      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("blog_agent_configs")
 }
 
 // ====================================================

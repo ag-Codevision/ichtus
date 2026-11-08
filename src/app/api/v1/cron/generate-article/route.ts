@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { generateBlogArticleWithNvidia } from "@/lib/blog-ai/nvidia-nim";
+import { searchPexelsImage } from "@/lib/blog-ai/pexels";
 import { searchUnsplashImage } from "@/lib/blog-ai/unsplash";
 import { revalidatePath } from "next/cache";
 import { PostStatus } from "@prisma/client";
@@ -62,7 +63,8 @@ async function handleGeneration(req: NextRequest) {
 
     // 4. Busca da Imagem em Alta Resolução no Unsplash
     console.log(`[Blog IA Cron] Buscando imagem para query: "${articleData.imageQuery}"`);
-    const imageInfo = await searchUnsplashImage(articleData.imageQuery);
+    const pexelsPhoto = await searchPexelsImage(articleData.imageQuery);
+    const imageInfo = pexelsPhoto?.imageUrl ? pexelsPhoto : await searchUnsplashImage(articleData.imageQuery);
 
     // 5. Garantir que o slug é único no banco
     let uniqueSlug = articleData.slug;
