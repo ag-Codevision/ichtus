@@ -16,11 +16,9 @@ RUN npx prisma generate
 
 COPY . .
 
-# Desativa telemetria e cache excessivo de disco durante o build
+# Desativa telemetria durante o build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-ENV NEXT_DISABLE_WEBPACK_CACHE=1
-ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 RUN npm run build
 
