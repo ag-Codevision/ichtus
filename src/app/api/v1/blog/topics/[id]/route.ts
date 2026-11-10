@@ -26,8 +26,19 @@ export async function PATCH(
     if (body.title && typeof body.title === "string") {
       data.title = body.title.trim();
     }
-    if (body.category !== undefined) {
-      data.category = body.category;
+    if (body.category !== undefined && typeof body.category === "string") {
+      data.category = body.category.trim();
+    }
+    if (body.targetAudience !== undefined && typeof body.targetAudience === "string") {
+      data.targetAudience = body.targetAudience.trim();
+    }
+    if (body.tone !== undefined && typeof body.tone === "string") {
+      data.tone = body.tone.trim();
+    }
+    if (Array.isArray(body.keywords)) {
+      data.keywords = body.keywords.map((k: any) => String(k).trim()).filter(Boolean);
+    } else if (typeof body.keywords === "string") {
+      data.keywords = body.keywords.split(",").map((k: string) => k.trim()).filter(Boolean);
     }
 
     const updated = await prisma.blogTopic.update({

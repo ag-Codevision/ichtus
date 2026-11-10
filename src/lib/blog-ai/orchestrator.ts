@@ -47,7 +47,7 @@ export async function getOrCreateBlogAgentConfig() {
  * Valida se o momento atual é elegível para execução automática segundo a cadência configurada:
  * - Agente ativo (isActive: true)
  * - Dia da semana permitido (allowedDays)
- * - Horário dentro da janela programada (preferredHours) com tolerância de +/- 30 minutos
+ * - Lógica de Slots Inteligente: compara horários já vencidos hoje com posts publicados
  * - Quantidade de postagens hoje não ultrapassou postsPerDay
  */
 export async function checkScheduleEligibility(config: any): Promise<{
@@ -74,7 +74,7 @@ export async function checkScheduleEligibility(config: any): Promise<{
   });
   const currentDayKey = dayFormatter.format(now).toUpperCase(); // "MON", "TUE", etc.
 
-  // 1. Validar Dia da Semana
+  // 1. Validar Dia da Semana (Fallback seguro: se vazio, permite todos os dias)
   const allowedDays: string[] = (config.allowedDays && config.allowedDays.length > 0)
     ? config.allowedDays.map((d: string) => d.toUpperCase())
     : ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -86,7 +86,7 @@ export async function checkScheduleEligibility(config: any): Promise<{
     };
   }
 
-  // 2. Validar Limite de Postagens Diárias
+  // 2. Validar Limite Geral de Postagens no Dia
   const startOfDay = new Date(`${brasiliaDateStr}T00:00:00-03:00`);
   const postsCountToday = await prisma.blogPost.count({
     where: {
@@ -96,34 +96,43 @@ export async function checkScheduleEligibility(config: any): Promise<{
     },
   });
 
-  const limitPerDay = config.postsPerDay || 1;
+  const limitPerDay = Math.max(1, config.postsPerDay || 1);
   if (postsCountToday >= limitPerDay) {
     return {
       eligible: false,
-      reason: `Limite diário atingido: ${postsCountToday} de ${limitPerDay} post(s) já foram publicados hoje.`,
+      reason: `Limite diário atingido: ${postsCountToday} de ${limitPerDay} post(s) já foram publicados hoje (${brasiliaDateStr}).`,
     };
   }
 
-  // 3. Validar Horários Programados
+  // 3. Validação Inteligente de Slots de Horários
   const preferredHours: string[] = (config.preferredHours && config.preferredHours.length > 0)
-    ? config.preferredHours
+    ? [...config.preferredHours].sort()
     : ["09:00", "15:00"];
 
   const [currH, currM] = brasiliaTimeStr.split(":").map(Number);
   const currentMinutes = currH * 60 + currM;
 
-  // Tolerância: de 5 minutos antes até 35 minutos após o horário previsto
-  const isMatchingSlot = preferredHours.some((hourStr: string) => {
+  // Conta quantos slots de horários programados já foram atingidos/ultrapassados hoje
+  const slotsPassed = preferredHours.filter((hourStr: string) => {
     const [slotH, slotM] = hourStr.split(":").map(Number);
     const slotMinutes = slotH * 60 + slotM;
-    const diff = currentMinutes - slotMinutes;
-    return diff >= -5 && diff <= 35;
-  });
+    return currentMinutes >= (slotMinutes - 5); // Tolera até 5 minutos de antecedência
+  }).length;
 
-  if (!isMatchingSlot) {
+  if (slotsPassed === 0) {
     return {
       eligible: false,
-      reason: `Horário atual (${brasiliaTimeStr} Brasília) fora da janela dos horários cadastrados (${preferredHours.join(", ")}).`,
+      reason: `Horário atual (${brasiliaTimeStr} Brasília) anterior ao primeiro horário programado (${preferredHours[0]}).`,
+    };
+  }
+
+  // A meta de artigos que deveriam ter sido publicados até este momento do dia
+  const expectedPostsByNow = Math.min(slotsPassed, limitPerDay);
+
+  if (postsCountToday >= expectedPostsByNow) {
+    return {
+      eligible: false,
+      reason: `Meta para este horário já cumprida (${postsCountToday}/${expectedPostsByNow} posts até ${brasiliaTimeStr} Brasília).`,
     };
   }
 
@@ -173,15 +182,16 @@ export async function runAutonomousBlogCycle(options?: {
     }
 
     if (!topicToUse) {
-      // Prioridade: PENDING ordenado por prioridade (URGENT > HIGH > MEDIUM > LOW) e data mais antiga
-      // Como enum no Postgres não ordena alfabeticamente pela prioridade lógica, buscamos PENDING
-      const pendingTopics = await prisma.blogTopic.findMany({
-        where: { status: TopicStatus.PENDING },
-        orderBy: { createdAt: "asc" },
+      // Prioridade: Pautas ativas no mini-cérebro (não pausadas).
+      // Faz rodízio inteligente: pautas com menor quantidade de artigos gerados têm preferência.
+      const availableTopics = await prisma.blogTopic.findMany({
+        where: {
+          status: { notIn: [TopicStatus.PAUSED] },
+        },
+        orderBy: [{ postsGeneratedCount: "asc" }, { createdAt: "asc" }],
       });
 
-      if (pendingTopics.length > 0) {
-        // Ordena na memória pela prioridade de negócio
+      if (availableTopics.length > 0) {
         const priorityOrder: Record<PriorityLevel, number> = {
           URGENT: 1,
           HIGH: 2,
@@ -189,11 +199,20 @@ export async function runAutonomousBlogCycle(options?: {
           LOW: 4,
         };
 
-        pendingTopics.sort(
-          (a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]
-        );
+        availableTopics.sort((a, b) => {
+          // 1º critério: Menor contagem de artigos já gerados (rodízio equilibrado)
+          if (a.postsGeneratedCount !== b.postsGeneratedCount) {
+            return a.postsGeneratedCount - b.postsGeneratedCount;
+          }
+          // 2º critério: Prioridade de negócio
+          if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+            return priorityOrder[a.priority] - priorityOrder[b.priority];
+          }
+          // 3º critério: Ordem cronológica de cadastro
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        });
 
-        topicToUse = pendingTopics[0];
+        topicToUse = availableTopics[0];
       }
     }
 
@@ -253,12 +272,12 @@ export async function runAutonomousBlogCycle(options?: {
       },
     });
 
-    // 6. Atualiza a pauta no mini-cérebro
+    // 6. Atualiza a pauta no mini-cérebro (mantém ativa para rodízio e incrementa contador)
     if (topicToUse) {
       await prisma.blogTopic.update({
         where: { id: topicToUse.id },
         data: {
-          status: TopicStatus.COMPLETED,
+          status: TopicStatus.PENDING,
           postsGeneratedCount: { increment: 1 },
         },
       });

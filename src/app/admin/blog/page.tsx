@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   Sparkles,
   Bot,
@@ -22,22 +21,22 @@ import {
   Eye,
   Settings,
   Layers,
-  ArrowRight,
   Sliders,
-  Image as ImageIcon,
   Check,
   ChevronRight,
   BookOpen,
   X,
   Minus,
+  Pencil,
+  FileText,
 } from "lucide-react";
 
 const WEEK_DAYS = [
-  { key: "MON", label: "Seg", full: "Segunda-feira" },
-  { key: "TUE", label: "Ter", full: "Terça-feira" },
-  { key: "WED", label: "Qua", full: "Quarta-feira" },
-  { key: "THU", label: "Qui", full: "Quinta-feira" },
-  { key: "FRI", label: "Sex", full: "Sexta-feira" },
+  { key: "MON", label: "Seg", full: "Segunda" },
+  { key: "TUE", label: "Ter", full: "Terça" },
+  { key: "WED", label: "Qua", full: "Quarta" },
+  { key: "THU", label: "Qui", full: "Quinta" },
+  { key: "FRI", label: "Sex", full: "Sexta" },
   { key: "SAT", label: "Sáb", full: "Sábado" },
   { key: "SUN", label: "Dom", full: "Domingo" },
 ];
@@ -100,32 +99,45 @@ export default function AdminBlogPage() {
   const [suggestingTopics, setSuggestingTopics] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
 
-  // Modais e Filtros
+  // Modais de Criação e Edição de Pautas
   const [isNewTopicModalOpen, setIsNewTopicModalOpen] = useState(false);
-  const [topicFilter, setTopicFilter] = useState<string>("ALL");
   const [newTopicMode, setNewTopicMode] = useState<"single" | "bulk">("single");
   const [singleTitle, setSingleTitle] = useState("");
-  const [singleCategory, setSingleCategory] = useState("Fachadas e Comunicação Visual");
+  const [singleCategory, setSingleCategory] = useState("Fachadas Comerciais");
   const [singlePriority, setSinglePriority] = useState<"LOW" | "MEDIUM" | "HIGH" | "URGENT">("MEDIUM");
   const [bulkTitles, setBulkTitles] = useState("");
+
+  // Modal de Edição (CRUD)
+  const [editingTopic, setEditingTopic] = useState<BlogTopic | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editCategory, setEditCategory] = useState("Fachadas Comerciais");
+  const [editPriority, setEditPriority] = useState<"LOW" | "MEDIUM" | "HIGH" | "URGENT">("MEDIUM");
+  const [editKeywords, setEditKeywords] = useState("");
+  const [savingEditTopic, setSavingEditTopic] = useState(false);
+
+  // Filtros de Pautas
+  const [topicFilter, setTopicFilter] = useState<string>("ALL");
+  const [topicSearch, setTopicSearch] = useState("");
+
+  // Input de Horário
   const [newHourInput, setNewHourInput] = useState("09:00");
 
-  // Feedback Notification
+  // Feedback Notification Toast
   const [feedback, setFeedback] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
 
   const showFeedback = (type: "success" | "error" | "info", message: string) => {
     setFeedback({ type, message });
-    setTimeout(() => setFeedback(null), 6000);
+    setTimeout(() => setFeedback(null), 5000);
   };
 
-  // Funções Auxiliares de Cadência (Dias e Horários)
+  // Funções de Cadência (Dias e Horários)
   const handleToggleDay = (dayKey: string) => {
     if (!config) return;
     const current = config.allowedDays || [];
     let updated: string[];
     if (current.includes(dayKey)) {
       if (current.length === 1) {
-        showFeedback("info", "Mantenha ao menos 1 dia da semana ativo para o robô.");
+        showFeedback("info", "Mantenha ao menos 1 dia da semana ativo.");
         return;
       }
       updated = current.filter((d) => d !== dayKey);
@@ -187,24 +199,24 @@ export default function AdminBlogPage() {
       ]);
 
       if (topicsRes.ok) {
-        const json = await topicsRes.json();
-        setTopics(json.data || []);
-        if (json.stats) setTopicStats(json.stats);
+        const tJson = await topicsRes.json();
+        setTopics(tJson.data || []);
+        if (tJson.stats) setTopicStats(tJson.stats);
       }
 
       if (configRes.ok) {
-        const json = await configRes.json();
-        setConfig(json.data || null);
+        const cJson = await configRes.json();
+        setConfig(cJson.data);
       }
 
       if (postsRes.ok) {
-        const json = await postsRes.json();
-        setPosts(json.data || []);
-        if (json.stats) setPostStats(json.stats);
+        const pJson = await postsRes.json();
+        setPosts(pJson.data || []);
+        if (pJson.stats) setPostStats(pJson.stats);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Erro ao carregar dados do blog:", err);
-      showFeedback("error", "Erro ao carregar dados do servidor.");
+      showFeedback("error", "Erro ao sincronizar informações.");
     } finally {
       setLoading(false);
     }
@@ -215,26 +227,26 @@ export default function AdminBlogPage() {
   }, [fetchData]);
 
   // Ação: Disparar Geração Imediata com IA
-  const handleGenerateNow = async (forcedTopicId?: string) => {
+  const handleGenerateNow = async (topicId?: string) => {
     setGeneratingNow(true);
-    showFeedback("info", "O Agente de IA está escrevendo o artigo e selecionando fotos no Pexels...");
     try {
       const res = await fetch("/api/v1/blog/agent/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topicId: forcedTopicId }),
+        body: JSON.stringify({
+          topicId,
+          ignoreSchedule: true,
+        }),
       });
 
       const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || json.details || "Falha na geração");
-      }
+      if (!res.ok) throw new Error(json.error || json.details || "Falha na geração");
 
-      showFeedback("success", `Sucesso! Artigo "${json.data?.post?.title}" publicado.`);
+      showFeedback("success", `Artigo gerado com sucesso! "${json.data?.post?.title || "Novo Post"}"`);
       await fetchData();
+      setActiveTab("posts");
     } catch (err: any) {
-      console.error("Erro na geração manual:", err);
-      showFeedback("error", err.message || "Erro durante a execução do agente.");
+      showFeedback("error", err.message || "Erro ao gerar artigo.");
     } finally {
       setGeneratingNow(false);
     }
@@ -243,30 +255,25 @@ export default function AdminBlogPage() {
   // Ação: Sugerir 10 Pautas com IA
   const handleSuggestTopics = async () => {
     setSuggestingTopics(true);
-    showFeedback("info", "A IA está analisando tendências e gerando 10 pautas estratégicas de SEO...");
     try {
       const res = await fetch("/api/v1/blog/topics/suggest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count: 10, autoSave: true }),
+        body: JSON.stringify({ count: 10 }),
       });
-
       const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || "Erro ao sugerir pautas");
-      }
+      if (!res.ok) throw new Error(json.error || "Erro ao sugerir pautas");
 
-      showFeedback("success", json.message || "10 novas pautas foram adicionadas ao Mini-Cérebro!");
+      showFeedback("success", "10 pautas estratégicas adicionadas ao Mini-Cérebro!");
       await fetchData();
     } catch (err: any) {
-      console.error("Erro ao sugerir tópicos:", err);
-      showFeedback("error", err.message || "Falha ao gerar pautas.");
+      showFeedback("error", err.message || "Erro ao sugerir tópicos.");
     } finally {
       setSuggestingTopics(false);
     }
   };
 
-  // Ação: Criar Nova Pauta Manual
+  // Ação: Criar Nova Pauta (CRUD - Create)
   const handleCreateTopic = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -316,27 +323,67 @@ export default function AdminBlogPage() {
     }
   };
 
-  // Ação: Alterar Status da Pauta
-  const handleUpdateTopicStatus = async (id: string, newStatus: string) => {
+  // Ação: Abrir Modal de Edição (CRUD - Edit)
+  const handleOpenEditTopic = (topic: BlogTopic) => {
+    setEditingTopic(topic);
+    setEditTitle(topic.title);
+    setEditCategory(topic.category || "Fachadas Comerciais");
+    setEditPriority(topic.priority || "MEDIUM");
+    setEditKeywords(Array.isArray(topic.keywords) ? topic.keywords.join(", ") : "");
+  };
+
+  // Ação: Salvar Edição da Pauta (CRUD - Update)
+  const handleSaveEditTopic = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTopic || !editTitle.trim()) return;
+    setSavingEditTopic(true);
     try {
-      const res = await fetch(`/api/v1/blog/topics/${id}`, {
+      const res = await fetch(`/api/v1/blog/topics/${editingTopic.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          category: editCategory,
+          priority: editPriority,
+          keywords: editKeywords.split(",").map((k) => k.trim()).filter(Boolean),
+        }),
       });
-      if (!res.ok) throw new Error("Falha ao atualizar status");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Erro ao atualizar pauta.");
+
+      showFeedback("success", "Pauta atualizada com sucesso!");
+      setEditingTopic(null);
+      await fetchData();
+    } catch (err: any) {
+      showFeedback("error", err.message || "Erro ao salvar alterações.");
+    } finally {
+      setSavingEditTopic(false);
+    }
+  };
+
+  // Ação: Pausar / Reativar Pauta
+  const handleToggleTopicPause = async (topic: BlogTopic) => {
+    const nextStatus = topic.status === "PAUSED" ? "PENDING" : "PAUSED";
+    try {
+      const res = await fetch(`/api/v1/blog/topics/${topic.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (!res.ok) throw new Error("Falha ao alternar status da pauta.");
+      showFeedback("success", `Pauta ${nextStatus === "PAUSED" ? "pausada" : "ativada para rodízio"}.`);
       await fetchData();
     } catch (err: any) {
       showFeedback("error", err.message);
     }
   };
 
-  // Ação: Excluir Pauta
+  // Ação: Excluir Pauta (CRUD - Delete)
   const handleDeleteTopic = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir esta pauta do mini-cérebro?")) return;
     try {
       const res = await fetch(`/api/v1/blog/topics/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Falha ao excluir");
+      if (!res.ok) throw new Error("Falha ao excluir.");
       showFeedback("success", "Pauta removida.");
       await fetchData();
     } catch (err: any) {
@@ -354,7 +401,7 @@ export default function AdminBlogPage() {
         body: JSON.stringify({ status: nextStatus }),
       });
       if (!res.ok) throw new Error("Falha ao alterar status");
-      showFeedback("success", `Post ${nextStatus === "PUBLISHED" ? "publicado no ar" : "movido para rascunho"}.`);
+      showFeedback("success", `Post ${nextStatus === "PUBLISHED" ? "publicado" : "em rascunho"}.`);
       await fetchData();
     } catch (err: any) {
       showFeedback("error", err.message);
@@ -374,7 +421,7 @@ export default function AdminBlogPage() {
     }
   };
 
-  // Ação: Salvar Configurações
+  // Ação: Salvar Configurações de Agendamento
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!config) return;
@@ -387,7 +434,7 @@ export default function AdminBlogPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-      showFeedback("success", "Configurações de agendamento salvas com sucesso!");
+      showFeedback("success", "Regras de agendamento salvas com sucesso!");
     } catch (err: any) {
       showFeedback("error", err.message || "Erro ao salvar.");
     } finally {
@@ -395,65 +442,75 @@ export default function AdminBlogPage() {
     }
   };
 
+  // Filtragem de Pautas
   const filteredTopics = topics.filter((t) => {
-    if (topicFilter === "ALL") return true;
-    return t.status === topicFilter;
+    if (topicFilter === "ACTIVE" && t.status === "PAUSED") return false;
+    if (topicFilter === "PAUSED" && t.status !== "PAUSED") return false;
+    if (topicSearch.trim()) {
+      const search = topicSearch.toLowerCase();
+      return (
+        t.title.toLowerCase().includes(search) ||
+        (t.category && t.category.toLowerCase().includes(search)) ||
+        (t.keywords && t.keywords.some((k) => k.toLowerCase().includes(search)))
+      );
+    }
+    return true;
   });
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-8 animate-fadeIn text-zinc-100">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 animate-fadeIn text-zinc-100">
       {/* Toast Notification */}
       {feedback && (
         <div
-          className={`fixed bottom-6 right-6 z-50 px-5 py-3.5 rounded-2xl shadow-2xl border text-sm font-semibold flex items-center gap-3 transition-all ${
+          className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl border text-xs font-semibold flex items-center gap-2.5 transition-all ${
             feedback.type === "success"
-              ? "bg-emerald-950/90 text-emerald-200 border-emerald-500/40"
+              ? "bg-emerald-950/90 text-emerald-300 border-emerald-500/40"
               : feedback.type === "error"
-              ? "bg-red-950/90 text-red-200 border-red-500/40"
-              : "bg-blue-950/90 text-blue-200 border-blue-500/40"
+              ? "bg-red-950/90 text-red-300 border-red-500/40"
+              : "bg-blue-950/90 text-blue-300 border-blue-500/40"
           }`}
         >
-          {feedback.type === "success" && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />}
-          {feedback.type === "error" && <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />}
-          {feedback.type === "info" && <RefreshCw className="w-5 h-5 text-blue-400 animate-spin shrink-0" />}
+          {feedback.type === "success" ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          ) : feedback.type === "error" ? (
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+          ) : (
+            <Bot className="w-4 h-4 text-blue-400 shrink-0" />
+          )}
           <span>{feedback.message}</span>
         </div>
       )}
 
-      {/* Cabeçalho Principal */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-white/10">
+      {/* Topo Compacto: Título & Botão de Geração Rápida */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#FF650F] mb-1.5">
-            <Bot className="w-4 h-4" />
-            <span>Sistema Autônomo de Conteúdo &amp; Inbound Marketing</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight flex items-center gap-3">
-            <span>Blog Autônomo com IA</span>
-            <span className="text-xs px-2.5 py-1 rounded-full bg-[#FF650F]/20 text-[#FF650F] border border-[#FF650F]/30 font-bold uppercase tracking-wider">
-              Mini-Cérebro Ativo
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#FF650F] animate-pulse"></span>
+            <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">
+              Plataforma ICTHUS • Blog IA
             </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
+            Gerenciador do Blog &amp; Mini-Cérebro
           </h1>
-          <p className="text-sm text-zinc-400 mt-1 max-w-2xl leading-relaxed">
-            Planejamento estratégico de pautas, geração técnica especializada em engenharia visual (ACM, LED e CNC) com busca automática de fotos no Pexels.
-          </p>
         </div>
 
-        {/* Botões de Ação Imediata */}
-        <div className="flex flex-wrap items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => handleGenerateNow()}
             disabled={generatingNow}
-            className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#FF650F] to-orange-600 hover:from-orange-500 hover:to-orange-600 text-white font-extrabold text-sm shadow-xl shadow-orange-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-bold transition-all shadow-md shadow-orange-500/20 disabled:opacity-50"
+            title="Gera 1 artigo imediatamente usando o próximo tema do Mini-Cérebro"
           >
             {generatingNow ? (
               <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                 <span>Gerando Artigo...</span>
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4" />
-                <span>GERAR POST AGORA COM IA</span>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Gerar Artigo Agora</span>
               </>
             )}
           </button>
@@ -461,84 +518,75 @@ export default function AdminBlogPage() {
           <Link
             href="/blog"
             target="_blank"
-            className="inline-flex items-center gap-2 px-5 py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 text-white text-sm font-bold border border-white/10 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-semibold border border-white/10 transition-colors"
           >
-            <span>Ver Blog Público</span>
-            <ExternalLink className="w-4 h-4 opacity-70" />
+            <span>Ver Blog</span>
+            <ExternalLink className="w-3.5 h-3.5 opacity-60" />
           </Link>
         </div>
       </div>
 
-      {/* Cards de Métricas e Indicadores de Saúde */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Artigos Publicados */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-[#18191D] to-[#121316] border border-white/10 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-zinc-400 text-xs font-semibold uppercase tracking-wider">
-            <span>Artigos no Blog</span>
-            <BookOpen className="w-4 h-4 text-[#FF650F]" />
+      {/* Cards de Métricas Compactos (3 Cards) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        {/* Card 1: Pautas no Mini-Cérebro */}
+        <div className="p-4 rounded-xl bg-[#141518] border border-white/10 flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+              Pautas Cadastradas
+            </span>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-2xl font-black text-white">{topics.length}</span>
+              <span className="text-xs text-zinc-400">
+                ({topics.filter((t) => t.status !== "PAUSED").length} ativas)
+              </span>
+            </div>
           </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-white">{postStats.total}</span>
-            <span className="text-xs text-emerald-400 font-medium">({postStats.published} no ar)</span>
-          </div>
-          <p className="text-xs text-zinc-500 mt-2">Prisma PostgreSQL</p>
-        </div>
-
-        {/* Card 2: Pautas no Mini-Cérebro */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-[#18191D] to-[#121316] border border-white/10 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-zinc-400 text-xs font-semibold uppercase tracking-wider">
-            <span>Pautas no Mini-Cérebro</span>
-            <Brain className="w-4 h-4 text-[#FF650F]" />
-          </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-white">{topicStats.pending}</span>
-            <span className="text-xs text-zinc-400">pendentes / {topicStats.total} total</span>
-          </div>
-          <p className="text-xs text-zinc-500 mt-2">{topicStats.completed} já publicadas</p>
-        </div>
-
-        {/* Card 3: Cadência de Agendamento */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-[#18191D] to-[#121316] border border-white/10 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-zinc-400 text-xs font-semibold uppercase tracking-wider">
-            <span>Cadência de Postagem</span>
-            <Calendar className="w-4 h-4 text-[#FF650F]" />
-          </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-white">{config?.postsPerDay || 1}</span>
-            <span className="text-xs text-zinc-400">post(s) por dia</span>
-          </div>
-          <div className="text-[11px] text-zinc-400 mt-2 space-y-0.5">
-            <p className="font-semibold text-zinc-300">
-              {config?.allowedDays?.length === 7
-                ? "Todos os dias"
-                : config?.allowedDays?.length === 5 && !config?.allowedDays.includes("SAT") && !config?.allowedDays.includes("SUN")
-                ? "Dias úteis (Seg-Sex)"
-                : `${config?.allowedDays?.length || 0} dias/semana`}
-            </p>
-            <p className="truncate text-zinc-500 font-mono">
-              {config?.preferredHours?.length ? `Horários: ${config.preferredHours.join(", ")}` : "Horário padrão"}
-            </p>
+          <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+            <Brain className="w-5 h-5" />
           </div>
         </div>
 
-        {/* Card 4: Banco de Imagens Pexels */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-[#18191D] to-[#121316] border border-white/10 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-zinc-400 text-xs font-semibold uppercase tracking-wider">
-            <span>Banco de Fotos</span>
-            <ImageIcon className="w-4 h-4 text-[#FF650F]" />
+        {/* Card 2: Artigos Publicados */}
+        <div className="p-4 rounded-xl bg-[#141518] border border-white/10 flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+              Artigos no Ar
+            </span>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-2xl font-black text-white">{postStats.published}</span>
+              <span className="text-xs text-emerald-400">publicados</span>
+            </div>
           </div>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold text-emerald-400">Pexels API</span>
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <BookOpen className="w-5 h-5" />
           </div>
-          <p className="text-xs text-zinc-500 mt-2">Fotos gratuitas em alta definição</p>
+        </div>
+
+        {/* Card 3: Status do Robô & Cadência */}
+        <div className="p-4 rounded-xl bg-[#141518] border border-white/10 flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+              Cadência do Robô
+            </span>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-2xl font-black text-white">{config?.postsPerDay || 1}</span>
+              <span className="text-xs text-zinc-400">post(s) / dia</span>
+            </div>
+            <span className="text-[11px] text-zinc-500 block truncate">
+              {config?.isActive ? "🟢 Agendador Operacional" : "⏸️ Robô Pausado"}
+            </span>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-[#FF650F]/10 border border-[#FF650F]/20 flex items-center justify-center text-[#FF650F]">
+            <Calendar className="w-5 h-5" />
+          </div>
         </div>
       </div>
 
-      {/* Navegação por Abas */}
-      <div className="flex border-b border-white/10 gap-2 overflow-x-auto pb-px">
+      {/* Navegação por Abas Limpa */}
+      <div className="flex border-b border-white/10 gap-1 overflow-x-auto">
         <button
           onClick={() => setActiveTab("brain")}
-          className={`flex items-center gap-2.5 px-6 py-3.5 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+          className={`flex items-center gap-2 px-5 py-3 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "brain"
               ? "border-[#FF650F] text-[#FF650F] bg-white/[0.02]"
               : "border-transparent text-zinc-400 hover:text-white"
@@ -550,19 +598,19 @@ export default function AdminBlogPage() {
 
         <button
           onClick={() => setActiveTab("schedule")}
-          className={`flex items-center gap-2.5 px-6 py-3.5 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+          className={`flex items-center gap-2 px-5 py-3 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "schedule"
               ? "border-[#FF650F] text-[#FF650F] bg-white/[0.02]"
               : "border-transparent text-zinc-400 hover:text-white"
           }`}
         >
           <Sliders className="w-4 h-4" />
-          <span>Regras de Agendamento &amp; Robô</span>
+          <span>Regras de Agendamento</span>
         </button>
 
         <button
           onClick={() => setActiveTab("posts")}
-          className={`flex items-center gap-2.5 px-6 py-3.5 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+          className={`flex items-center gap-2 px-5 py-3 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "posts"
               ? "border-[#FF650F] text-[#FF650F] bg-white/[0.02]"
               : "border-transparent text-zinc-400 hover:text-white"
@@ -573,137 +621,131 @@ export default function AdminBlogPage() {
         </button>
       </div>
 
-      {/* CONTEÚDO DA ABA 1: MINI-CÉREBRO */}
+      {/* ABA 1: MINI-CÉREBRO DE PAUTAS (CRUD COMPLETO) */}
       {activeTab === "brain" && (
-        <div className="space-y-6">
-          {/* Barra de Ações da Aba */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#141518] border border-white/10">
-            {/* Filtros por Status */}
-            <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
-              <span className="text-zinc-500 mr-1 flex items-center gap-1">
-                <Filter className="w-3.5 h-3.5" />
-                Filtrar:
-              </span>
-              {[
-                { label: "Todas", value: "ALL" },
-                { label: "Pendentes", value: "PENDING" },
-                { label: "Em Produção", value: "IN_PROGRESS" },
-                { label: "Publicadas", value: "COMPLETED" },
-                { label: "Pausadas", value: "PAUSED" },
-              ].map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => setTopicFilter(f.value)}
-                  className={`px-3 py-1.5 rounded-xl transition-colors ${
-                    topicFilter === f.value
-                      ? "bg-[#FF650F] text-white"
-                      : "bg-white/5 hover:bg-white/10 text-zinc-300"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
+        <div className="space-y-4">
+          {/* Barra Superior: Busca, Filtro e Ações */}
+          <div className="p-3.5 rounded-2xl bg-[#141518] border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            {/* Campo de Busca & Filtros Rápidos */}
+            <div className="flex flex-wrap items-center gap-2 flex-grow">
+              <div className="relative min-w-[200px] sm:w-64">
+                <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Buscar pauta ou categoria..."
+                  value={topicSearch}
+                  onChange={(e) => setTopicSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-1 text-xs">
+                {[
+                  { label: "Todas", value: "ALL" },
+                  { label: "Ativas", value: "ACTIVE" },
+                  { label: "Pausadas", value: "PAUSED" },
+                ].map((f) => (
+                  <button
+                    key={f.value}
+                    onClick={() => setTopicFilter(f.value)}
+                    className={`px-3 py-1.5 rounded-xl transition-colors text-xs font-semibold ${
+                      topicFilter === f.value
+                        ? "bg-[#FF650F] text-white"
+                        : "bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Botões de Ação */}
-            <div className="flex items-center gap-2.5">
+            {/* Botões: Sugerir IA & Nova Pauta */}
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={handleSuggestTopics}
                 disabled={suggestingTopics}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-bold transition-all disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-bold transition-all disabled:opacity-50"
+                title="Gera 10 ideias de pautas de alto impacto com IA"
               >
                 {suggestingTopics ? (
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                 ) : (
                   <Sparkles className="w-3.5 h-3.5 text-purple-400" />
                 )}
-                <span>Sugerir 10 Pautas com IA</span>
+                <span>Sugerir 10 Pautas</span>
               </button>
 
               <button
                 onClick={() => setIsNewTopicModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-extrabold transition-all shadow-md shadow-orange-500/20"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-bold transition-all shadow-md shadow-orange-500/20"
               >
-                <Plus className="w-4 h-4" />
-                <span>Nova Pauta Manual</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Nova Pauta</span>
               </button>
             </div>
           </div>
 
-          {/* Lista de Pautas */}
+          {/* Listagem de Pautas em Linhas Compactas */}
           {loading ? (
-            <div className="p-12 text-center text-zinc-500">
-              <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-[#FF650F]" />
-              <p className="text-sm">Carregando pautas do mini-cérebro...</p>
+            <div className="p-8 text-center text-zinc-500">
+              <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[#FF650F]" />
+              <p className="text-xs">Carregando pautas do mini-cérebro...</p>
             </div>
           ) : filteredTopics.length === 0 ? (
-            <div className="p-12 text-center rounded-3xl bg-[#141518] border border-white/10 space-y-3">
-              <Brain className="w-12 h-12 text-zinc-600 mx-auto" />
-              <h3 className="text-lg font-bold text-white">Nenhuma pauta encontrada</h3>
-              <p className="text-sm text-zinc-400 max-w-md mx-auto">
-                Adicione pautas manualmente ou clique em &quot;Sugerir 10 Pautas com IA&quot; para o robô popular o mini-cérebro com ideias de alto impacto.
+            <div className="p-8 text-center rounded-2xl bg-[#141518] border border-white/10 space-y-2">
+              <Brain className="w-8 h-8 text-zinc-600 mx-auto" />
+              <h3 className="text-sm font-bold text-white">Nenhuma pauta encontrada</h3>
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                Adicione suas ideias de temas ou use &quot;Sugerir 10 Pautas&quot; para abastecer o robô.
               </p>
-              <button
-                onClick={handleSuggestTopics}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Sugerir Pautas Agora</span>
-              </button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {filteredTopics.map((topic) => (
                 <div
                   key={topic.id}
-                  className="p-5 rounded-2xl bg-[#141518] border border-white/10 hover:border-white/20 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  className={`p-3.5 rounded-xl bg-[#141518] border transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 ${
+                    topic.status === "PAUSED"
+                      ? "border-white/5 opacity-60"
+                      : "border-white/10 hover:border-white/20"
+                  }`}
                 >
-                  <div className="space-y-2 flex-grow">
+                  {/* Informações da Pauta */}
+                  <div className="space-y-1 flex-grow">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                          topic.status === "PENDING"
-                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                            : topic.status === "IN_PROGRESS"
-                            ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                            : topic.status === "COMPLETED"
-                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                            : "bg-zinc-700/40 text-zinc-400 border border-zinc-600/30"
-                        }`}
-                      >
-                        {topic.status === "PENDING" && "Pendente"}
-                        {topic.status === "IN_PROGRESS" && "Em Produção"}
-                        {topic.status === "COMPLETED" && "Publicada"}
-                        {topic.status === "PAUSED" && "Pausada"}
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/5 text-zinc-400 border border-white/5">
+                        {topic.category || "Geral"}
                       </span>
 
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                          topic.priority === "URGENT"
-                            ? "bg-red-500/20 text-red-300"
-                            : topic.priority === "HIGH"
-                            ? "bg-orange-500/20 text-orange-300"
-                            : "bg-zinc-800 text-zinc-400"
-                        }`}
-                      >
-                        Prioridade: {topic.priority}
-                      </span>
+                      {topic.priority === "URGENT" && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-500/20 text-red-300 border border-red-500/30">
+                          Urgente
+                        </span>
+                      )}
+                      {topic.priority === "HIGH" && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-orange-500/20 text-orange-300 border border-orange-500/30">
+                          Alta
+                        </span>
+                      )}
 
-                      <span className="text-xs text-zinc-400 font-medium">
-                        {topic.category}
+                      <span className="text-[11px] text-zinc-500 font-medium">
+                        {topic.postsGeneratedCount === 0
+                          ? "Ainda não utilizada"
+                          : `${topic.postsGeneratedCount} artigo(s) já gerado(s)`}
                       </span>
                     </div>
 
-                    <h3 className="text-base font-bold text-white leading-snug">
+                    <h3 className="text-sm font-bold text-white leading-snug">
                       {topic.title}
                     </h3>
 
                     {topic.keywords && topic.keywords.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <div className="flex flex-wrap items-center gap-1 pt-0.5">
                         {topic.keywords.slice(0, 4).map((kw, idx) => (
                           <span
                             key={idx}
-                            className="text-[11px] px-2 py-0.5 rounded-md bg-white/5 text-zinc-400"
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-black/40 text-zinc-400 font-mono"
                           >
                             #{kw}
                           </span>
@@ -712,44 +754,52 @@ export default function AdminBlogPage() {
                     )}
                   </div>
 
-                  {/* Ações da Pauta */}
-                  <div className="flex items-center gap-2 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-white/5">
-                    {topic.status === "PENDING" && (
-                      <button
-                        onClick={() => handleGenerateNow(topic.id)}
-                        disabled={generatingNow}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FF650F]/20 hover:bg-[#FF650F] text-[#FF650F] hover:text-white border border-[#FF650F]/40 text-xs font-bold transition-all disabled:opacity-50"
-                        title="Produzir artigo imediatamente com base nesta pauta"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Gerar Post</span>
-                      </button>
-                    )}
+                  {/* Ações CRUD da Pauta */}
+                  <div className="flex items-center gap-1.5 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-white/5">
+                    {/* Botão de Disparo Rápido com Este Tema */}
+                    <button
+                      onClick={() => handleGenerateNow(topic.id)}
+                      disabled={generatingNow}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#FF650F]/15 hover:bg-[#FF650F] text-[#FF650F] hover:text-white border border-[#FF650F]/30 text-xs font-bold transition-all disabled:opacity-50"
+                      title="Gerar um novo artigo com IA sobre esta pauta agora"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Gerar Artigo</span>
+                    </button>
 
-                    {topic.status === "PENDING" ? (
-                      <button
-                        onClick={() => handleUpdateTopicStatus(topic.id, "PAUSED")}
-                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs transition-colors"
-                        title="Pausar pauta"
-                      >
-                        <Pause className="w-4 h-4" />
-                      </button>
-                    ) : topic.status === "PAUSED" ? (
-                      <button
-                        onClick={() => handleUpdateTopicStatus(topic.id, "PENDING")}
-                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs transition-colors"
-                        title="Ativar pauta"
-                      >
-                        <Play className="w-4 h-4" />
-                      </button>
-                    ) : null}
+                    {/* Editar Pauta (CRUD - Edit) */}
+                    <button
+                      onClick={() => handleOpenEditTopic(topic)}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-colors"
+                      title="Editar pauta"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
 
+                    {/* Pausar / Reativar Pauta */}
+                    <button
+                      onClick={() => handleToggleTopicPause(topic)}
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        topic.status === "PAUSED"
+                          ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400"
+                          : "bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white"
+                      }`}
+                      title={topic.status === "PAUSED" ? "Reativar pauta no rodízio" : "Pausar pauta temporariamente"}
+                    >
+                      {topic.status === "PAUSED" ? (
+                        <Play className="w-3.5 h-3.5" />
+                      ) : (
+                        <Pause className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+
+                    {/* Excluir Pauta (CRUD - Delete) */}
                     <button
                       onClick={() => handleDeleteTopic(topic.id)}
-                      className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs transition-colors"
-                      title="Excluir pauta"
+                      className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                      title="Excluir pauta do mini-cérebro"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -759,374 +809,290 @@ export default function AdminBlogPage() {
         </div>
       )}
 
-      {/* CONTEÚDO DA ABA 2: AGENDAMENTO E REGRAS */}
+      {/* ABA 2: REGRAS DE AGENDAMENTO (LAYOUT COMPACTO & LIMPO) */}
       {activeTab === "schedule" && config && (
-        <form onSubmit={handleSaveConfig} className="space-y-6">
-          <div className="p-6 sm:p-8 rounded-3xl bg-[#141518] border border-white/10 space-y-8">
-            {/* Status Geral do Robô */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
-              <div className="space-y-1">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Bot className="w-5 h-5 text-[#FF650F]" />
-                  <span>Status do Agente Autônomo</span>
-                </h3>
-                <p className="text-xs text-zinc-400">
-                  Quando ativo, o robô monitora as pautas do mini-cérebro e gera novos artigos de acordo com a cadência.
+        <form onSubmit={handleSaveConfig} className="space-y-4">
+          <div className="p-5 sm:p-6 rounded-2xl bg-[#141518] border border-white/10 space-y-6">
+            {/* Bloco 1: Status Geral & Modo de Publicação */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-5 border-b border-white/10">
+              {/* Status do Robô */}
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Bot className="w-4 h-4 text-[#FF650F]" />
+                    Status do Robô Autônomo
+                  </span>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    {config.isActive
+                      ? "O robô monitora a cadência e publica nos horários previstos."
+                      : "O agendador automático está pausado."}
+                  </p>
+                </div>
+
+                <label className="relative inline-flex items-center cursor-pointer ml-4">
+                  <input
+                    type="checkbox"
+                    checked={config.isActive}
+                    onChange={(e) => setConfig({ ...config, isActive: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#FF650F]"></div>
+                </label>
+              </div>
+
+              {/* Modo de Publicação */}
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Sliders className="w-4 h-4 text-[#FF650F]" />
+                  Modo de Publicação
+                </span>
+                <div className="flex gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setConfig({ ...config, autoPublish: true })}
+                    className={`flex-1 py-1.5 px-2.5 rounded-lg font-bold border transition-all text-center ${
+                      config.autoPublish
+                        ? "bg-[#FF650F] text-white border-orange-500 shadow-sm"
+                        : "bg-white/5 text-zinc-400 border-white/5 hover:text-white"
+                    }`}
+                  >
+                    🚀 Direto no Ar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfig({ ...config, autoPublish: false })}
+                    className={`flex-1 py-1.5 px-2.5 rounded-lg font-bold border transition-all text-center ${
+                      !config.autoPublish
+                        ? "bg-[#FF650F] text-white border-orange-500 shadow-sm"
+                        : "bg-white/5 text-zinc-400 border-white/5 hover:text-white"
+                    }`}
+                  >
+                    📝 Salvar Rascunho
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Bloco 2: Posts por Dia */}
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-[#FF650F]" />
+                  Cadência Diária de Artigos
+                </span>
+                <p className="text-[11px] text-zinc-400 mt-0.5">
+                  Quantidade máxima de artigos que a IA produzirá a cada 24 horas.
                 </p>
               </div>
 
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={config.isActive}
-                  onChange={(e) => setConfig({ ...config, isActive: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-14 h-7 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#FF650F]"></div>
-                <span className="ml-3 text-sm font-bold text-white">
-                  {config.isActive ? "🟢 ATIVADO" : "⏸️ PAUSADO"}
-                </span>
-              </label>
-            </div>
-
-            {/* SEÇÃO 1: CADÊNCIA DE POSTAGENS E HORÁRIOS */}
-            <div className="space-y-6 pb-6 border-b border-white/10">
-              {/* Quantidade de Posts por Dia */}
-              <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="space-y-1">
-                    <label className="text-sm font-bold text-white flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-[#FF650F]" />
-                      <span>Quantidade de Posts por Dia</span>
-                    </label>
-                    <p className="text-xs text-zinc-400">
-                      Defina a meta de artigos que o robô produzirá e publicará a cada 24 horas.
-                    </p>
-                  </div>
-
-                  {/* Stepper Numérico (- / +) */}
-                  <div className="flex items-center gap-3 bg-black/40 border border-white/10 rounded-2xl p-1.5 self-start sm:self-auto">
-                    <button
-                      type="button"
-                      onClick={() => setConfig({ ...config, postsPerDay: Math.max(1, (config.postsPerDay || 1) - 1) })}
-                      disabled={(config.postsPerDay || 1) <= 1}
-                      className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-white flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                      title="Diminuir posts por dia"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </button>
-                    <div className="px-4 text-center min-w-[120px]">
-                      <span className="text-xl font-black text-white">{config.postsPerDay || 1}</span>
-                      <span className="text-xs text-zinc-400 block font-semibold">
-                        {(config.postsPerDay || 1) === 1 ? "post por dia" : "posts por dia"}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setConfig({ ...config, postsPerDay: Math.min(10, (config.postsPerDay || 1) + 1) })}
-                      disabled={(config.postsPerDay || 1) >= 10}
-                      className="w-9 h-9 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white flex items-center justify-center transition-colors shadow-lg shadow-orange-500/20 disabled:opacity-30 disabled:cursor-not-allowed"
-                      title="Aumentar posts por dia"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
+              <div className="flex items-center gap-2">
+                {/* Stepper Compacto */}
+                <div className="flex items-center bg-black/40 border border-white/10 rounded-xl p-1">
+                  <button
+                    type="button"
+                    onClick={() => setConfig({ ...config, postsPerDay: Math.max(1, (config.postsPerDay || 1) - 1) })}
+                    disabled={(config.postsPerDay || 1) <= 1}
+                    className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white flex items-center justify-center disabled:opacity-30"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="w-12 text-center text-sm font-black text-white">
+                    {config.postsPerDay || 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setConfig({ ...config, postsPerDay: Math.min(10, (config.postsPerDay || 1) + 1) })}
+                    disabled={(config.postsPerDay || 1) >= 10}
+                    className="w-7 h-7 rounded-lg bg-[#FF650F] hover:bg-orange-600 text-white flex items-center justify-center disabled:opacity-30"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
                 {/* Presets Rápidos */}
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mr-1">Atalhos:</span>
-                  {[1, 2, 3, 5].map((num) => (
-                    <button
-                      type="button"
-                      key={num}
-                      onClick={() => setConfig({ ...config, postsPerDay: num })}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                        (config.postsPerDay || 1) === num
-                          ? "bg-[#FF650F] text-white shadow-md shadow-orange-500/20"
-                          : "bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/5"
-                      }`}
-                    >
-                      {num} post{num > 1 ? "s" : ""}/dia
-                    </button>
-                  ))}
-                </div>
+                {[1, 2, 3].map((num) => (
+                  <button
+                    type="button"
+                    key={num}
+                    onClick={() => setConfig({ ...config, postsPerDay: num })}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      (config.postsPerDay || 1) === num
+                        ? "bg-[#FF650F] text-white"
+                        : "bg-white/5 hover:bg-white/10 text-zinc-400"
+                    }`}
+                  >
+                    {num}/dia
+                  </button>
+                ))}
               </div>
+            </div>
 
-              {/* Dias da Semana Permitidos */}
-              <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="space-y-1">
-                    <label className="text-sm font-bold text-white flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-[#FF650F]" />
-                      <span>Dias da Semana Autorizados</span>
-                    </label>
-                    <p className="text-xs text-zinc-400">
-                      Escolha os dias em que a IA tem permissão para disparar publicações no blog.
-                    </p>
-                  </div>
-
-                  {/* Presets de Dias */}
-                  <div className="flex items-center gap-2 self-start sm:self-auto">
-                    <button
-                      type="button"
-                      onClick={() => handleSetDaysPreset("weekdays")}
-                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] font-bold text-zinc-300 border border-white/5 transition-colors"
-                    >
-                      Dias Úteis (Seg-Sex)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSetDaysPreset("weekend")}
-                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] font-bold text-zinc-300 border border-white/5 transition-colors"
-                    >
-                      Finais de Semana
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSetDaysPreset("all")}
-                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[11px] font-bold text-zinc-300 border border-white/5 transition-colors"
-                    >
-                      Todos os Dias
-                    </button>
-                  </div>
-                </div>
-
-                {/* Grade dos 7 Dias da Semana */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 pt-2">
-                  {WEEK_DAYS.map((day) => {
-                    const isSelected = (config.allowedDays || []).includes(day.key);
-                    return (
-                      <button
-                        type="button"
-                        key={day.key}
-                        onClick={() => handleToggleDay(day.key)}
-                        className={`p-3.5 rounded-2xl text-center border transition-all flex flex-col items-center justify-center gap-1 ${
-                          isSelected
-                            ? "bg-gradient-to-b from-[#FF650F] to-[#e05508] text-white border-orange-400/40 shadow-lg shadow-orange-500/25 scale-[1.02]"
-                            : "bg-black/30 hover:bg-white/5 text-zinc-400 border-white/5 hover:border-white/10"
-                        }`}
-                      >
-                        <span className="text-xs font-black uppercase tracking-wider">{day.label}</span>
-                        <span className={`text-[10px] font-medium ${isSelected ? "text-white/80" : "text-zinc-400"}`}>
-                          {day.full.split("-")[0]}
-                        </span>
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full mt-0.5 ${
-                            isSelected ? "bg-white" : "bg-zinc-700"
-                          }`}
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Horários das Postagens */}
-              <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-bold text-white flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-[#FF650F]" />
-                    <span>Horários Programados de Publicação</span>
-                  </label>
-                  <p className="text-xs text-zinc-400">
-                    Cadastre os horários do dia em que você deseja que os artigos entrem no ar (Horário de Brasília).
+            {/* Bloco 3: Dias da Semana */}
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-[#FF650F]" />
+                    Dias da Semana Autorizados
+                  </span>
+                  <p className="text-[11px] text-zinc-400">
+                    O robô só publica nos dias marcados abaixo.
                   </p>
                 </div>
 
-                {/* Campo de Adição de Horário */}
-                <div className="flex flex-wrap items-center gap-3 pt-1">
-                  <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-3 py-2">
-                    <Clock className="w-4 h-4 text-zinc-400" />
-                    <input
-                      type="time"
-                      value={newHourInput}
-                      onChange={(e) => setNewHourInput(e.target.value)}
-                      className="bg-transparent text-white font-mono text-sm font-bold focus:outline-none"
-                    />
-                  </div>
+                {/* Presets de Dias */}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleSetDaysPreset("weekdays")}
+                    className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] font-semibold text-zinc-300 border border-white/5"
+                  >
+                    Seg-Sex
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSetDaysPreset("weekend")}
+                    className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] font-semibold text-zinc-300 border border-white/5"
+                  >
+                    Finais de Semana
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSetDaysPreset("all")}
+                    className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] font-semibold text-zinc-300 border border-white/5"
+                  >
+                    Todos
+                  </button>
+                </div>
+              </div>
 
+              {/* Grade Compacta de Dias */}
+              <div className="grid grid-cols-7 gap-1.5">
+                {WEEK_DAYS.map((day) => {
+                  const isSelected = (config.allowedDays || []).includes(day.key);
+                  return (
+                    <button
+                      type="button"
+                      key={day.key}
+                      onClick={() => handleToggleDay(day.key)}
+                      className={`py-2 rounded-xl text-center border text-xs font-extrabold transition-all flex flex-col items-center justify-center gap-0.5 ${
+                        isSelected
+                          ? "bg-[#FF650F] text-white border-orange-400/50 shadow-sm"
+                          : "bg-black/30 hover:bg-white/5 text-zinc-500 border-white/5"
+                      }`}
+                    >
+                      <span>{day.label}</span>
+                      <span className={`w-1 h-1 rounded-full ${isSelected ? "bg-white" : "bg-transparent"}`} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bloco 4: Horários de Postagem */}
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-[#FF650F]" />
+                    Horários Programados (Horário de Brasília)
+                  </span>
+                  <p className="text-[11px] text-zinc-400">
+                    O robô valida a hora atual e posta de acordo com a janela destes horários.
+                  </p>
+                </div>
+
+                {/* Campo de Adição Compacto */}
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="time"
+                    value={newHourInput}
+                    onChange={(e) => setNewHourInput(e.target.value)}
+                    className="bg-black/40 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white font-mono font-bold focus:outline-none"
+                  />
                   <button
                     type="button"
                     onClick={() => handleAddHour()}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-[#FF650F] text-white text-xs font-bold transition-all border border-white/10 hover:border-transparent shadow-md"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-[#FF650F] text-white text-xs font-bold transition-all border border-white/10 hover:border-transparent"
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Adicionar Horário</span>
+                    <Plus className="w-3 h-3" />
+                    <span>Adicionar</span>
                   </button>
+                </div>
+              </div>
 
-                  {/* Sugestões Rápidas de Horários Comerciais */}
-                  <div className="flex flex-wrap items-center gap-1.5 sm:ml-auto">
-                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mr-1">Sugestões:</span>
-                    {["08:30", "11:30", "14:00", "17:30", "20:00"].map((h) => (
-                      <button
-                        type="button"
-                        key={h}
-                        onClick={() => handleAddHour(h)}
-                        className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-mono font-semibold border border-white/5 transition-colors"
-                      >
-                        +{h}
-                      </button>
-                    ))}
+              {/* Lista de Horários Cadastrados */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {(config.preferredHours || []).map((hour) => (
+                  <div
+                    key={hour}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-zinc-900 border border-white/10 text-white text-xs font-mono font-bold"
+                  >
+                    <Clock className="w-3 h-3 text-[#FF650F]" />
+                    <span>{hour}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveHour(hour)}
+                      className="text-zinc-500 hover:text-red-400 ml-1"
+                      title="Remover horário"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
-                </div>
+                ))}
 
-                {/* Lista de Horários Ativos em Tags Removíveis */}
-                <div className="pt-2">
-                  <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-2">
-                    Horários Ativos ({(config.preferredHours || []).length}):
-                  </span>
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    {(config.preferredHours || []).map((hour) => (
-                      <div
-                        key={hour}
-                        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-zinc-900 to-zinc-800 border border-white/10 text-white shadow-sm"
-                      >
-                        <Clock className="w-3.5 h-3.5 text-[#FF650F]" />
-                        <span className="text-xs font-extrabold font-mono tracking-wider">{hour}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveHour(hour)}
-                          className="w-4 h-4 rounded-full bg-white/10 hover:bg-red-500/80 hover:text-white text-zinc-400 flex items-center justify-center transition-colors ml-1"
-                          title={`Remover horário ${hour}`}
-                        >
-                          <X className="w-2.5 h-2.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Alerta / Dica de Coerência entre Horários e Posts/Dia */}
-                <div className="p-3.5 rounded-xl bg-black/30 border border-white/5 flex items-center gap-3 text-xs">
-                  {(config.preferredHours || []).length >= (config.postsPerDay || 1) ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span className="text-zinc-300">
-                        <strong className="text-emerald-400">Cadência balanceada:</strong> você tem{" "}
-                        {(config.preferredHours || []).length} horários cadastrados para{" "}
-                        {config.postsPerDay || 1} post(s) diários.
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span className="text-zinc-300">
-                        <strong className="text-amber-400">Dica de distribuição:</strong> você definiu{" "}
-                        {config.postsPerDay || 1} posts por dia, mas possui apenas{" "}
-                        {(config.preferredHours || []).length} horário(s) cadastrado(s). Adicione mais horários para
-                        distribuir as postagens ao longo do dia.
-                      </span>
-                    </>
-                  )}
-                </div>
+                {/* Sugestões Rápidas */}
+                <span className="text-[11px] text-zinc-500 font-medium ml-2">Sugestões:</span>
+                {["08:30", "12:00", "15:00", "18:30"].map((h) => (
+                  <button
+                    type="button"
+                    key={h}
+                    onClick={() => handleAddHour(h)}
+                    className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-[11px] font-mono border border-white/5"
+                  >
+                    +{h}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* SEÇÃO 2: MODO DE PUBLICAÇÃO & AUTORIA */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-white/10">
-              {/* Modo de Publicação (Direto vs Rascunho) */}
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-white flex items-center gap-2">
-                  <Sliders className="w-4 h-4 text-[#FF650F]" />
-                  <span>Modo de Publicação</span>
-                </label>
-                <p className="text-xs text-zinc-400">
-                  Escolha se os artigos entram no ar imediatamente ou ficam em rascunho para sua aprovação.
+            {/* Bloco 5: Autoria Técnica */}
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Settings className="w-4 h-4 text-[#FF650F]" />
+                  Assinatura de Autoria Padrão
+                </span>
+                <p className="text-[11px] text-zinc-400 mt-0.5">
+                  Nome do autor exibido nos artigos publicados.
                 </p>
-                <div className="flex flex-col gap-2 pt-1">
-                  <label className="flex items-center gap-3 p-3.5 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:border-white/10 transition-colors">
-                    <input
-                      type="radio"
-                      name="autoPublish"
-                      checked={config.autoPublish === true}
-                      onChange={() => setConfig({ ...config, autoPublish: true })}
-                      className="accent-[#FF650F] w-4 h-4"
-                    />
-                    <div>
-                      <span className="text-xs font-bold text-white block">
-                        🚀 Publicação Direta (100% Autônomo)
-                      </span>
-                      <span className="text-[11px] text-zinc-400">
-                        O post é gerado, recebe a foto em alta definição do Pexels e entra no ar automaticamente.
-                      </span>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center gap-3 p-3.5 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:border-white/10 transition-colors">
-                    <input
-                      type="radio"
-                      name="autoPublish"
-                      checked={config.autoPublish === false}
-                      onChange={() => setConfig({ ...config, autoPublish: false })}
-                      className="accent-[#FF650F] w-4 h-4"
-                    />
-                    <div>
-                      <span className="text-xs font-bold text-white block">
-                        📝 Modo Revisor (Salvar como Rascunho)
-                      </span>
-                      <span className="text-[11px] text-zinc-400">
-                        O post é salvo como DRAFT. Você revisa no painel e publica com 1 clique.
-                      </span>
-                    </div>
-                  </label>
-                </div>
               </div>
 
-              {/* Banco de Imagens & Autoria */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-white flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-[#FF650F]" />
-                    <span>Banco de Imagens Oficial</span>
-                  </label>
-                  <p className="text-xs text-zinc-400">
-                    Fotos em alta definição integradas via API oficial com atribuição legal ao fotógrafo.
-                  </p>
-                  <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
-                      <span className="text-xs font-bold text-white">Pexels API Oficial</span>
-                    </div>
-                    <span className="text-[11px] text-emerald-400 font-semibold">Chave Conectada</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-white flex items-center gap-2">
-                    <Settings className="w-4 h-4 text-[#FF650F]" />
-                    <span>Assinatura de Autoria Padrão</span>
-                  </label>
-                  <p className="text-xs text-zinc-400">
-                    Nome exibido como autor técnico nos artigos do blog.
-                  </p>
-                  <input
-                    type="text"
-                    value={config.defaultAuthor}
-                    onChange={(e) => setConfig({ ...config, defaultAuthor: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
-                    placeholder="Ex: Engenharia ICTHUS"
-                  />
-                </div>
-              </div>
+              <input
+                type="text"
+                value={config.defaultAuthor}
+                onChange={(e) => setConfig({ ...config, defaultAuthor: e.target.value })}
+                className="w-full sm:w-64 px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+                placeholder="Ex: Engenharia ICTHUS"
+              />
             </div>
 
-            {/* Botão de Salvar */}
+            {/* Botão Salvar Compacto */}
             <div className="flex justify-end pt-2">
               <button
                 type="submit"
                 disabled={savingConfig}
-                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-[#FF650F] hover:bg-orange-600 text-white text-sm font-extrabold transition-all shadow-xl shadow-orange-500/25 disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-extrabold transition-all shadow-md shadow-orange-500/20 disabled:opacity-50"
               >
                 {savingConfig ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                     <span>Salvando...</span>
                   </>
                 ) : (
                   <>
-                    <Check className="w-4 h-4" />
-                    <span>SALVAR REGRAS DE AGENDAMENTO</span>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Salvar Regras de Agendamento</span>
                   </>
                 )}
               </button>
@@ -1135,10 +1101,10 @@ export default function AdminBlogPage() {
         </form>
       )}
 
-      {/* CONTEÚDO DA ABA 3: ARTIGOS GERADOS */}
+      {/* ABA 3: ARTIGOS GERADOS */}
       {activeTab === "posts" && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-[#141518] border border-white/10 text-xs">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#141518] border border-white/10 text-xs">
             <span className="text-zinc-400">
               Total de <strong>{posts.length}</strong> artigos salvos no banco de dados.
             </span>
@@ -1153,89 +1119,66 @@ export default function AdminBlogPage() {
           </div>
 
           {posts.length === 0 ? (
-            <div className="p-12 text-center rounded-3xl bg-[#141518] border border-white/10 space-y-3">
-              <BookOpen className="w-12 h-12 text-zinc-600 mx-auto" />
-              <h3 className="text-lg font-bold text-white">Nenhum artigo postado ainda</h3>
-              <p className="text-sm text-zinc-400 max-w-md mx-auto">
-                Clique no botão principal no topo &quot;GERAR POST AGORA COM IA&quot; para publicar seu primeiro artigo.
+            <div className="p-8 text-center rounded-2xl bg-[#141518] border border-white/10 space-y-2">
+              <BookOpen className="w-8 h-8 text-zinc-600 mx-auto" />
+              <h3 className="text-sm font-bold text-white">Nenhum artigo gerado ainda</h3>
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                Clique em &quot;Gerar Artigo Agora&quot; ou aguarde o agendador automático produzir os primeiros conteúdos.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-2">
               {posts.map((post) => (
                 <div
                   key={post.id}
-                  className="rounded-3xl bg-[#141518] border border-white/10 hover:border-white/20 transition-all overflow-hidden flex flex-col justify-between group"
+                  className="p-3.5 rounded-xl bg-[#141518] border border-white/10 hover:border-white/20 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
-                  {/* Imagem de Capa */}
-                  <div className="relative aspect-video w-full bg-zinc-900 overflow-hidden">
-                    <img
-                      src={post.coverImageUrl}
-                      alt={post.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute top-3 right-3">
+                  <div className="space-y-1 flex-grow">
+                    <div className="flex items-center gap-2">
                       <span
-                        className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                        className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md ${
                           post.status === "PUBLISHED"
-                            ? "bg-emerald-500/90 text-white"
-                            : "bg-amber-500/90 text-white"
+                            ? "bg-emerald-500/20 text-emerald-300"
+                            : "bg-amber-500/20 text-amber-300"
                         }`}
                       >
-                        {post.status === "PUBLISHED" ? "Publicado" : "Rascunho"}
+                        {post.status === "PUBLISHED" ? "Publicado no Ar" : "Rascunho"}
+                      </span>
+                      <span className="text-[11px] text-zinc-500">
+                        {new Date(post.publishedAt).toLocaleDateString("pt-BR")}
                       </span>
                     </div>
+
+                    <h3 className="text-sm font-bold text-white leading-snug">
+                      {post.title}
+                    </h3>
                   </div>
 
-                  {/* Informações */}
-                  <div className="p-5 space-y-3 flex-grow flex flex-col justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-[11px] text-zinc-400">
-                        <Clock className="w-3.5 h-3.5 text-[#FF650F]" />
-                        <span>{post.readingTimeMin} min de leitura</span>
-                        <span>•</span>
-                        <span>
-                          {new Date(post.publishedAt).toLocaleDateString("pt-BR")}
-                        </span>
-                      </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Link
+                      href={`/blog/${post.slug}`}
+                      target="_blank"
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-colors"
+                      title="Visualizar post no blog"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </Link>
 
-                      <h3 className="text-base font-bold text-white line-clamp-2 leading-snug">
-                        {post.title}
-                      </h3>
+                    <button
+                      onClick={() => handleTogglePostStatus(post.id, post.status)}
+                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-semibold transition-colors"
+                      title="Alternar entre publicado e rascunho"
+                    >
+                      {post.status === "PUBLISHED" ? "Despublicar" : "Publicar"}
+                    </button>
 
-                      <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed">
-                        {post.excerpt}
-                      </p>
-                    </div>
-
-                    {/* Rodapé do Card */}
-                    <div className="pt-4 border-t border-white/5 flex items-center justify-between gap-2">
-                      <Link
-                        href={`/blog/${post.slug}`}
-                        target="_blank"
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#FF650F] hover:text-orange-400 transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Ver Post</span>
-                      </Link>
-
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => handleTogglePostStatus(post.id, post.status)}
-                          className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] font-semibold text-zinc-300 transition-colors"
-                        >
-                          {post.status === "PUBLISHED" ? "Tornar Rascunho" : "Publicar"}
-                        </button>
-
-                        <button
-                          onClick={() => handleDeletePost(post.id)}
-                          className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
-                          title="Excluir"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
+                    <button
+                      onClick={() => handleDeletePost(post.id)}
+                      className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                      title="Excluir post"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -1244,18 +1187,18 @@ export default function AdminBlogPage() {
         </div>
       )}
 
-      {/* MODAL: NOVA PAUTA MANUAL */}
+      {/* MODAL 1: NOVA PAUTA (CRUD - CREATE) */}
       {isNewTopicModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-lg rounded-3xl bg-[#18191D] border border-white/10 p-6 sm:p-8 space-y-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-[#18191D] border border-white/10 p-5 sm:p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Brain className="w-5 h-5 text-[#FF650F]" />
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Brain className="w-4 h-4 text-[#FF650F]" />
                 <span>Adicionar Pauta ao Mini-Cérebro</span>
               </h3>
               <button
                 onClick={() => setIsNewTopicModalOpen(false)}
-                className="text-zinc-500 hover:text-white"
+                className="text-zinc-500 hover:text-white text-sm"
               >
                 ✕
               </button>
@@ -1266,65 +1209,65 @@ export default function AdminBlogPage() {
               <button
                 type="button"
                 onClick={() => setNewTopicMode("single")}
-                className={`flex-1 py-2 rounded-lg transition-all ${
+                className={`flex-1 py-1.5 rounded-lg transition-all ${
                   newTopicMode === "single"
                     ? "bg-[#FF650F] text-white"
                     : "text-zinc-400 hover:text-white"
                 }`}
               >
-                Pauta Individual
+                Pauta Única
               </button>
               <button
                 type="button"
                 onClick={() => setNewTopicMode("bulk")}
-                className={`flex-1 py-2 rounded-lg transition-all ${
+                className={`flex-1 py-1.5 rounded-lg transition-all ${
                   newTopicMode === "bulk"
                     ? "bg-[#FF650F] text-white"
                     : "text-zinc-400 hover:text-white"
                 }`}
               >
-                Em Lote (Colar Lista)
+                Em Lote (1 por linha)
               </button>
             </div>
 
-            <form onSubmit={handleCreateTopic} className="space-y-4">
+            <form onSubmit={handleCreateTopic} className="space-y-3">
               {newTopicMode === "single" ? (
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-300">
                     Título / Tema da Pauta *
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="Ex: Como escolher a espessura de ACM ideal para fachadas"
+                    placeholder="Ex: Como escolher a espessura ideal de ACM para fachadas"
                     value={singleTitle}
                     onChange={(e) => setSingleTitle(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
                   />
                 </div>
               ) : (
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-300">
-                    Cole suas pautas (1 título por linha) *
+                    Cole as pautas (1 título por linha) *
                   </label>
                   <textarea
                     required
-                    rows={6}
+                    rows={5}
                     placeholder="Tendências de iluminação LED em 2027&#10;Vantagens do corte CNC em acrílico&#10;Como revitalizar fachadas comerciais antigas"
                     value={bulkTitles}
                     onChange={(e) => setBulkTitles(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none resize-none font-mono"
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none resize-none font-mono"
                   ></textarea>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-300">Categoria</label>
                   <select
                     value={singleCategory}
                     onChange={(e) => setSingleCategory(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+                    className="w-full px-2.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
                   >
                     <option value="Fachadas Comerciais">Fachadas Comerciais</option>
                     <option value="Letreiros & Iluminação">Letreiros &amp; Iluminação</option>
@@ -1334,12 +1277,12 @@ export default function AdminBlogPage() {
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-300">Prioridade</label>
                   <select
                     value={singlePriority}
                     onChange={(e) => setSinglePriority(e.target.value as any)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+                    className="w-full px-2.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
                   >
                     <option value="URGENT">Urgente</option>
                     <option value="HIGH">Alta</option>
@@ -1349,19 +1292,115 @@ export default function AdminBlogPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+              <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => setIsNewTopicModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-bold"
+                  className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-bold"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-extrabold shadow-lg shadow-orange-500/20"
+                  className="px-5 py-2 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-extrabold shadow-md shadow-orange-500/20"
                 >
-                  Adicionar ao Mini-Cérebro
+                  Adicionar Pauta
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: EDITAR PAUTA (CRUD - EDIT / UPDATE) */}
+      {editingTopic && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-[#18191D] border border-white/10 p-5 sm:p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Pencil className="w-4 h-4 text-[#FF650F]" />
+                <span>Editar Pauta do Mini-Cérebro</span>
+              </h3>
+              <button
+                onClick={() => setEditingTopic(null)}
+                className="text-zinc-500 hover:text-white text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditTopic} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-300">
+                  Título / Tema da Pauta *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-300">Categoria</label>
+                  <select
+                    value={editCategory}
+                    onChange={(e) => setEditCategory(e.target.value)}
+                    className="w-full px-2.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+                  >
+                    <option value="Fachadas Comerciais">Fachadas Comerciais</option>
+                    <option value="Letreiros & Iluminação">Letreiros &amp; Iluminação</option>
+                    <option value="Engenharia de Materiais">Engenharia de Materiais</option>
+                    <option value="Usinagem CNC & Corte">Usinagem CNC &amp; Corte</option>
+                    <option value="Normas Técnicas & ROI">Normas Técnicas &amp; ROI</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-300">Prioridade</label>
+                  <select
+                    value={editPriority}
+                    onChange={(e) => setEditPriority(e.target.value as any)}
+                    className="w-full px-2.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+                  >
+                    <option value="URGENT">Urgente</option>
+                    <option value="HIGH">Alta</option>
+                    <option value="MEDIUM">Média</option>
+                    <option value="LOW">Baixa</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-300">
+                  Palavras-chave (separadas por vírgula)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: fachadas de ACM, iluminação LED, durabilidade"
+                  value={editKeywords}
+                  onChange={(e) => setEditKeywords(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setEditingTopic(null)}
+                  className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-bold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEditTopic}
+                  className="px-5 py-2 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-extrabold shadow-md shadow-orange-500/20 disabled:opacity-50"
+                >
+                  {savingEditTopic ? "Salvando..." : "Salvar Alterações"}
                 </button>
               </div>
             </form>
