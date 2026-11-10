@@ -6,12 +6,15 @@ FROM node:20-alpine
 WORKDIR /app
 RUN apk add --no-cache openssl libc6-compat
 
-# Copia arquivos de configuração e schema
-COPY package.json package-lock.json tsconfig.json* ./
+# Copia apenas o necessário para as migrações e seed
 COPY prisma ./prisma/
+COPY tsconfig.json* ./
 
-# Instala apenas as dependências mínimas para migrações e seed
-RUN npm install prisma@6.19.3 @prisma/client@6.19.3 tsx bcryptjs @types/bcryptjs typescript @types/node --no-save --omit=dev
+# Inicializa um package.json limpo para isolamento total de dependências
+# Evita ler lockfile com binários desnecessários como @next/swc
+RUN npm init -y && \
+    npm install prisma@6.19.3 @prisma/client@6.19.3 tsx@4.19.2 bcryptjs@2.4.3 @types/bcryptjs typescript@5.3.3 @types/node --no-audit --no-fund --no-package-lock && \
+    npm cache clean --force
 
 # Gera o Prisma Client
 RUN npx prisma generate
