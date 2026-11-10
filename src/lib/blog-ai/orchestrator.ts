@@ -87,12 +87,14 @@ export async function checkScheduleEligibility(config: any): Promise<{
   }
 
   // 2. Validar Limite Geral de Postagens no Dia
+  // Considera apenas posts efetivamente publicados se autoPublish estiver ativo
   const startOfDay = new Date(`${brasiliaDateStr}T00:00:00-03:00`);
   const postsCountToday = await prisma.blogPost.count({
     where: {
       publishedAt: {
         gte: startOfDay,
       },
+      ...(config.autoPublish ? { status: PostStatus.PUBLISHED } : {}),
     },
   });
 

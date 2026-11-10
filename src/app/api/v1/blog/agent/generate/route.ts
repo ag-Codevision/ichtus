@@ -29,8 +29,10 @@ async function handleGenerate(request: NextRequest, isGetMethod = false) {
       ignoreSchedule = typeof body.ignoreSchedule === "boolean" ? body.ignoreSchedule : undefined;
     } else {
       topicId = searchParams.get("topicId") || undefined;
-      forcePublish = searchParams.get("forcePublish") === "true";
-      ignoreSchedule = searchParams.get("ignoreSchedule") === "true";
+      const fpParam = searchParams.get("forcePublish");
+      forcePublish = fpParam !== null ? fpParam === "true" : undefined;
+      const isParam = searchParams.get("ignoreSchedule");
+      ignoreSchedule = isParam !== null ? isParam === "true" : undefined;
     }
 
     // Se for chamada de Cron externa (cron-job.org / vps crontab), respeita a cadência por padrão.
