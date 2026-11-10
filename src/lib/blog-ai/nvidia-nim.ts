@@ -108,11 +108,11 @@ async function callLLM(options: {
     }
   }
 
-  // 2. Fallback oficial: NVIDIA NIM API
+  // 2. Provedor oficial: NVIDIA NIM API (nvidia/nemotron-3.5-bolt-e4b)
   const apiKey =
     process.env.NVIDIA_API_KEY ||
     "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";
-  const model = process.env.NVIDIA_MODEL || "meta/llama-3.2-90b-vision-instruct";
+  const model = process.env.NVIDIA_MODEL || "nvidia/nemotron-3.5-bolt-e4b";
 
   const nvidiaRes = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
