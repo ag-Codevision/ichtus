@@ -193,7 +193,11 @@ export default function AdminBlogPage() {
       return;
     }
     const updated = Array.from(new Set([...current, hour])).sort();
-    setConfig({ ...config, preferredHours: updated });
+    setConfig({
+      ...config,
+      preferredHours: updated,
+      postsPerDay: Math.max(config.postsPerDay || 1, updated.length),
+    });
     setNewHourInput("12:00");
   };
 

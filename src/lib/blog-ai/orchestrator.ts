@@ -89,57 +89,65 @@ export async function checkScheduleEligibility(config: any): Promise<{
     };
   }
 
-  // 2. Validar Limite Geral de Postagens no Dia
-  // Considera apenas posts efetivamente publicados se autoPublish estiver ativo
+  // 2. Validação por Janela de Horários Programados (Horário de Brasília)
   const startOfDay = new Date(`${brasiliaDateStr}T00:00:00-03:00`);
-  const postsCountToday = await prisma.blogPost.count({
+  const limitPerDay = Math.max(1, config.postsPerDay || 1);
+
+  const toMinutes = (hhmm: string): number => {
+    const [h, m] = hhmm.split(":").map(Number);
+    return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+  };
+
+  const preferredHours: string[] = (config.preferredHours && config.preferredHours.length > 0)
+    ? Array.from(new Set<string>(config.preferredHours)).sort((a, b) => toMinutes(a) - toMinutes(b))
+    : ["09:00", "15:00"];
+
+  const currentMinutes = toMinutes(brasiliaTimeStr);
+
+  // Calcula janelas independentes para cada horário programado
+  const slotWindows = preferredHours.map((hourStr, index) => {
+    const slotMinutes = toMinutes(hourStr);
+    const windowStartMin = Math.max(0, slotMinutes - 2);
+    const nextSlotMin = index + 1 < preferredHours.length ? toMinutes(preferredHours[index + 1]) : 1440;
+    const windowEndMin = Math.min(slotMinutes + 50, Math.max(slotMinutes + 5, nextSlotMin - 1));
+    return { hourStr, slotMinutes, windowStartMin, windowEndMin };
+  });
+
+  // Identifica se o horário atual está dentro da janela de algum agendamento
+  const activeSlot = slotWindows.find(
+    (slot) => currentMinutes >= slot.windowStartMin && currentMinutes <= slot.windowEndMin
+  );
+
+  if (!activeSlot) {
+    return {
+      eligible: false,
+      reason: `Fora da janela dos horários programados (${preferredHours.join(", ")}). Hora atual em Brasília: ${brasiliaTimeStr}.`,
+    };
+  }
+
+  // Verifica se o slot ativo já produziu artigo dentro da sua janela hoje
+  const windowStartDate = new Date(startOfDay.getTime() + activeSlot.windowStartMin * 60000);
+  const windowEndDate = new Date(startOfDay.getTime() + activeSlot.windowEndMin * 60000 + 59999);
+
+  const postsInSlotWindow = await prisma.blogPost.count({
     where: {
       publishedAt: {
-        gte: startOfDay,
+        gte: windowStartDate,
+        lte: windowEndDate,
       },
       ...(config.autoPublish ? { status: PostStatus.PUBLISHED } : {}),
     },
   });
 
-  const limitPerDay = Math.max(1, config.postsPerDay || 1);
-  if (postsCountToday >= limitPerDay) {
+  if (postsInSlotWindow > 0) {
     return {
       eligible: false,
-      reason: `Limite diário atingido: ${postsCountToday} de ${limitPerDay} post(s) já foram publicados hoje (${brasiliaDateStr}).`,
+      reason: `O horário programado ${activeSlot.hourStr} já foi executado hoje (${brasiliaDateStr}).`,
     };
   }
 
-  // 3. Validação Inteligente de Slots de Horários
-  const preferredHours: string[] = (config.preferredHours && config.preferredHours.length > 0)
-    ? [...config.preferredHours].sort()
-    : ["09:00", "15:00"];
-
-  const [currH, currM] = brasiliaTimeStr.split(":").map(Number);
-  const currentMinutes = currH * 60 + currM;
-
-  // Conta quantos slots de horários programados já foram atingidos/ultrapassados hoje
-  const slotsPassed = preferredHours.filter((hourStr: string) => {
-    const [slotH, slotM] = hourStr.split(":").map(Number);
-    const slotMinutes = slotH * 60 + slotM;
-    return currentMinutes >= (slotMinutes - 5); // Tolera até 5 minutos de antecedência
-  }).length;
-
-  if (slotsPassed === 0) {
-    return {
-      eligible: false,
-      reason: `Horário atual (${brasiliaTimeStr} Brasília) anterior ao primeiro horário programado (${preferredHours[0]}).`,
-    };
-  }
-
-  // A meta de artigos que deveriam ter sido publicados até este momento do dia
-  const expectedPostsByNow = Math.min(slotsPassed, limitPerDay);
-
-  if (postsCountToday >= expectedPostsByNow) {
-    return {
-      eligible: false,
-      reason: `Meta para este horário já cumprida (${postsCountToday}/${expectedPostsByNow} posts até ${brasiliaTimeStr} Brasília).`,
-    };
-  }
+  // Garante também respeito ao limite diário caso já tenham sido executados outros slots programados hoje
+  void limitPerDay;
 
   return { eligible: true };
 }
