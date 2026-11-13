@@ -4,7 +4,7 @@ import Link from "next/link";
 import { BlogPost } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
-import { formatDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { Clock, ArrowRight, Calendar, UserCheck } from "lucide-react";
 
 interface BlogCardProps {
@@ -56,7 +56,7 @@ export function BlogCard({ post, isFeatured = false }: BlogCardProps) {
             <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-[10px] text-white/80 font-mono pointer-events-none">
               <span className="flex items-center gap-1 drop-shadow">
                 <Calendar className="w-3 h-3 text-glessios-orange" />
-                {formatDate(post.publishedAt)}
+                {formatDateTime(post.publishedAt)}
               </span>
               <span className="flex items-center gap-1 drop-shadow bg-black/60 px-1.5 py-0.5 rounded-full backdrop-blur-sm">
                 <Clock className="w-3 h-3 text-glessios-orange" />

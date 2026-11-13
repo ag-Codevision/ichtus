@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { formatDateTime } from "@/lib/utils";
 import {
   Sparkles,
   Bot,
@@ -74,13 +75,18 @@ interface BlogPost {
   title: string;
   slug: string;
   excerpt: string;
+  contentMarkdown: string;
   coverImageUrl: string;
+  imageAlt?: string;
   imagePhotographer: string | null;
   status: "PUBLISHED" | "DRAFT" | "ARCHIVED";
+  metaTitle?: string;
+  metaDescription?: string;
   tags: string[];
   readingTimeMin: number;
   viewCount: number;
   publishedAt: string;
+  createdAt?: string;
 }
 
 export default function AdminBlogPage() {
@@ -118,6 +124,20 @@ export default function AdminBlogPage() {
   // Filtros de Pautas
   const [topicFilter, setTopicFilter] = useState<string>("ALL");
   const [topicSearch, setTopicSearch] = useState("");
+
+  // Filtros e Modal de Edição de Artigos Gerados (CRUD)
+  const [postStatusFilter, setPostStatusFilter] = useState<"ALL" | "PUBLISHED" | "DRAFT">("ALL");
+  const [postSearch, setPostSearch] = useState("");
+  const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
+  const [editPostTitle, setEditPostTitle] = useState("");
+  const [editPostExcerpt, setEditPostExcerpt] = useState("");
+  const [editPostContent, setEditPostContent] = useState("");
+  const [editPostCoverImage, setEditPostCoverImage] = useState("");
+  const [editPostStatus, setEditPostStatus] = useState<"PUBLISHED" | "DRAFT" | "ARCHIVED">("DRAFT");
+  const [editPostTags, setEditPostTags] = useState("");
+  const [editPostMetaTitle, setEditPostMetaTitle] = useState("");
+  const [editPostMetaDesc, setEditPostMetaDesc] = useState("");
+  const [savingEditPost, setSavingEditPost] = useState(false);
 
   // Input de Horário
   const [newHourInput, setNewHourInput] = useState("09:00");
@@ -421,6 +441,55 @@ export default function AdminBlogPage() {
     }
   };
 
+  // Ação: Abrir Modal de Edição de Artigo (CRUD - Edit)
+  const handleOpenEditPost = (post: BlogPost) => {
+    setEditingPost(post);
+    setEditPostTitle(post.title || "");
+    setEditPostExcerpt(post.excerpt || "");
+    setEditPostContent(post.contentMarkdown || "");
+    setEditPostCoverImage(post.coverImageUrl || "");
+    setEditPostStatus(post.status || "DRAFT");
+    setEditPostTags(Array.isArray(post.tags) ? post.tags.join(", ") : "");
+    setEditPostMetaTitle(post.metaTitle || "");
+    setEditPostMetaDesc(post.metaDescription || "");
+  };
+
+  // Ação: Salvar Alterações do Artigo (CRUD - Update)
+  const handleSaveEditPost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPost || !editPostTitle.trim()) return;
+    setSavingEditPost(true);
+    try {
+      const res = await fetch(`/api/v1/blog/posts/${editingPost.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editPostTitle.trim(),
+          excerpt: editPostExcerpt.trim(),
+          contentMarkdown: editPostContent,
+          coverImageUrl: editPostCoverImage.trim(),
+          status: editPostStatus,
+          tags: editPostTags
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean),
+          metaTitle: editPostMetaTitle.trim(),
+          metaDescription: editPostMetaDesc.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Erro ao atualizar artigo.");
+
+      showFeedback("success", "Artigo atualizado com sucesso!");
+      setEditingPost(null);
+      await fetchData();
+    } catch (err: any) {
+      showFeedback("error", err.message || "Erro ao salvar alterações do artigo.");
+    } finally {
+      setSavingEditPost(false);
+    }
+  };
+
   // Ação: Salvar Configurações de Agendamento
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -452,6 +521,20 @@ export default function AdminBlogPage() {
         t.title.toLowerCase().includes(search) ||
         (t.category && t.category.toLowerCase().includes(search)) ||
         (t.keywords && t.keywords.some((k) => k.toLowerCase().includes(search)))
+      );
+    }
+    return true;
+  });
+
+  // Filtragem de Artigos Gerados
+  const filteredPosts = posts.filter((p) => {
+    if (postStatusFilter !== "ALL" && p.status !== postStatusFilter) return false;
+    if (postSearch.trim()) {
+      const search = postSearch.toLowerCase();
+      return (
+        p.title.toLowerCase().includes(search) ||
+        (p.excerpt && p.excerpt.toLowerCase().includes(search)) ||
+        (p.tags && p.tags.some((tag) => tag.toLowerCase().includes(search)))
       );
     }
     return true;
@@ -1103,85 +1186,244 @@ export default function AdminBlogPage() {
 
       {/* ABA 3: ARTIGOS GERADOS */}
       {activeTab === "posts" && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#141518] border border-white/10 text-xs">
-            <span className="text-zinc-400">
-              Total de <strong>{posts.length}</strong> artigos salvos no banco de dados.
-            </span>
-            <Link
-              href="/blog"
-              target="_blank"
-              className="inline-flex items-center gap-1.5 text-[#FF650F] hover:underline font-bold"
-            >
-              <span>Abrir Blog Público</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </Link>
+        <div className="space-y-5">
+          {/* Barra superior de filtros de status, busca e link público */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-4 rounded-2xl bg-[#141518] border border-white/10">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPostStatusFilter("ALL")}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border ${
+                  postStatusFilter === "ALL"
+                    ? "bg-[#FF650F] text-white border-[#FF650F] shadow-md shadow-orange-500/20"
+                    : "bg-black/30 text-zinc-400 border-white/10 hover:text-white hover:border-white/20"
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Todos</span>
+                <span className="px-1.5 py-0.5 rounded-md bg-black/25 text-[10px] font-extrabold">
+                  {postStats.total || posts.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPostStatusFilter("PUBLISHED")}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border ${
+                  postStatusFilter === "PUBLISHED"
+                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                    : "bg-black/30 text-zinc-400 border-white/10 hover:text-white hover:border-white/20"
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Publicados no Ar</span>
+                <span className="px-1.5 py-0.5 rounded-md bg-black/25 text-[10px] font-extrabold">
+                  {postStats.published}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPostStatusFilter("DRAFT")}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border ${
+                  postStatusFilter === "DRAFT"
+                    ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                    : "bg-black/30 text-zinc-400 border-white/10 hover:text-white hover:border-white/20"
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Aguardando Avaliação</span>
+                <span className="px-1.5 py-0.5 rounded-md bg-black/25 text-[10px] font-extrabold">
+                  {postStats.drafts}
+                </span>
+              </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              <div className="relative flex-grow sm:w-64">
+                <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={postSearch}
+                  onChange={(e) => setPostSearch(e.target.value)}
+                  placeholder="Buscar por título ou tag..."
+                  className="w-full pl-9 pr-8 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#FF650F]"
+                />
+                {postSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setPostSearch("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
+                    title="Limpar busca"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <Link
+                href="/blog"
+                target="_blank"
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[#FF650F] text-xs font-bold transition-colors whitespace-nowrap"
+              >
+                <span>Abrir Blog Público</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           </div>
 
           {posts.length === 0 ? (
-            <div className="p-8 text-center rounded-2xl bg-[#141518] border border-white/10 space-y-2">
+            <div className="p-10 text-center rounded-2xl bg-[#141518] border border-white/10 space-y-2">
               <BookOpen className="w-8 h-8 text-zinc-600 mx-auto" />
               <h3 className="text-sm font-bold text-white">Nenhum artigo gerado ainda</h3>
               <p className="text-xs text-zinc-400 max-w-sm mx-auto">
                 Clique em &quot;Gerar Artigo Agora&quot; ou aguarde o agendador automático produzir os primeiros conteúdos.
               </p>
             </div>
+          ) : filteredPosts.length === 0 ? (
+            <div className="p-10 text-center rounded-2xl bg-[#141518] border border-white/10 space-y-3">
+              <Filter className="w-8 h-8 text-zinc-600 mx-auto" />
+              <h3 className="text-sm font-bold text-white">Nenhum artigo encontrado com este filtro</h3>
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                Tente limpar o termo de busca ou selecionar outra categoria de status.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setPostStatusFilter("ALL");
+                  setPostSearch("");
+                }}
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-white transition-colors"
+              >
+                Mostrar Todos os Artigos
+              </button>
+            </div>
           ) : (
-            <div className="space-y-2">
-              {posts.map((post) => (
-                <div
-                  key={post.id}
-                  className="p-3.5 rounded-xl bg-[#141518] border border-white/10 hover:border-white/20 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                >
-                  <div className="space-y-1 flex-grow">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md ${
-                          post.status === "PUBLISHED"
-                            ? "bg-emerald-500/20 text-emerald-300"
-                            : "bg-amber-500/20 text-amber-300"
-                        }`}
-                      >
-                        {post.status === "PUBLISHED" ? "Publicado no Ar" : "Rascunho"}
-                      </span>
-                      <span className="text-[11px] text-zinc-500">
-                        {new Date(post.publishedAt).toLocaleDateString("pt-BR")}
-                      </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredPosts.map((post) => {
+                const isPublished = post.status === "PUBLISHED";
+                return (
+                  <article
+                    key={post.id}
+                    className="group rounded-2xl bg-[#141518] border border-white/10 hover:border-[#FF650F]/40 overflow-hidden flex flex-col justify-between transition-all shadow-lg shadow-black/20"
+                  >
+                    <div>
+                      {/* Capa do artigo */}
+                      <div className="relative h-44 w-full bg-zinc-900 overflow-hidden">
+                        {post.coverImageUrl ? (
+                          <img
+                            src={post.coverImageUrl}
+                            alt={post.imageAlt || post.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900">
+                            <FileText className="w-10 h-10 text-zinc-700" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#141518] via-black/25 to-transparent" />
+
+                        {/* Status Badge */}
+                        <span
+                          className={`absolute top-3 left-3 text-[10px] font-extrabold px-2.5 py-1 rounded-lg backdrop-blur-md border ${
+                            isPublished
+                              ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/30"
+                              : "bg-amber-500/20 text-amber-200 border-amber-400/30"
+                          }`}
+                        >
+                          {isPublished ? "Publicado no Ar" : "Aguardando Avaliação"}
+                        </span>
+
+                        {/* Tempo de Leitura */}
+                        <span className="absolute top-3 right-3 text-[10px] font-bold px-2 py-1 rounded-lg bg-black/60 text-zinc-200 backdrop-blur-md border border-white/10">
+                          {post.readingTimeMin || 4} min
+                        </span>
+
+                        {/* Data e horário de postagem */}
+                        <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-[11px] text-zinc-200 font-medium">
+                          <span className="inline-flex items-center gap-1.5 bg-black/55 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-white/10">
+                            <Calendar className="w-3 h-3 text-[#FF650F]" />
+                            {formatDateTime(post.publishedAt)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Corpo do Card */}
+                      <div className="p-4 space-y-2.5">
+                        <h3 className="text-sm font-extrabold text-white leading-snug line-clamp-2 group-hover:text-[#FF650F] transition-colors">
+                          {post.title}
+                        </h3>
+
+                        <p className="text-xs text-zinc-400 leading-relaxed line-clamp-3">
+                          {post.excerpt || "Sem resumo cadastrado para este artigo."}
+                        </p>
+
+                        {post.tags && post.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {post.tags.slice(0, 3).map((tag) => (
+                              <span
+                                key={tag}
+                                className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white/5 text-zinc-300 border border-white/5"
+                              >
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    <h3 className="text-sm font-bold text-white leading-snug">
-                      {post.title}
-                    </h3>
-                  </div>
+                    {/* Rodapé de Ações */}
+                    <div className="px-4 py-3 border-t border-white/10 bg-black/20 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePostStatus(post.id, post.status)}
+                        className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-colors border ${
+                          isPublished
+                            ? "bg-white/5 hover:bg-amber-500/15 text-zinc-300 hover:text-amber-300 border-white/10 hover:border-amber-500/30"
+                            : "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/30"
+                        }`}
+                        title={
+                          isPublished
+                            ? "Mover para Aguardando Avaliação"
+                            : "Aprovar e Publicar no Blog"
+                        }
+                      >
+                        {isPublished ? "Mover p/ Avaliação" : "Publicar Agora"}
+                      </button>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Link
-                      href={`/blog/${post.slug}`}
-                      target="_blank"
-                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-colors"
-                      title="Visualizar post no blog"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                    </Link>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditPost(post)}
+                          className="p-2 rounded-xl bg-white/5 hover:bg-[#FF650F]/20 text-zinc-300 hover:text-[#FF650F] border border-white/10 transition-colors"
+                          title="Editar artigo"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
 
-                    <button
-                      onClick={() => handleTogglePostStatus(post.id, post.status)}
-                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-semibold transition-colors"
-                      title="Alternar entre publicado e rascunho"
-                    >
-                      {post.status === "PUBLISHED" ? "Despublicar" : "Publicar"}
-                    </button>
+                        <Link
+                          href={`/blog/${post.slug}`}
+                          target="_blank"
+                          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition-colors"
+                          title="Visualizar artigo no blog"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </Link>
 
-                    <button
-                      onClick={() => handleDeletePost(post.id)}
-                      className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
-                      title="Excluir post"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePost(post.id)}
+                          className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors"
+                          title="Excluir artigo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>
@@ -1401,6 +1643,176 @@ export default function AdminBlogPage() {
                   className="px-5 py-2 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-extrabold shadow-md shadow-orange-500/20 disabled:opacity-50"
                 >
                   {savingEditTopic ? "Salvando..." : "Salvar Alterações"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: EDITAR ARTIGO GERADO */}
+      {editingPost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl bg-[#141518] border border-white/15 shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between gap-4 bg-black/20 shrink-0">
+              <div className="min-w-0">
+                <h2 className="text-base font-extrabold text-white flex items-center gap-2">
+                  <Pencil className="w-4 h-4 text-[#FF650F]" />
+                  <span>Editar Artigo</span>
+                </h2>
+                <p className="text-[11px] text-zinc-400 mt-0.5 flex items-center gap-1.5">
+                  <Calendar className="w-3 h-3 text-[#FF650F]" />
+                  <span>Postado em {formatDateTime(editingPost.publishedAt)}</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingPost(null)}
+                className="text-zinc-500 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                title="Fechar modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditPost} className="p-5 space-y-4 overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-semibold text-zinc-300 block mb-1.5">
+                    Título do Artigo *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editPostTitle}
+                    onChange={(e) => setEditPostTitle(e.target.value)}
+                    placeholder="Título principal do artigo"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-sm text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-zinc-300 block mb-1.5">
+                    Status de Publicação
+                  </label>
+                  <select
+                    value={editPostStatus}
+                    onChange={(e) => setEditPostStatus(e.target.value as "PUBLISHED" | "DRAFT")}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-sm text-white focus:outline-none focus:border-[#FF650F]"
+                  >
+                    <option value="PUBLISHED">Publicado no Ar</option>
+                    <option value="DRAFT">Aguardando Avaliação</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-zinc-300 block mb-1.5">
+                  URL da Imagem de Capa
+                </label>
+                <div className="flex flex-col sm:flex-row gap-3 items-start">
+                  <input
+                    type="text"
+                    value={editPostCoverImage}
+                    onChange={(e) => setEditPostCoverImage(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                  {editPostCoverImage && (
+                    <div className="w-full sm:w-28 h-16 rounded-xl overflow-hidden border border-white/10 bg-black/40 shrink-0">
+                      <img
+                        src={editPostCoverImage}
+                        alt="Preview da capa"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-zinc-300 block mb-1.5">
+                  Resumo (Excerpt) *
+                </label>
+                <textarea
+                  rows={2}
+                  required
+                  value={editPostExcerpt}
+                  onChange={(e) => setEditPostExcerpt(e.target.value)}
+                  placeholder="Resumo exibido nos cards do blog..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none focus:border-[#FF650F]"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-zinc-300 block mb-1.5">
+                  Conteúdo em Markdown *
+                </label>
+                <textarea
+                  rows={10}
+                  required
+                  value={editPostContent}
+                  onChange={(e) => setEditPostContent(e.target.value)}
+                  placeholder="# Título&#10;&#10;Conteúdo do artigo..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs font-mono text-zinc-200 leading-relaxed focus:outline-none focus:border-[#FF650F]"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-zinc-300 block mb-1.5">
+                  Tags (separadas por vírgula)
+                </label>
+                <input
+                  type="text"
+                  value={editPostTags}
+                  onChange={(e) => setEditPostTags(e.target.value)}
+                  placeholder="Ex: Evangelho, Bíblia, Fé Cristã"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none focus:border-[#FF650F]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-white/10">
+                <div>
+                  <label className="text-xs font-semibold text-zinc-300 block mb-1.5">
+                    Meta Title (SEO)
+                  </label>
+                  <input
+                    type="text"
+                    value={editPostMetaTitle}
+                    onChange={(e) => setEditPostMetaTitle(e.target.value)}
+                    placeholder="Título para buscadores"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-zinc-300 block mb-1.5">
+                    Meta Description (SEO)
+                  </label>
+                  <input
+                    type="text"
+                    value={editPostMetaDesc}
+                    onChange={(e) => setEditPostMetaDesc(e.target.value)}
+                    placeholder="Descrição para buscadores"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none focus:border-[#FF650F]"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-white/10 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingPost(null)}
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-zinc-300"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEditPost}
+                  className="px-5 py-2 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-extrabold shadow-md shadow-orange-500/20 disabled:opacity-50"
+                >
+                  {savingEditPost ? "Salvando..." : "Salvar Alterações"}
                 </button>
               </div>
             </form>

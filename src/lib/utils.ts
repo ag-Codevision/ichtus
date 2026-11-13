@@ -22,7 +22,7 @@ export function formatCurrency(value: number | string | null | undefined): strin
 }
 
 /**
- * Formatação de data no padrão brasileiro com proteção contra datas inválidas
+ * Formatação de data no padrão brasileiro com proteção contra datas inválidas (Fuso de Brasília)
  */
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "-";
@@ -33,6 +33,7 @@ export function formatDate(date: Date | string | null | undefined): string {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
+      timeZone: "America/Sao_Paulo",
     }).format(d);
   } catch {
     return "-";
@@ -40,20 +41,26 @@ export function formatDate(date: Date | string | null | undefined): string {
 }
 
 /**
- * Formatação de data com hora no padrão brasileiro com proteção contra datas inválidas
+ * Formatação de data com hora no padrão brasileiro ("dd/mm/aaaa às HH:mm" - Fuso de Brasília)
  */
 export function formatDateTime(date: Date | string | null | undefined): string {
   if (!date) return "-";
   try {
     const d = typeof date === "string" ? new Date(date) : date;
     if (!(d instanceof Date) || isNaN(d.getTime())) return "-";
-    return new Intl.DateTimeFormat("pt-BR", {
+    const datePart = new Intl.DateTimeFormat("pt-BR", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
+      timeZone: "America/Sao_Paulo",
+    }).format(d);
+    const timePart = new Intl.DateTimeFormat("pt-BR", {
       hour: "2-digit",
       minute: "2-digit",
+      hour12: false,
+      timeZone: "America/Sao_Paulo",
     }).format(d);
+    return `${datePart} às ${timePart}`;
   } catch {
     return "-";
   }

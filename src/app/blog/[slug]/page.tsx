@@ -3,7 +3,7 @@ import { Footer } from "@/components/layout/footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import prisma from "@/lib/prisma";
-import { formatDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import {
   Clock,
   ArrowLeft,
@@ -249,7 +249,7 @@ export default async function BlogPostPage({ params }: PageProps) {
               <div className="flex items-center gap-4 text-glessios-text-body font-mono text-xs">
                 <span className="flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-glessios-orange" />
-                  {formatDate(post.publishedAt)}
+                  {formatDateTime(post.publishedAt)}
                 </span>
                 <span>•</span>
                 <span className="flex items-center gap-1.5">
@@ -272,7 +272,7 @@ export default async function BlogPostPage({ params }: PageProps) {
             />
             {post.imagePhotographer && (
               <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 bg-black/75 backdrop-blur-md text-[11px] text-white/90 px-3 py-1.5 rounded-lg border border-white/10">
-                Fotografia: {post.imagePhotographer} (Unsplash)
+                Fotografia: {post.imagePhotographer}
               </div>
             )}
           </div>

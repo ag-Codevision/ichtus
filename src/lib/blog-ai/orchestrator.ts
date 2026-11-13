@@ -16,6 +16,9 @@ export interface CycleResult {
   error?: string;
 }
 
+// Trava atômica em memória para evitar disparos simultâneos concorrentes (Race Condition)
+let isCycleRunning = false;
+
 /**
  * Obtém ou inicializa a configuração singleton do agente
  */
@@ -149,7 +152,29 @@ export async function runAutonomousBlogCycle(options?: {
   forcePublish?: boolean;
   ignoreSchedule?: boolean;
 }): Promise<CycleResult> {
+  // 1. Trava em memória contra disparos simultâneos no mesmo instante
+  if (isCycleRunning) {
+    console.log("[Blog Agent] Ciclo já em andamento em outra requisição concorrente. Disparo ignorado.");
+    return {
+      success: true,
+      message: "Ciclo já em andamento em outra requisição concorrente. Disparo ignorado.",
+    };
+  }
+
   const config = await getOrCreateBlogAgentConfig();
+
+  // 2. Trava persistida no banco (proteção contra concorrência com expiração de 3 minutos)
+  if (
+    config.lastStatus === "RUNNING" &&
+    config.updatedAt &&
+    Date.now() - new Date(config.updatedAt).getTime() < 180000
+  ) {
+    console.log("[Blog Agent] Bloqueio de concorrência ativo no banco (lastStatus=RUNNING < 3min). Disparo ignorado.");
+    return {
+      success: true,
+      message: "Ciclo já em andamento em outra requisição concorrente. Disparo ignorado.",
+    };
+  }
 
   // Se não for manual e não forçar bypass de cadência, valida elegibilidade de dia/hora/limite
   if (!options?.forcedTopicId && !options?.ignoreSchedule) {
@@ -167,7 +192,8 @@ export async function runAutonomousBlogCycle(options?: {
     }
   }
 
-  // Atualiza status para RUNNING
+  // Ativa trava em memória e atualiza status para RUNNING no banco
+  isCycleRunning = true;
   await prisma.blogAgentConfig.update({
     where: { id: config.id },
     data: { lastStatus: "RUNNING", lastError: null },
@@ -327,5 +353,7 @@ export async function runAutonomousBlogCycle(options?: {
       message: "Falha ao executar o ciclo do agente de blog.",
       error: error?.message || String(error),
     };
+  } finally {
+    isCycleRunning = false;
   }
 }
