@@ -63,7 +63,7 @@ function buildTopicCreateData(item: any) {
     category: cleanCategory,
     keywords,
     targetAudience: item.targetAudience || "Empresários, Lojistas e Arquitetos",
-    tone: item.tone || "Técnico Especialista e Conversão",
+    tone: item.tone || "Técnico, Educativo e Didático",
     priority: (item.priority as PriorityLevel) || PriorityLevel.MEDIUM,
     status: TopicStatus.PENDING,
   };

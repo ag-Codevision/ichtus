@@ -1,0 +1,55 @@
+[
+  {
+    "id": "guideline-default-1",
+    "title": "Diretriz Global — Ensino Técnico e Imparcialidade",
+    "scope": "GLOBAL",
+    "category": null,
+    "triggerKeywords": [],
+    "instructions": "Mantenha linha editorial 100% educativa, técnica e instrutiva. Nunca mencione a ICTHUS/Glessios, não faça autopromoção, não use primeira pessoa corporativa e não insira chamadas comerciais. Finalize sempre com síntese técnica e checklist prático.",
+    "priority": "URGENT",
+    "isActive": true,
+    "createdAt": "2026-11-14T19:57:00.000Z",
+    "updatedAt": "2026-11-14T19:57:00.000Z"
+  },
+  {
+    "id": "guideline-default-2",
+    "title": "Diretriz por Tema — Tipografia, Fontes e Legibilidade em Letreiros",
+    "scope": "TOPIC",
+    "category": "Letreiros & Iluminação",
+    "triggerKeywords": [
+      "tipografia",
+      "fonte",
+      "fontes",
+      "legibilidade",
+      "kerning",
+      "tracking",
+      "letra caixa",
+      "leitura"
+    ],
+    "instructions": "Ao abordar tipografia ou letras caixa em comunicação visual, explique obrigatoriamente: 1) Relação entre altura da fonte (x-height) e distância de leitura em metros; 2) Importância do kerning/tracking ampliado para evitar fusão visual (halation) em letreiros iluminados por LED; 3) Espessura mínima de haste (stroke width) para acomodar módulos de LED internos ou usinagem CNC; 4) Contraste cromático entre letra e fachada.",
+    "priority": "HIGH",
+    "isActive": true,
+    "createdAt": "2026-11-14T19:57:01.000Z",
+    "updatedAt": "2026-11-14T19:57:01.000Z"
+  },
+  {
+    "id": "guideline-default-3",
+    "title": "Diretriz por Tema — Fachadas Externas e Revestimento em ACM",
+    "scope": "TOPIC",
+    "category": "Fachadas Comerciais",
+    "triggerKeywords": [
+      "fachada",
+      "fachadas externas",
+      "acm",
+      "revestimento externo",
+      "intempéries",
+      "carga de vento",
+      "estrutura metálica"
+    ],
+    "instructions": "Ao escrever sobre fachadas externas ou ACM, aborde obrigatoriamente: 1) Especificação técnica do material (ACM 3mm vs 4mm, pintura PVDF Kynar 500 vs Poliéster para incidência solar UV); 2) Dimensionamento de subestrutura metálica (aço galvanizado ou alumínio) e resistência à carga de vento (NBR 6123); 3) Juntas de dilatação térmica, dobra em bandeja (cassete) e vedação neutra contra infiltrações.",
+    "priority": "HIGH",
+    "isActive": true,
+    "createdAt": "2026-11-14T19:57:02.000Z",
+    "updatedAt": "2026-11-14T19:57:02.000Z"
+  }
+]

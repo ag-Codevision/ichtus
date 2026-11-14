@@ -33,6 +33,8 @@ import {
   Tag,
   Upload,
   Image as ImageIcon,
+  Globe,
+  ShieldCheck,
 } from "lucide-react";
 
 interface MarkdownImageItem {
@@ -102,6 +104,43 @@ interface BlogAgentConfig {
   lastError: string | null;
 }
 
+type PriorityValue = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+
+interface BlogGuideline {
+  id: string;
+  title: string;
+  scope: "GLOBAL" | "TOPIC";
+  category: string | null;
+  triggerKeywords: string[];
+  instructions: string;
+  priority: PriorityValue;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const GUIDELINE_PRIORITY_META: Record<
+  PriorityValue,
+  { label: string; className: string }
+> = {
+  URGENT: {
+    label: "Urgente",
+    className: "bg-red-500/20 text-red-300 border-red-500/30",
+  },
+  HIGH: {
+    label: "Alta",
+    className: "bg-orange-500/20 text-orange-300 border-orange-500/30",
+  },
+  MEDIUM: {
+    label: "Média",
+    className: "bg-blue-500/15 text-blue-300 border-blue-500/30",
+  },
+  LOW: {
+    label: "Baixa",
+    className: "bg-white/5 text-zinc-400 border-white/10",
+  },
+};
+
 interface BlogPost {
   id: string;
   title: string;
@@ -122,14 +161,16 @@ interface BlogPost {
 }
 
 export default function AdminBlogPage() {
-  const [activeTab, setActiveTab] = useState<"brain" | "schedule" | "posts">("brain");
+  const [activeTab, setActiveTab] = useState<"brain" | "guidelines" | "schedule" | "posts">("brain");
 
   // Estados dos Dados
   const [topics, setTopics] = useState<BlogTopic[]>([]);
+  const [guidelines, setGuidelines] = useState<BlogGuideline[]>([]);
   const [categories, setCategories] = useState<BlogCategoryItem[]>([]);
   const [config, setConfig] = useState<BlogAgentConfig | null>(null);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [topicStats, setTopicStats] = useState({ total: 0, pending: 0, inProgress: 0, completed: 0 });
+  const [guidelineStats, setGuidelineStats] = useState({ total: 0, active: 0, global: 0, topic: 0 });
   const [postStats, setPostStats] = useState({ total: 0, published: 0, drafts: 0, archived: 0 });
 
   // Loadings
@@ -159,6 +200,21 @@ export default function AdminBlogPage() {
   const [topicFilter, setTopicFilter] = useState<string>("ALL");
   const [topicCategoryFilter, setTopicCategoryFilter] = useState<string>("ALL");
   const [topicSearch, setTopicSearch] = useState("");
+
+  // Filtros e Modal do Cérebro de Diretrizes (CRUD)
+  const [guidelineSearch, setGuidelineSearch] = useState("");
+  const [guidelineFilter, setGuidelineFilter] = useState<"ALL" | "GLOBAL" | "TOPIC" | "ACTIVE" | "PAUSED">("ALL");
+  const [isGuidelineModalOpen, setIsGuidelineModalOpen] = useState(false);
+  const [editingGuideline, setEditingGuideline] = useState<BlogGuideline | null>(null);
+  const [guidelineTitle, setGuidelineTitle] = useState("");
+  const [guidelineScope, setGuidelineScope] = useState<"GLOBAL" | "TOPIC">("TOPIC");
+  const [guidelineCategory, setGuidelineCategory] = useState("");
+  const [guidelineTriggers, setGuidelineTriggers] = useState("");
+  const [guidelinePriority, setGuidelinePriority] = useState<PriorityValue>("MEDIUM");
+  const [guidelineInstructions, setGuidelineInstructions] = useState("");
+  const [guidelineIsActive, setGuidelineIsActive] = useState(true);
+  const [savingGuideline, setSavingGuideline] = useState(false);
+  const [togglingGuidelineId, setTogglingGuidelineId] = useState<string | null>(null);
 
   // Filtros e Modal de Edição de Artigos Gerados (CRUD)
   const [postStatusFilter, setPostStatusFilter] = useState<"ALL" | "PUBLISHED" | "DRAFT">("ALL");
@@ -266,11 +322,12 @@ export default function AdminBlogPage() {
       setLoading(true);
     }
     try {
-      const [topicsRes, categoriesRes, configRes, postsRes] = await Promise.all([
+      const [topicsRes, categoriesRes, configRes, postsRes, guidelinesRes] = await Promise.all([
         fetch("/api/v1/blog/topics"),
         fetch("/api/v1/blog/categories"),
         fetch("/api/v1/blog/agent/config"),
         fetch("/api/v1/blog/posts"),
+        fetch("/api/v1/blog/guidelines"),
       ]);
 
       if (topicsRes.ok) {
@@ -302,6 +359,22 @@ export default function AdminBlogPage() {
         setPosts(pJson.data || []);
         if (pJson.stats) setPostStats(pJson.stats);
       }
+
+      if (guidelinesRes.ok) {
+        const gJson = await guidelinesRes.json();
+        const gList: BlogGuideline[] = gJson.data || [];
+        setGuidelines(gList);
+        if (gJson.stats) {
+          setGuidelineStats(gJson.stats);
+        } else {
+          setGuidelineStats({
+            total: gList.length,
+            active: gList.filter((g) => g.isActive).length,
+            global: gList.filter((g) => g.scope === "GLOBAL").length,
+            topic: gList.filter((g) => g.scope === "TOPIC").length,
+          });
+        }
+      }
     } catch (err) {
       console.error("Erro ao carregar dados do blog:", err);
       showFeedback("error", "Erro ao sincronizar informações.");
@@ -321,6 +394,9 @@ export default function AdminBlogPage() {
       if (editingTopic) {
         setEditCategory(event.category.name);
       }
+      if (isGuidelineModalOpen && guidelineScope === "TOPIC") {
+        setGuidelineCategory(event.category.name);
+      }
       showFeedback("success", `Categoria "${event.category.name}" criada!`);
     } else if (event?.action === "update" && event.category && event.previousName) {
       if (singleCategory === event.previousName) {
@@ -329,6 +405,9 @@ export default function AdminBlogPage() {
       if (editCategory === event.previousName) {
         setEditCategory(event.category.name);
       }
+      if (guidelineCategory === event.previousName) {
+        setGuidelineCategory(event.category.name);
+      }
       if (topicCategoryFilter === event.previousName) {
         setTopicCategoryFilter(event.category.name);
       }
@@ -336,6 +415,9 @@ export default function AdminBlogPage() {
     } else if (event?.action === "delete" && event.deletedName) {
       if (editCategory === event.deletedName) {
         setEditCategory("");
+      }
+      if (guidelineCategory === event.deletedName) {
+        setGuidelineCategory("");
       }
       if (topicCategoryFilter === event.deletedName) {
         setTopicCategoryFilter("ALL");
@@ -554,6 +636,151 @@ export default function AdminBlogPage() {
       await fetchData(true);
     } catch (err: any) {
       showFeedback("error", err.message);
+    }
+  };
+
+  // Ação: Abrir Modal para Criar Nova Diretriz
+  const handleOpenNewGuideline = () => {
+    setEditingGuideline(null);
+    setGuidelineTitle("");
+    setGuidelineScope("TOPIC");
+    setGuidelineCategory("");
+    setGuidelineTriggers("");
+    setGuidelinePriority("MEDIUM");
+    setGuidelineInstructions("");
+    setGuidelineIsActive(true);
+    setIsGuidelineModalOpen(true);
+  };
+
+  // Ação: Abrir Modal para Editar Diretriz Existente
+  const handleOpenEditGuideline = (guideline: BlogGuideline) => {
+    setEditingGuideline(guideline);
+    setGuidelineTitle(guideline.title);
+    setGuidelineScope(guideline.scope);
+    setGuidelineCategory(guideline.category || "");
+    setGuidelineTriggers(
+      Array.isArray(guideline.triggerKeywords) ? guideline.triggerKeywords.join(", ") : ""
+    );
+    setGuidelinePriority(guideline.priority || "MEDIUM");
+    setGuidelineInstructions(guideline.instructions || "");
+    setGuidelineIsActive(Boolean(guideline.isActive));
+    setIsGuidelineModalOpen(true);
+  };
+
+  // Ação: Fechar Modal de Diretriz
+  const handleCloseGuidelineModal = () => {
+    setIsGuidelineModalOpen(false);
+    setEditingGuideline(null);
+  };
+
+  // Ação: Criar ou Atualizar Diretriz no Cérebro de Diretrizes (CRUD - Create / Update)
+  const handleSaveGuideline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guidelineTitle.trim() || !guidelineInstructions.trim()) {
+      showFeedback("error", "Preencha o título e as instruções da diretriz.");
+      return;
+    }
+
+    setSavingGuideline(true);
+    try {
+      const triggerKeywords =
+        guidelineScope === "TOPIC"
+          ? guidelineTriggers
+              .split(",")
+              .map((kw) => kw.trim())
+              .filter(Boolean)
+          : [];
+
+      const payload = {
+        title: guidelineTitle.trim(),
+        scope: guidelineScope,
+        category:
+          guidelineScope === "TOPIC" && guidelineCategory.trim()
+            ? guidelineCategory.trim()
+            : null,
+        triggerKeywords,
+        instructions: guidelineInstructions.trim(),
+        priority: guidelinePriority,
+        isActive: guidelineIsActive,
+      };
+
+      const endpoint = editingGuideline
+        ? `/api/v1/blog/guidelines/${editingGuideline.id}`
+        : "/api/v1/blog/guidelines";
+
+      const res = await fetch(endpoint, {
+        method: editingGuideline ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error || json?.message || "Erro ao salvar diretriz.");
+      }
+
+      showFeedback(
+        "success",
+        json.message ||
+          (editingGuideline
+            ? "Diretriz atualizada com sucesso!"
+            : "Nova diretriz adicionada ao Cérebro de Diretrizes!")
+      );
+      handleCloseGuidelineModal();
+      await fetchData(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao salvar diretriz.";
+      showFeedback("error", message);
+    } finally {
+      setSavingGuideline(false);
+    }
+  };
+
+  // Ação: Pausar / Ativar Diretriz (CRUD - Patch isActive)
+  const handleToggleGuidelineActive = async (guideline: BlogGuideline) => {
+    const nextActive = !guideline.isActive;
+    setTogglingGuidelineId(guideline.id);
+    try {
+      const res = await fetch(`/api/v1/blog/guidelines/${guideline.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: nextActive }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error || "Falha ao atualizar status da diretriz.");
+      }
+
+      showFeedback(
+        "success",
+        nextActive
+          ? "Diretriz ativada e pronta para orientar o agente."
+          : "Diretriz pausada temporariamente."
+      );
+      await fetchData(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Falha ao alternar diretriz.";
+      showFeedback("error", message);
+    } finally {
+      setTogglingGuidelineId(null);
+    }
+  };
+
+  // Ação: Excluir Diretriz (CRUD - Delete)
+  const handleDeleteGuideline = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta diretriz do Cérebro de Diretrizes?")) return;
+    try {
+      const res = await fetch(`/api/v1/blog/guidelines/${id}`, { method: "DELETE" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error || "Falha ao excluir diretriz.");
+      }
+
+      showFeedback("success", json.message || "Diretriz removida.");
+      await fetchData(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao excluir diretriz.";
+      showFeedback("error", message);
     }
   };
 
@@ -820,6 +1047,33 @@ export default function AdminBlogPage() {
     return true;
   });
 
+  // Filtragem e Contadores do Cérebro de Diretrizes
+  const guidelineCounts = {
+    total: guidelines.length || guidelineStats.total,
+    global: guidelines.filter((g) => g.scope === "GLOBAL").length,
+    topic: guidelines.filter((g) => g.scope === "TOPIC").length,
+    active: guidelines.filter((g) => g.isActive).length,
+    paused: guidelines.filter((g) => !g.isActive).length,
+  };
+
+  const filteredGuidelines = guidelines.filter((g) => {
+    if (guidelineFilter === "GLOBAL" && g.scope !== "GLOBAL") return false;
+    if (guidelineFilter === "TOPIC" && g.scope !== "TOPIC") return false;
+    if (guidelineFilter === "ACTIVE" && !g.isActive) return false;
+    if (guidelineFilter === "PAUSED" && g.isActive) return false;
+    if (guidelineSearch.trim()) {
+      const search = guidelineSearch.toLowerCase();
+      return (
+        g.title.toLowerCase().includes(search) ||
+        g.instructions.toLowerCase().includes(search) ||
+        (g.category && g.category.toLowerCase().includes(search)) ||
+        (g.triggerKeywords &&
+          g.triggerKeywords.some((kw) => kw.toLowerCase().includes(search)))
+      );
+    }
+    return true;
+  });
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 animate-fadeIn text-zinc-100">
       {/* Toast Notification */}
@@ -957,6 +1211,18 @@ export default function AdminBlogPage() {
         >
           <Brain className="w-4 h-4" />
           <span>Mini-Cérebro de Pautas ({topics.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("guidelines")}
+          className={`flex items-center gap-2 px-5 py-3 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
+            activeTab === "guidelines"
+              ? "border-[#FF650F] text-[#FF650F] bg-white/[0.02]"
+              : "border-transparent text-zinc-400 hover:text-white"
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span>Cérebro de Diretrizes ({guidelines.length})</span>
         </button>
 
         <button
@@ -1213,7 +1479,299 @@ export default function AdminBlogPage() {
         </div>
       )}
 
-      {/* ABA 2: REGRAS DE AGENDAMENTO (LAYOUT COMPACTO & LIMPO) */}
+      {/* ABA 2: CÉREBRO DE DIRETRIZES (REGRAS GLOBAIS E POR TEMA PARA O AGENTE) */}
+      {activeTab === "guidelines" && (
+        <div className="space-y-4">
+          {/* Banner Explicativo Compacto */}
+          <div className="p-4 rounded-2xl bg-[#141518] border border-white/10 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#FF650F]/15 border border-[#FF650F]/30 flex items-center justify-center text-[#FF650F] shrink-0 mt-0.5">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-xs sm:text-sm font-extrabold text-white">
+                  Como funciona o Cérebro de Diretrizes
+                </h2>
+                <p className="text-[11px] sm:text-xs text-zinc-400 leading-relaxed max-w-3xl">
+                  Regras <strong className="text-purple-300">Globais</strong> valem para todos os artigos produzidos pela IA (linha editorial, imparcialidade e proibições). Regras <strong className="text-orange-300">Por Tema</strong> são acionadas automaticamente sempre que a pauta pertencer à categoria vinculada ou contiver uma das palavras-gatilho configuradas.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0 text-[11px] font-bold">
+              <span className="px-2.5 py-1 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                {guidelineCounts.global} Globais
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-[#FF650F]/10 text-orange-300 border border-[#FF650F]/20">
+                {guidelineCounts.topic} Por Tema
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                {guidelineCounts.active} Ativas
+              </span>
+            </div>
+          </div>
+
+          {/* Barra de Controles: Busca, Filtros Rápidos e Botão Nova Diretriz */}
+          <div className="p-3.5 rounded-2xl bg-[#141518] border border-white/10 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 flex-grow">
+              <div className="relative min-w-[220px] sm:w-72">
+                <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Buscar por título, instrução ou #gatilho..."
+                  value={guidelineSearch}
+                  onChange={(e) => setGuidelineSearch(e.target.value)}
+                  className="w-full pl-8 pr-8 py-1.5 rounded-xl bg-black/40 border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:border-[#FF650F] focus:outline-none"
+                />
+                {guidelineSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setGuidelineSearch("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
+                    title="Limpar busca"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1 text-xs">
+                {(
+                  [
+                    { label: "Todas", value: "ALL", count: guidelineCounts.total },
+                    { label: "Globais", value: "GLOBAL", count: guidelineCounts.global },
+                    { label: "Por Tema", value: "TOPIC", count: guidelineCounts.topic },
+                    { label: "Ativas", value: "ACTIVE", count: guidelineCounts.active },
+                    { label: "Pausadas", value: "PAUSED", count: guidelineCounts.paused },
+                  ] as const
+                ).map((f) => (
+                  <button
+                    key={f.value}
+                    type="button"
+                    onClick={() => setGuidelineFilter(f.value)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors text-xs font-semibold ${
+                      guidelineFilter === f.value
+                        ? "bg-[#FF650F] text-white"
+                        : "bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    <span>{f.label}</span>
+                    <span
+                      className={`px-1.5 py-0.2 rounded text-[10px] font-extrabold ${
+                        guidelineFilter === f.value ? "bg-black/25 text-white" : "bg-black/30 text-zinc-400"
+                      }`}
+                    >
+                      {f.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleOpenNewGuideline}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-bold transition-all shadow-md shadow-orange-500/20 shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Nova Diretriz</span>
+            </button>
+          </div>
+
+          {/* Listagem de Cards de Diretrizes */}
+          {loading && guidelines.length === 0 ? (
+            <div className="p-8 text-center text-zinc-500 rounded-2xl bg-[#141518] border border-white/10">
+              <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[#FF650F]" />
+              <p className="text-xs">Carregando diretrizes do cérebro do agente...</p>
+            </div>
+          ) : guidelines.length === 0 ? (
+            <div className="p-10 text-center rounded-2xl bg-[#141518] border border-white/10 space-y-3">
+              <Layers className="w-8 h-8 text-zinc-600 mx-auto" />
+              <h3 className="text-sm font-bold text-white">Nenhuma diretriz cadastrada</h3>
+              <p className="text-xs text-zinc-400 max-w-md mx-auto">
+                Crie diretrizes globais ou por tema para orientar o comportamento, critérios técnicos e restrições do agente redator.
+              </p>
+              <button
+                type="button"
+                onClick={handleOpenNewGuideline}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-bold transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Criar Primeira Diretriz</span>
+              </button>
+            </div>
+          ) : filteredGuidelines.length === 0 ? (
+            <div className="p-8 text-center rounded-2xl bg-[#141518] border border-white/10 space-y-3">
+              <Filter className="w-7 h-7 text-zinc-600 mx-auto" />
+              <h3 className="text-sm font-bold text-white">Nenhuma diretriz encontrada</h3>
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                Tente ajustar o termo de busca ou selecionar outro filtro rápido.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setGuidelineFilter("ALL");
+                  setGuidelineSearch("");
+                }}
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-white transition-colors"
+              >
+                Mostrar Todas as Diretrizes
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredGuidelines.map((guideline) => {
+                const matchedCat = guideline.category
+                  ? categories.find(
+                      (c) => c.name.toLowerCase() === guideline.category!.toLowerCase()
+                    )
+                  : undefined;
+                const priorityMeta =
+                  GUIDELINE_PRIORITY_META[guideline.priority] || GUIDELINE_PRIORITY_META.MEDIUM;
+                const isToggling = togglingGuidelineId === guideline.id;
+
+                return (
+                  <article
+                    key={guideline.id}
+                    className={`p-4 sm:p-5 rounded-2xl bg-[#141518] border transition-all space-y-3 ${
+                      guideline.isActive
+                        ? "border-white/10 hover:border-white/20"
+                        : "border-white/5 opacity-65"
+                    }`}
+                  >
+                    {/* Linha de Badges e Ações Rápidas */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {/* Badge de Escopo */}
+                        {guideline.scope === "GLOBAL" ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                            <Globe className="w-3 h-3" />
+                            <span>Global • Todos os Artigos</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-[#FF650F]/15 text-orange-300 border border-[#FF650F]/30">
+                            <Tag className="w-3 h-3" />
+                            <span>Específica por Tema</span>
+                          </span>
+                        )}
+
+                        {/* Badge de Categoria Vinculada */}
+                        {guideline.category && (
+                          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/5 text-zinc-200 border border-white/10">
+                            {matchedCat && (
+                              <span
+                                className="w-1.5 h-1.5 rounded-full shrink-0"
+                                style={{ backgroundColor: matchedCat.color || "#FF650F" }}
+                              />
+                            )}
+                            <span>{guideline.category}</span>
+                          </span>
+                        )}
+
+                        {/* Badge de Prioridade */}
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${priorityMeta.className}`}
+                        >
+                          {priorityMeta.label}
+                        </span>
+
+                        {/* Badge de Status */}
+                        <span
+                          className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                            guideline.isActive
+                              ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                              : "bg-zinc-800/80 text-zinc-400 border-white/10"
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              guideline.isActive ? "bg-emerald-400" : "bg-zinc-500"
+                            }`}
+                          />
+                          <span>{guideline.isActive ? "Ativa" : "Pausada"}</span>
+                        </span>
+                      </div>
+
+                      {/* Botões de Ação Rápida */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditGuideline(guideline)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-200 hover:text-white border border-white/10 text-[11px] font-bold transition-colors"
+                          title="Editar diretriz"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          <span>Editar</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isToggling}
+                          onClick={() => handleToggleGuidelineActive(guideline)}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition-colors disabled:opacity-50 ${
+                            guideline.isActive
+                              ? "bg-white/5 hover:bg-amber-500/15 text-zinc-300 hover:text-amber-300 border-white/10 hover:border-amber-500/30"
+                              : "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/30"
+                          }`}
+                          title={guideline.isActive ? "Pausar diretriz" : "Ativar diretriz"}
+                        >
+                          {isToggling ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : guideline.isActive ? (
+                            <Pause className="w-3 h-3" />
+                          ) : (
+                            <Play className="w-3 h-3" />
+                          )}
+                          <span>{guideline.isActive ? "Pausar" : "Ativar"}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteGuideline(guideline.id)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-[11px] font-bold transition-colors"
+                          title="Excluir diretriz"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Excluir</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Título da Diretriz */}
+                    <h3 className="text-sm sm:text-base font-bold text-white leading-snug">
+                      {guideline.title}
+                    </h3>
+
+                    {/* Bloco com Texto Completo das Instruções */}
+                    <div className="p-3.5 rounded-xl bg-black/35 border border-white/5 text-xs text-zinc-300 leading-relaxed whitespace-pre-line">
+                      {guideline.instructions}
+                    </div>
+
+                    {/* Chips das Palavras-Gatilho */}
+                    {guideline.triggerKeywords && guideline.triggerKeywords.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span className="text-[11px] font-semibold text-zinc-500 mr-0.5">
+                          Gatilhos:
+                        </span>
+                        {guideline.triggerKeywords.map((kw, idx) => (
+                          <span
+                            key={`${guideline.id}-kw-${idx}`}
+                            className="text-[10px] px-2 py-0.5 rounded-md bg-black/40 border border-white/10 text-zinc-300 font-mono"
+                          >
+                            #{kw}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ABA 3: REGRAS DE AGENDAMENTO (LAYOUT COMPACTO & LIMPO) */}
       {activeTab === "schedule" && config && (
         <form onSubmit={handleSaveConfig} className="space-y-4">
           <div className="p-5 sm:p-6 rounded-2xl bg-[#141518] border border-white/10 space-y-6">
@@ -1505,7 +2063,7 @@ export default function AdminBlogPage() {
         </form>
       )}
 
-      {/* ABA 3: ARTIGOS GERADOS */}
+      {/* ABA 4: ARTIGOS GERADOS */}
       {activeTab === "posts" && (
         <div className="space-y-5">
           {/* Input oculto compartilhado para troca rápida da imagem de capa diretamente do card */}
@@ -2364,7 +2922,264 @@ export default function AdminBlogPage() {
         </div>
       )}
 
-      {/* MODAL 4: GERENCIAR CATEGORIAS DO MINI-CÉREBRO (CRUD COMPLETO) */}
+      {/* MODAL 4: CRIAR / EDITAR DIRETRIZ DO CÉREBRO DE DIRETRIZES */}
+      {isGuidelineModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl bg-[#18191D] border border-white/10 shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between gap-4 bg-black/20 shrink-0">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-[#FF650F]" />
+                <h3 className="text-sm sm:text-base font-extrabold text-white">
+                  {editingGuideline ? "Editar Diretriz do Agente" : "Nova Diretriz para o Agente"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseGuidelineModal}
+                className="text-zinc-500 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                title="Fechar modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveGuideline} className="p-5 sm:p-6 space-y-4 overflow-y-auto">
+              {/* Título da Diretriz */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 block">
+                  Título da Diretriz *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Diretriz por Tema — Tipografia, Fontes e Legibilidade"
+                  value={guidelineTitle}
+                  onChange={(e) => setGuidelineTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white text-xs sm:text-sm focus:border-[#FF650F] focus:outline-none"
+                />
+              </div>
+
+              {/* Seletor de Escopo */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 block">
+                  Escopo de Aplicação *
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setGuidelineScope("TOPIC")}
+                    className={`p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 ${
+                      guidelineScope === "TOPIC"
+                        ? "bg-[#FF650F]/15 border-[#FF650F] text-white"
+                        : "bg-black/30 border-white/10 text-zinc-400 hover:text-white hover:border-white/20"
+                    }`}
+                  >
+                    <Tag
+                      className={`w-4 h-4 mt-0.5 shrink-0 ${
+                        guidelineScope === "TOPIC" ? "text-[#FF650F]" : "text-zinc-500"
+                      }`}
+                    />
+                    <div>
+                      <span className="text-xs font-extrabold block">
+                        Específica por Tema / Assunto
+                      </span>
+                      <span className="text-[11px] text-zinc-400 block mt-0.5">
+                        Acionada pela categoria da pauta ou por palavras-gatilho.
+                      </span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setGuidelineScope("GLOBAL")}
+                    className={`p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 ${
+                      guidelineScope === "GLOBAL"
+                        ? "bg-purple-500/15 border-purple-500 text-white"
+                        : "bg-black/30 border-white/10 text-zinc-400 hover:text-white hover:border-white/20"
+                    }`}
+                  >
+                    <Globe
+                      className={`w-4 h-4 mt-0.5 shrink-0 ${
+                        guidelineScope === "GLOBAL" ? "text-purple-400" : "text-zinc-500"
+                      }`}
+                    />
+                    <div>
+                      <span className="text-xs font-extrabold block">
+                        Global — Todos os Artigos
+                      </span>
+                      <span className="text-[11px] text-zinc-400 block mt-0.5">
+                        Aplicada em 100% dos artigos gerados pelo agente.
+                      </span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Campos Exclusivos de Diretriz por Tema */}
+              {guidelineScope === "TOPIC" && (
+                <div className="p-4 rounded-xl bg-black/25 border border-white/10 space-y-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="text-xs font-bold text-zinc-300">
+                        Categoria Vinculada
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsCategoriesModalOpen(true)}
+                        className="text-[11px] font-bold text-[#FF650F] hover:text-orange-400 hover:underline inline-flex items-center gap-1 transition-colors"
+                        title="Criar, editar ou excluir categorias"
+                      >
+                        <Sliders className="w-3 h-3" />
+                        <span>Gerenciar</span>
+                      </button>
+                    </div>
+                    <select
+                      value={guidelineCategory}
+                      onChange={(e) => setGuidelineCategory(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none [color-scheme:dark]"
+                    >
+                      <option value="" className="bg-zinc-900 text-white">
+                        Qualquer categoria (acionar só por palavras-gatilho)
+                      </option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.name} className="bg-zinc-900 text-white">
+                          {cat.name}
+                        </option>
+                      ))}
+                      {guidelineCategory &&
+                        !categories.some(
+                          (c) => c.name.toLowerCase() === guidelineCategory.toLowerCase()
+                        ) && (
+                          <option value={guidelineCategory} className="bg-zinc-900 text-white">
+                            {guidelineCategory} (Personalizada)
+                          </option>
+                        )}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-zinc-300 block">
+                      Palavras-Gatilho (separadas por vírgula)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="tipografia, fontes, legibilidade, kerning, letra caixa"
+                      value={guidelineTriggers}
+                      onChange={(e) => setGuidelineTriggers(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+                    />
+                    <p className="text-[11px] text-zinc-500">
+                      Sempre que qualquer palavra acima aparecer no título, categoria ou palavras-chave da pauta, esta diretriz será injetada no agente.
+                    </p>
+                    {guidelineTriggers.trim() && (
+                      <div className="flex flex-wrap gap-1 pt-0.5">
+                        {guidelineTriggers
+                          .split(",")
+                          .map((kw) => kw.trim())
+                          .filter(Boolean)
+                          .map((kw, idx) => (
+                            <span
+                              key={`preview-kw-${idx}`}
+                              className="text-[10px] px-2 py-0.5 rounded bg-black/50 border border-white/10 text-zinc-300 font-mono"
+                            >
+                              #{kw}
+                            </span>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Seletor de Prioridade */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 block">
+                  Prioridade
+                </label>
+                <select
+                  value={guidelinePriority}
+                  onChange={(e) => setGuidelinePriority(e.target.value as PriorityValue)}
+                  className="w-full sm:w-64 px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none [color-scheme:dark]"
+                >
+                  <option value="URGENT" className="bg-zinc-900 text-white">Urgente</option>
+                  <option value="HIGH" className="bg-zinc-900 text-white">Alta</option>
+                  <option value="MEDIUM" className="bg-zinc-900 text-white">Média</option>
+                  <option value="LOW" className="bg-zinc-900 text-white">Baixa</option>
+                </select>
+              </div>
+
+              {/* Instruções de Comportamento e Escrita */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 block">
+                  Instruções de Comportamento e Escrita para o Agente *
+                </label>
+                <textarea
+                  rows={6}
+                  required
+                  placeholder="Descreva em detalhes o que o agente deve abordar, critérios técnicos obrigatórios, estrutura esperada ou restrições editoriais..."
+                  value={guidelineInstructions}
+                  onChange={(e) => setGuidelineInstructions(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white text-xs sm:text-sm leading-relaxed focus:border-[#FF650F] focus:outline-none"
+                />
+              </div>
+
+              {/* Toggle Diretriz Ativa */}
+              <div className="p-3.5 rounded-xl bg-black/25 border border-white/10 flex items-center justify-between gap-4">
+                <div>
+                  <span className="text-xs font-bold text-white block">
+                    Diretriz Ativa
+                  </span>
+                  <span className="text-[11px] text-zinc-400 block">
+                    {guidelineIsActive
+                      ? "Esta diretriz será considerada automaticamente na próxima geração de artigos."
+                      : "Diretriz pausada — não será enviada ao agente até ser reativada."}
+                  </span>
+                </div>
+
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={guidelineIsActive}
+                    onChange={(e) => setGuidelineIsActive(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#FF650F]"></div>
+                </label>
+              </div>
+
+              {/* Botões de Ação */}
+              <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={handleCloseGuidelineModal}
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-bold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingGuideline}
+                  className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-extrabold shadow-md shadow-orange-500/20 disabled:opacity-50"
+                >
+                  {savingGuideline ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Salvar Diretriz</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: GERENCIAR CATEGORIAS DO MINI-CÉREBRO (CRUD COMPLETO) */}
       <BlogCategoriesModal
         isOpen={isCategoriesModalOpen}
         onClose={() => setIsCategoriesModalOpen(false)}

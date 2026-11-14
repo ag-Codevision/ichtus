@@ -5,6 +5,14 @@
  * 2. Fallback oficial para API NVIDIA NIM (meta/llama-3.2-90b-vision-instruct)
  */
 
+import { matchGuidelinesForArticle } from "./guidelines";
+
+export interface PromptGuidelineInput {
+  title: string;
+  scope?: string;
+  instructions: string;
+}
+
 export interface GeneratedArticle {
   title: string;
   slug: string;
@@ -147,6 +155,23 @@ async function callLLM(options: {
 }
 
 /**
+ * Formata a seção de diretrizes do Cérebro de Diretrizes para injeção nos prompts.
+ */
+function buildGuidelinesPromptSection(guidelines: PromptGuidelineInput[]): string {
+  if (!guidelines || guidelines.length === 0) {
+    return "";
+  }
+
+  const lines = guidelines.map((guideline) => {
+    const scopeLabel =
+      String(guideline.scope || "").toUpperCase() === "GLOBAL" ? "GLOBAL" : "TEMA";
+    return `- [${scopeLabel}] ${guideline.title}: ${guideline.instructions}`;
+  });
+
+  return `\n\nDIRETRIZES ESPECÍFICAS DO CÉREBRO DE DIRETRIZES (CUMPRIMENTO OBRIGATÓRIO):\n${lines.join("\n")}`;
+}
+
+/**
  * Gera um artigo completo com SEO para o Blog
  */
 export async function generateBlogArticleWithNvidia(params?: string | {
@@ -155,56 +180,93 @@ export async function generateBlogArticleWithNvidia(params?: string | {
   keywords?: string[];
   targetAudience?: string;
   tone?: string;
+  guidelines?: PromptGuidelineInput[];
 }): Promise<GeneratedArticle> {
   const p = typeof params === "string" ? { topic: params } : params;
   const topic =
     p?.topic ||
     DEFAULT_TOPIC_IDEAS[Math.floor(Math.random() * DEFAULT_TOPIC_IDEAS.length)];
   const category = p?.category || "Fachadas & Comunicação Visual";
-  const keywords = p?.keywords?.length
-    ? p.keywords.join(", ")
-    : "fachadas em ACM, letreiros luminosos LED, usinagem CNC, comunicação visual comercial";
-  const targetAudience = p?.targetAudience || "Empresários, Lojistas, Franquias e Arquitetos";
-  const tone = p?.tone || "Técnico Especialista, Didático e Focado em Conversão";
+  const keywordsList = p?.keywords?.length
+    ? p.keywords
+    : ["fachadas em ACM", "letreiros luminosos LED", "usinagem CNC", "comunicação visual comercial"];
+  const keywords = keywordsList.join(", ");
+  const targetAudience = p?.targetAudience || "Empresários, Lojistas, Franquias, Engenheiros e Arquitetos";
+  // Sanitiza tons legados com foco comercial/conversão para manter a linha estritamente educativa
+  const rawTone = p?.tone?.trim();
+  const tone =
+    !rawTone || /convers[aã]o/i.test(rawTone)
+      ? "Técnico, Educativo, Didático e Imparcial (Sem Autopromoção)"
+      : rawTone;
 
-  const systemPrompt = `Você é o diretor sênior de engenharia visual e redação técnica da "ICTHUS Soluções e Design" (empresa líder em fachadas comerciais em ACM, letreiros luminosos em LED, usinagem CNC Router e comunicação visual corporativa de alto impacto).
+  // Carrega diretrizes explicitamente informadas ou aciona o Cérebro de Diretrizes com fallback seguro
+  let activeGuidelines: PromptGuidelineInput[] = [];
+  if (Array.isArray(p?.guidelines)) {
+    activeGuidelines = p.guidelines;
+  } else {
+    try {
+      activeGuidelines = await matchGuidelinesForArticle({
+        topic,
+        category: p?.category,
+        keywords: p?.keywords,
+      });
+    } catch (err) {
+      console.warn(
+        "[AI Engine] Não foi possível consultar as diretrizes do blog, prosseguindo sem bloqueio:",
+        err
+      );
+      activeGuidelines = [];
+    }
+  }
 
-Sua missão é produzir um artigo aprofundado, técnico, altamente persuasivo e com SEO impecável em Português do Brasil (pt-BR).
+  const guidelinesSection = buildGuidelinesPromptSection(activeGuidelines);
+
+  const systemPrompt = `Você é um Engenheiro Sênior e Professor Especialista em Engenharia de Comunicação Visual, Arquitetura Comercial, Materiais (ACM, Acrílico, Aço Inox, Policarbonato, Vinil), Iluminação LED e Processos de Fabricação (Usinagem CNC Router e Corte a Laser).
+
+Sua missão é produzir um artigo técnico, educativo, instrutivo e aprofundado em Português do Brasil (pt-BR), com excelente estrutura de SEO, focado em ensinar conceitos de engenharia, especificações técnicas, normas, comparativos práticos e boas práticas de execução.
+
+PROIBIÇÃO ESTRITA DE AUTOPROMOÇÃO:
+- NUNCA mencione o nome da empresa ("ICTHUS", "Ictus", "Glessios" ou qualquer marca própria) em nenhuma parte do artigo ("title", "excerpt", "contentMarkdown", "metaTitle", "metaDescription").
+- NUNCA utilize primeira pessoa corporativa ("nós fazemos", "aqui na empresa", "nossa equipe", "nossos projetos") nem linguagem de propaganda, venda ou autopromoção.
+- NUNCA inclua chamadas comerciais para orçamento, números de WhatsApp/telefone ou links promocionais como "/#orcamento".
+- O texto deve ser 100% imparcial, técnico e educativo, como um guia de engenharia ou aula técnica de referência.${guidelinesSection}
 
 REGRAS OBRIGATÓRIAS:
 1. Responda EXCLUSIVAMENTE em formato JSON VÁLIDO.
 2. Dentro dos campos de texto (especialmente "contentMarkdown"), use "\\n" para quebras de linha, NUNCA quebras literais de linha brutas.
 3. No campo "contentMarkdown":
-   - Escreva um artigo completo e robusto (mínimo de 800 palavras).
-   - Use formatação rica em Markdown: introdução de impacto, subtítulos ## e ###, listas com bullet points e tabelas comparativas com especificações técnicas (ex: espessuras de chapas de ACM 3mm/4mm, durabilidade de LEDs com proteção IP67/IP68).
-   - Inclua uma seção de Perguntas Frequentes (FAQ) com 3 dúvidas comuns de clientes.
-   - Conclua com uma chamada para ação (CTA) persuasiva direcionando o leitor para solicitar um Estudo Preliminar 3D e orçamento personalizado com a ICTHUS (mencionando o WhatsApp oficial (41) 99655-6102 e o link [Solicitar Estudo 3D](/#orcamento)).
+   - Escreva um artigo completo, didático e robusto (mínimo de 800 palavras).
+   - Use formatação rica em Markdown: introdução técnica contextualizando o problema ou conceito, subtítulos ## e ### bem organizados, listas com bullet points e tabelas comparativas com especificações técnicas reais (ex: espessuras de chapas de ACM 3mm/4mm, ligas, graus de proteção IP67/IP68, tolerâncias de corte, critérios dimensionais).
+   - Explique o "como" e o "porquê" por trás das escolhas técnicas, apresentando critérios objetivos de decisão e erros comuns a evitar na execução ou especificação.
+   - Inclua uma seção de Perguntas Frequentes (FAQ Técnico) com 3 dúvidas técnicas recorrentes sobre o assunto e respostas objetivas.
+   - Conclua com uma seção de Síntese Técnica e Checklist Prático de Boas Práticas, consolidando o aprendizado para que o leitor possa aplicar ou avaliar tecnicamente o tema abordado.
 4. No campo "imageQuery": forneça de 3 a 5 palavras-chave em INGLÊS específicas e estéticas para buscar uma foto profissional no banco de imagens Pexels (exemplo: "modern commercial facade architecture led signage").
 
 ESTRUTURA DO JSON DE RESPOSTA:
 {
-  "title": "Título magnético com palavra-chave principal",
+  "title": "Título educativo e técnico claro com palavra-chave principal",
   "slug": "titulo-em-slug-amigavel",
-  "excerpt": "Resumo executivo de 2 parágrafos curtos explicando a dor do empresário e as vantagens da solução apresentada",
+  "excerpt": "Resumo técnico e didático de 2 parágrafos curtos contextualizando o tema, o desafio técnico abordado e o que o leitor vai aprender no artigo",
   "contentMarkdown": "Artigo completo em Markdown rico estruturado...",
   "metaTitle": "Título SEO para Google com até 60 caracteres",
-  "metaDescription": "Meta descrição irresistível com até 155 caracteres",
+  "metaDescription": "Meta descrição educativa e informativa com até 155 caracteres",
   "tags": ["Tag1", "Tag2", "Tag3", "Tag4"],
   "imageQuery": "commercial building facade modern architecture",
   "readingTimeMin": 5
 }`;
 
-  const userPrompt = `Gere o artigo completo com base nos parâmetros:
+  const userPrompt = `Gere o artigo técnico e educativo completo com base nos parâmetros:
 - Pauta / Tema Principal: "${topic}"
 - Categoria: "${category}"
 - Palavras-chave prioritárias: "${keywords}"
 - Público-Alvo: "${targetAudience}"
-- Tom de Voz: "${tone}"`;
+- Tom de Voz: "${tone}"
+- Diretriz Editorial: "Artigo 100% educativo e técnico. Proibido mencionar a ICTHUS ou fazer autopromoção/vendas."${guidelinesSection}`;
 
   const rawContent = await callLLM({
     systemPrompt,
     userPrompt,
-    maxTokens: 2500,
+    maxTokens: 3500,
     temperature: 0.35,
   });
 
@@ -247,23 +309,24 @@ export async function suggestTopicsWithAI(
 
   const categoriesPattern = availableCategories.join(" | ");
 
-  const systemPrompt = `Você é o estrategista chefe de SEO e Inbound Marketing da ICTHUS (fábrica de fachadas em ACM, letreiros LED e comunicação visual).
-Sua missão é sugerir exatamente ${count} temas/pautas inéditas de alta demanda e pesquisa no Google para comerciantes, arquitetos e redes corporativas.
+  const systemPrompt = `Você é um editor-chefe técnico especializado em engenharia de comunicação visual, fachadas em ACM, letreiros LED, materiais arquitetônicos e processos de fabricação (usinagem CNC e corte a laser).
+Sua missão é sugerir exatamente ${count} temas/pautas educativas, técnicas e instrutivas de alta relevância e busca para arquitetos, engenheiros, projetistas, fabricantes e empresários.
+Não sugira pautas promocionais nem mencione nomes de empresas.
 
 Responda EXCLUSIVAMENTE em formato JSON VÁLIDO no seguinte formato:
 {
   "topics": [
     {
-      "title": "Título sugerido da pauta",
+      "title": "Título educativo/técnico sugerido da pauta",
       "category": "${categoriesPattern}",
       "keywords": ["palavra1", "palavra2", "palavra3"],
-      "targetAudience": "Empresários, Lojistas e Arquitetos",
-      "tone": "Técnico Especialista & Conversão"
+      "targetAudience": "Arquitetos, Engenheiros, Projetistas e Empresários",
+      "tone": "Técnico, Educativo e Didático"
     }
   ]
 }`;
 
-  const userPrompt = `Gere ${count} pautas estratégicas focadas em atrair orçamentos para a ICTHUS. Escolha obrigatoriamente o campo "category" de cada pauta entre: ${categoriesPattern}.`;
+  const userPrompt = `Gere ${count} pautas técnicas e educativas focadas em ensinar especificações, processos de fabricação, boas práticas de instalação, normas e engenharia de materiais. Escolha obrigatoriamente o campo "category" de cada pauta entre: ${categoriesPattern}.`;
 
   try {
     const rawContent = await callLLM({
@@ -281,12 +344,12 @@ Responda EXCLUSIVAMENTE em formato JSON VÁLIDO no seguinte formato:
     console.warn("[AI Engine] Erro na geração dinâmica de pautas via LLM, aplicando acervo estratégico curado:", err);
   }
 
-  // Fallback estratégico de alta conversão
+  // Fallback educativo curado com foco em engenharia e instrução técnica
   return DEFAULT_TOPIC_IDEAS.slice(0, count).map((ideaTitle, idx) => ({
     title: ideaTitle,
     category: availableCategories[idx % availableCategories.length],
-    keywords: ["fachadas em acm", "letreiro luminoso", "comunicação visual", "curitiba"],
-    targetAudience: "Empresários, Lojistas e Arquitetos",
-    tone: "Técnico Especialista & Conversão",
+    keywords: ["fachadas em acm", "letreiro luminoso", "comunicação visual", "engenharia de materiais"],
+    targetAudience: "Arquitetos, Engenheiros, Projetistas e Empresários",
+    tone: "Técnico, Educativo e Didático",
   }));
 }

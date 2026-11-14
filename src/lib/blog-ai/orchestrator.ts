@@ -5,6 +5,7 @@
 
 import prisma from "@/lib/prisma";
 import { generateBlogArticleWithNvidia } from "./nvidia-nim";
+import { matchGuidelinesForArticle } from "./guidelines";
 import { searchPexelsImage } from "./pexels";
 import { PostStatus, TopicStatus, PriorityLevel } from "@prisma/client";
 
@@ -260,14 +261,39 @@ export async function runAutonomousBlogCycle(options?: {
       });
     }
 
-    // 1. Gera o artigo completo com a IA
+    // 1. Resolve e registra no log as diretrizes aplicáveis ao tema, depois gera o artigo com a IA
     console.log(`[Blog Agent] Gerando artigo com IA para o tema: ${topicToUse?.title || "Tema Estratégico Autônomo"}`);
+
+    let matchedGuidelines: Awaited<ReturnType<typeof matchGuidelinesForArticle>> | undefined;
+    if (topicToUse) {
+      matchedGuidelines = await matchGuidelinesForArticle({
+        topic: topicToUse.title,
+        category: topicToUse.category,
+        keywords: topicToUse.keywords,
+      }).catch((err) => {
+        console.warn("[Blog Agent] Falha ao consultar diretrizes para log do ciclo:", err);
+        return undefined;
+      });
+
+      if (matchedGuidelines && matchedGuidelines.length > 0) {
+        const summary = matchedGuidelines
+          .map((g) => `[${g.scope}] ${g.title}`)
+          .join(" | ");
+        console.log(`[Blog Agent] Diretrizes acionadas (${matchedGuidelines.length}): ${summary}`);
+      } else {
+        console.log("[Blog Agent] Nenhuma diretriz específica acionada para este ciclo.");
+      }
+    } else {
+      console.log("[Blog Agent] Pauta autônoma dinâmica: as diretrizes serão resolvidas pelo motor de IA após seleção do tema.");
+    }
+
     const generated = await generateBlogArticleWithNvidia({
       topic: topicToUse?.title,
       category: topicToUse?.category || undefined,
       keywords: topicToUse?.keywords || undefined,
       targetAudience: topicToUse?.targetAudience || undefined,
       tone: topicToUse?.tone || undefined,
+      guidelines: matchedGuidelines,
     });
 
     // 2. Busca imagem profissional no Pexels

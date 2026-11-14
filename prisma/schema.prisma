@@ -740,6 +740,21 @@ model BlogAgentConfig {
   @@map("blog_agent_configs")
 }
 
+model BlogGuideline {
+  id              String        @id @default(cuid())
+  title           String
+  scope           String        @default("TOPIC")
+  category        String?
+  triggerKeywords String[]      @default([])
+  instructions    String        @db.Text
+  priority        PriorityLevel @default(MEDIUM)
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("blog_guidelines")
+}
+
 // ====================================================
 // NOTIFICAÇÕES MULTICANAL (IN-APP & WHATSAPP)
 // ====================================================

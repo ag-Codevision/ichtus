@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
             category: item.category,
             keywords: item.keywords || [],
             targetAudience: item.targetAudience || "Empresários, Lojistas e Arquitetos",
-            tone: item.tone || "Técnico Especialista e Conversão",
+            tone: item.tone || "Técnico, Educativo e Didático",
             priority: PriorityLevel.MEDIUM,
             status: TopicStatus.PENDING,
           },
