@@ -3,7 +3,7 @@ import { Footer } from "@/components/layout/footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import prisma from "@/lib/prisma";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, shouldBypassImageOptimization, resolvePublicBlogImageUrl } from "@/lib/utils";
 import {
   Clock,
   ArrowLeft,
@@ -65,7 +65,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: `https://icthusbrasil.com/blog/${post.slug}`,
       images: [
         {
-          url: post.coverImageUrl,
+          url: resolvePublicBlogImageUrl(post.coverImageUrl),
           alt: post.imageAlt,
         },
       ],
@@ -152,7 +152,7 @@ export default async function BlogPostPage({ params }: PageProps) {
     "@type": "Article",
     headline: post.title,
     description: post.metaDescription,
-    image: post.coverImageUrl,
+    image: resolvePublicBlogImageUrl(post.coverImageUrl),
     datePublished: post.publishedAt.toISOString(),
     dateModified: post.updatedAt.toISOString(),
     author: {
@@ -263,9 +263,10 @@ export default async function BlogPostPage({ params }: PageProps) {
           {/* Imagem de Capa em Alta Resolução com Animação */}
           <div className="animate-blog-in animation-delay-150 my-10 relative aspect-[16/9] sm:aspect-[21/9] w-full rounded-3xl overflow-hidden bg-glessios-charcoal border border-glessios-border-dark shadow-2xl">
             <Image
-              src={post.coverImageUrl}
+              src={post.coverImageUrl || "/logo.jpg"}
               alt={post.imageAlt || post.title}
               fill
+              unoptimized={shouldBypassImageOptimization(post.coverImageUrl)}
               className="object-cover"
               sizes="(max-width: 1200px) 100vw, 1152px"
               priority

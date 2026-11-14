@@ -40,9 +40,24 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Validação de extensão permitida
+    // Validação de extensão permitida (com fallback pelo MIME type caso o nome venha sem extensão)
+    const mimeExtensionMap: Record<string, string> = {
+      "image/png": ".png",
+      "image/jpeg": ".jpg",
+      "image/jpg": ".jpg",
+      "image/webp": ".webp",
+      "image/avif": ".avif",
+      "image/svg+xml": ".svg",
+      "image/gif": ".gif",
+      "video/mp4": ".mp4",
+      "video/webm": ".webm",
+      "video/quicktime": ".mov",
+      "video/x-msvideo": ".avi",
+      "video/x-m4v": ".m4v",
+    };
+
     const originalName = file.name || "media";
-    const ext = path.extname(originalName).toLowerCase();
+    const ext = (path.extname(originalName).toLowerCase() || mimeExtensionMap[file.type] || "").toLowerCase();
     const videoExtensions = [".mp4", ".webm", ".mov", ".avi", ".m4v"];
     const allowedExtensions = [
       ".png",

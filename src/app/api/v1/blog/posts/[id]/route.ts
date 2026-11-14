@@ -42,6 +42,12 @@ export async function PATCH(
       data.coverImageUrl = body.coverImageUrl.trim();
     }
     if (typeof body.imageAlt === "string") data.imageAlt = body.imageAlt.trim();
+    if (body.imagePhotographer !== undefined) {
+      data.imagePhotographer =
+        typeof body.imagePhotographer === "string"
+          ? body.imagePhotographer.trim() || null
+          : null;
+    }
     if (Array.isArray(body.tags)) {
       data.tags = body.tags
         .filter((t: any) => typeof t === "string")

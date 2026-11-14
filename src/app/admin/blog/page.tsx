@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { formatDateTime } from "@/lib/utils";
 import {
@@ -31,7 +31,33 @@ import {
   Pencil,
   FileText,
   Tag,
+  Upload,
+  Image as ImageIcon,
 } from "lucide-react";
+
+interface MarkdownImageItem {
+  fullMatch: string;
+  alt: string;
+  url: string;
+}
+
+/**
+ * Extrai ocorrências de imagens Markdown ![alt](url) do conteúdo do artigo
+ */
+function extractMarkdownImages(markdown: string): MarkdownImageItem[] {
+  if (!markdown) return [];
+  const regex = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
+  const items: MarkdownImageItem[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(markdown)) !== null) {
+    items.push({
+      fullMatch: match[0],
+      alt: match[1] || "",
+      url: match[2] || "",
+    });
+  }
+  return items;
+}
 import {
   BlogCategoriesModal,
   type BlogCategoryItem,
@@ -142,11 +168,24 @@ export default function AdminBlogPage() {
   const [editPostExcerpt, setEditPostExcerpt] = useState("");
   const [editPostContent, setEditPostContent] = useState("");
   const [editPostCoverImage, setEditPostCoverImage] = useState("");
+  const [editPostImageAlt, setEditPostImageAlt] = useState("");
+  const [editPostImagePhotographer, setEditPostImagePhotographer] = useState("");
   const [editPostStatus, setEditPostStatus] = useState<"PUBLISHED" | "DRAFT" | "ARCHIVED">("DRAFT");
   const [editPostTags, setEditPostTags] = useState("");
   const [editPostMetaTitle, setEditPostMetaTitle] = useState("");
   const [editPostMetaDesc, setEditPostMetaDesc] = useState("");
   const [savingEditPost, setSavingEditPost] = useState(false);
+
+  // Estados e referências para upload de imagens próprias nos artigos
+  const [uploadingCoverModal, setUploadingCoverModal] = useState(false);
+  const [uploadingInlineImage, setUploadingInlineImage] = useState(false);
+  const [uploadingCardPostId, setUploadingCardPostId] = useState<string | null>(null);
+  const quickCoverPostIdRef = useRef<string | null>(null);
+  const quickCoverInputRef = useRef<HTMLInputElement>(null);
+  const modalCoverInputRef = useRef<HTMLInputElement>(null);
+  const modalMarkdownFileInputRef = useRef<HTMLInputElement>(null);
+  const modalMarkdownTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const replacingMdTargetRef = useRef<MarkdownImageItem | null>(null);
 
   // Input de Horário
   const [newHourInput, setNewHourInput] = useState("09:00");
@@ -548,6 +587,128 @@ export default function AdminBlogPage() {
     }
   };
 
+  // Helper compartilhado para upload de imagens próprias do blog
+  const uploadBlogImageFile = async (file: File): Promise<string> => {
+    const allowedExt = /\.(png|jpe?g|webp|avif|svg|gif)$/i;
+    if (!file.type.startsWith("image/") && !allowedExt.test(file.name)) {
+      throw new Error("Selecione um arquivo de imagem válido (PNG, JPG, WEBP, AVIF, GIF ou SVG).");
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch("/api/v1/admin/cms/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.success || !json?.url) {
+      throw new Error(json?.error || "Falha ao enviar a imagem para o servidor.");
+    }
+
+    return json.url as string;
+  };
+
+  // Ação: Upload rápido da imagem de capa diretamente pelo Card do artigo
+  const handleQuickUploadPostCover = async (postId: string, file: File) => {
+    const targetPost = posts.find((p) => p.id === postId);
+    setUploadingCardPostId(postId);
+    try {
+      const uploadedUrl = await uploadBlogImageFile(file);
+      const isStockCredit =
+        targetPost?.imagePhotographer?.includes("Pexels") ||
+        targetPost?.imagePhotographer?.includes("Unsplash");
+
+      const res = await fetch(`/api/v1/blog/posts/${postId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          coverImageUrl: uploadedUrl,
+          ...(isStockCredit ? { imagePhotographer: "" } : {}),
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error || "Erro ao atualizar capa do artigo.");
+
+      showFeedback("success", "Imagem de capa atualizada com sucesso!");
+      await fetchData();
+    } catch (err: any) {
+      showFeedback("error", err.message || "Erro ao enviar imagem de capa.");
+    } finally {
+      setUploadingCardPostId(null);
+      quickCoverPostIdRef.current = null;
+    }
+  };
+
+  // Ação: Upload da imagem de capa dentro do Modal de Edição
+  const handleUploadModalCover = async (file: File) => {
+    setUploadingCoverModal(true);
+    try {
+      const uploadedUrl = await uploadBlogImageFile(file);
+      setEditPostCoverImage(uploadedUrl);
+      if (
+        editPostImagePhotographer.includes("Pexels") ||
+        editPostImagePhotographer.includes("Unsplash")
+      ) {
+        setEditPostImagePhotographer("");
+      }
+      if (!editPostImageAlt.trim() && editPostTitle.trim()) {
+        setEditPostImageAlt(editPostTitle.trim());
+      }
+      showFeedback("success", "Imagem enviada! Clique em Salvar Alterações para aplicar no artigo.");
+    } catch (err: any) {
+      showFeedback("error", err.message || "Erro ao enviar imagem de capa.");
+    } finally {
+      setUploadingCoverModal(false);
+    }
+  };
+
+  // Ação: Upload de imagem para inserir ou substituir dentro do Markdown do artigo
+  const handleUploadMarkdownImage = async (file: File) => {
+    setUploadingInlineImage(true);
+    try {
+      const uploadedUrl = await uploadBlogImageFile(file);
+      const replaceTarget = replacingMdTargetRef.current;
+
+      if (replaceTarget) {
+        const cleanAlt = replaceTarget.alt || "Imagem do artigo";
+        const replacement = `![${cleanAlt}](${uploadedUrl})`;
+        setEditPostContent((prev) => prev.replace(replaceTarget.fullMatch, replacement));
+        replacingMdTargetRef.current = null;
+        showFeedback("success", "Imagem interna substituída! Salve o artigo para confirmar.");
+        return;
+      }
+
+      const defaultAlt = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]+/g, " ").trim() || "Imagem ilustrativa";
+      const snippet = `\n\n![${defaultAlt}](${uploadedUrl})\n\n`;
+      const textarea = modalMarkdownTextareaRef.current;
+
+      if (textarea) {
+        const start = textarea.selectionStart ?? editPostContent.length;
+        const end = textarea.selectionEnd ?? editPostContent.length;
+        const nextValue =
+          editPostContent.slice(0, start) + snippet + editPostContent.slice(end);
+        setEditPostContent(nextValue);
+      } else {
+        setEditPostContent((prev) => `${prev}${snippet}`);
+      }
+
+      showFeedback("success", "Imagem inserida no conteúdo! Salve o artigo para publicar.");
+    } catch (err: any) {
+      showFeedback("error", err.message || "Erro ao enviar imagem do conteúdo.");
+    } finally {
+      setUploadingInlineImage(false);
+      replacingMdTargetRef.current = null;
+    }
+  };
+
+  const handleRemoveMarkdownImage = (item: MarkdownImageItem) => {
+    setEditPostContent((prev) =>
+      prev.replace(item.fullMatch, "").replace(/\n{3,}/g, "\n\n").trim()
+    );
+    showFeedback("info", "Imagem removida do conteúdo. Salve para confirmar.");
+  };
+
   // Ação: Abrir Modal de Edição de Artigo (CRUD - Edit)
   const handleOpenEditPost = (post: BlogPost) => {
     setEditingPost(post);
@@ -555,6 +716,8 @@ export default function AdminBlogPage() {
     setEditPostExcerpt(post.excerpt || "");
     setEditPostContent(post.contentMarkdown || "");
     setEditPostCoverImage(post.coverImageUrl || "");
+    setEditPostImageAlt(post.imageAlt || "");
+    setEditPostImagePhotographer(post.imagePhotographer || "");
     setEditPostStatus(post.status || "DRAFT");
     setEditPostTags(Array.isArray(post.tags) ? post.tags.join(", ") : "");
     setEditPostMetaTitle(post.metaTitle || "");
@@ -575,6 +738,8 @@ export default function AdminBlogPage() {
           excerpt: editPostExcerpt.trim(),
           contentMarkdown: editPostContent,
           coverImageUrl: editPostCoverImage.trim(),
+          imageAlt: editPostImageAlt.trim(),
+          imagePhotographer: editPostImagePhotographer.trim(),
           status: editPostStatus,
           tags: editPostTags
             .split(",")
@@ -1343,6 +1508,22 @@ export default function AdminBlogPage() {
       {/* ABA 3: ARTIGOS GERADOS */}
       {activeTab === "posts" && (
         <div className="space-y-5">
+          {/* Input oculto compartilhado para troca rápida da imagem de capa diretamente do card */}
+          <input
+            ref={quickCoverInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/avif,image/gif,image/svg+xml"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              const targetId = quickCoverPostIdRef.current;
+              e.target.value = "";
+              if (file && targetId) {
+                handleQuickUploadPostCover(targetId, file);
+              }
+            }}
+          />
+
           {/* Barra superior de filtros de status, busca e link público */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-4 rounded-2xl bg-[#141518] border border-white/10">
             <div className="flex flex-wrap items-center gap-2">
@@ -1495,13 +1676,43 @@ export default function AdminBlogPage() {
                           {post.readingTimeMin || 4} min
                         </span>
 
-                        {/* Data e horário de postagem */}
-                        <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-[11px] text-zinc-200 font-medium">
+                        {/* Data, horário de postagem e troca rápida da capa */}
+                        <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between gap-2 text-[11px] text-zinc-200 font-medium">
                           <span className="inline-flex items-center gap-1.5 bg-black/55 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-white/10">
                             <Calendar className="w-3 h-3 text-[#FF650F]" />
                             {formatDateTime(post.publishedAt)}
                           </span>
+
+                          <button
+                            type="button"
+                            disabled={uploadingCardPostId === post.id}
+                            onClick={() => {
+                              quickCoverPostIdRef.current = post.id;
+                              quickCoverInputRef.current?.click();
+                            }}
+                            className="inline-flex items-center gap-1.5 bg-black/70 hover:bg-[#FF650F] text-white backdrop-blur-sm px-2.5 py-1 rounded-lg border border-white/15 hover:border-transparent text-[10px] font-bold transition-colors disabled:opacity-60"
+                            title="Fazer upload de nova imagem de capa para este artigo"
+                          >
+                            {uploadingCardPostId === post.id ? (
+                              <>
+                                <RefreshCw className="w-3 h-3 animate-spin" />
+                                <span>Enviando...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-3 h-3" />
+                                <span>Trocar Capa</span>
+                              </>
+                            )}
+                          </button>
                         </div>
+
+                        {uploadingCardPostId === post.id && (
+                          <div className="absolute inset-0 bg-black/65 backdrop-blur-xs flex flex-col items-center justify-center gap-2 text-white text-xs font-bold">
+                            <RefreshCw className="w-5 h-5 animate-spin text-[#FF650F]" />
+                            <span>Enviando nova capa...</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Corpo do Card */}
@@ -1836,27 +2047,131 @@ export default function AdminBlogPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-zinc-300 block mb-1.5">
-                  URL da Imagem de Capa
-                </label>
-                <div className="flex flex-col sm:flex-row gap-3 items-start">
-                  <input
-                    type="text"
-                    value={editPostCoverImage}
-                    onChange={(e) => setEditPostCoverImage(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none focus:border-[#FF650F]"
-                  />
-                  {editPostCoverImage && (
-                    <div className="w-full sm:w-28 h-16 rounded-xl overflow-hidden border border-white/10 bg-black/40 shrink-0">
+              {/* Seção Completa: Imagem de Capa (Upload Próprio ou URL Externa) */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) handleUploadModalCover(file);
+                }}
+                className="p-4 rounded-2xl bg-black/30 border border-white/10 space-y-3"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <label className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4 text-[#FF650F]" />
+                      <span>Imagem de Capa do Artigo</span>
+                    </label>
+                    <p className="text-[11px] text-zinc-400">
+                      Envie uma foto própria do seu computador (arraste aqui ou clique em enviar) ou informe uma URL externa.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={modalCoverInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/avif,image/gif,image/svg+xml"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (file) handleUploadModalCover(file);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={uploadingCoverModal}
+                      onClick={() => modalCoverInputRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-extrabold shadow-md shadow-orange-500/20 transition-all disabled:opacity-60"
+                    >
+                      {uploadingCoverModal ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Enviando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Fazer Upload de Imagem</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 items-stretch">
+                  <div className="relative w-full sm:w-52 h-32 rounded-xl overflow-hidden border border-white/10 bg-zinc-900 shrink-0">
+                    {editPostCoverImage ? (
                       <img
                         src={editPostCoverImage}
-                        alt="Preview da capa"
+                        alt={editPostImageAlt || "Preview da capa"}
                         className="w-full h-full object-cover"
                       />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 text-[11px] gap-1">
+                        <ImageIcon className="w-6 h-6 opacity-50" />
+                        <span>Sem imagem</span>
+                      </div>
+                    )}
+                    {editPostCoverImage && (
+                      <span
+                        className={`absolute top-2 left-2 text-[9px] font-extrabold px-2 py-0.5 rounded-md backdrop-blur-md border ${
+                          editPostCoverImage.startsWith("/uploads/")
+                            ? "bg-emerald-500/25 text-emerald-200 border-emerald-400/30"
+                            : "bg-black/70 text-zinc-200 border-white/15"
+                        }`}
+                      >
+                        {editPostCoverImage.startsWith("/uploads/") ? "Upload Próprio" : "Link Externo"}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex-grow space-y-2.5">
+                    <div>
+                      <label className="text-[11px] font-semibold text-zinc-400 block mb-1">
+                        URL da Imagem (preenchida automaticamente após o upload)
+                      </label>
+                      <input
+                        type="text"
+                        value={editPostCoverImage}
+                        onChange={(e) => setEditPostCoverImage(e.target.value)}
+                        placeholder="https://... ou /uploads/cms/..."
+                        className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none focus:border-[#FF650F]"
+                      />
                     </div>
-                  )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="text-[11px] font-semibold text-zinc-400 block mb-1">
+                          Descrição da Imagem (Alt SEO)
+                        </label>
+                        <input
+                          type="text"
+                          value={editPostImageAlt}
+                          onChange={(e) => setEditPostImageAlt(e.target.value)}
+                          placeholder="Descrição acessível da foto"
+                          className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none focus:border-[#FF650F]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-semibold text-zinc-400 block mb-1">
+                          Crédito / Fotografia (opcional)
+                        </label>
+                        <input
+                          type="text"
+                          value={editPostImagePhotographer}
+                          onChange={(e) => setEditPostImagePhotographer(e.target.value)}
+                          placeholder="Deixe vazio para ocultar crédito"
+                          className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white focus:outline-none focus:border-[#FF650F]"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1874,11 +2189,54 @@ export default function AdminBlogPage() {
                 />
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-zinc-300 block mb-1.5">
-                  Conteúdo em Markdown *
-                </label>
+              <div className="space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="text-xs font-semibold text-zinc-300">
+                    Conteúdo em Markdown *
+                  </label>
+
+                  <div>
+                    <input
+                      ref={modalMarkdownFileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/avif,image/gif,image/svg+xml"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (file) {
+                          handleUploadMarkdownImage(file);
+                        } else {
+                          replacingMdTargetRef.current = null;
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={uploadingInlineImage}
+                      onClick={() => {
+                        replacingMdTargetRef.current = null;
+                        modalMarkdownFileInputRef.current?.click();
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-[#FF650F]/20 text-zinc-200 hover:text-[#FF650F] border border-white/10 hover:border-[#FF650F]/40 text-[11px] font-bold transition-colors disabled:opacity-60"
+                    >
+                      {uploadingInlineImage ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Enviando imagem...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Inserir Imagem no Conteúdo</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
                 <textarea
+                  ref={modalMarkdownTextareaRef}
                   rows={10}
                   required
                   value={editPostContent}
@@ -1886,6 +2244,62 @@ export default function AdminBlogPage() {
                   placeholder="# Título&#10;&#10;Conteúdo do artigo..."
                   className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs font-mono text-zinc-200 leading-relaxed focus:outline-none focus:border-[#FF650F]"
                 />
+
+                {/* Galeria rápida de imagens detectadas dentro do conteúdo Markdown */}
+                {(() => {
+                  const mdImages = extractMarkdownImages(editPostContent);
+                  if (mdImages.length === 0) return null;
+                  return (
+                    <div className="p-3 rounded-xl bg-black/30 border border-white/10 space-y-2">
+                      <span className="text-[11px] font-bold text-zinc-300 flex items-center gap-1.5">
+                        <ImageIcon className="w-3.5 h-3.5 text-[#FF650F]" />
+                        <span>Imagens presentes no corpo do artigo ({mdImages.length})</span>
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {mdImages.map((imgItem, idx) => (
+                          <div
+                            key={`${imgItem.url}-${idx}`}
+                            className="flex items-center gap-2.5 p-2 rounded-xl bg-white/[0.03] border border-white/10"
+                          >
+                            <img
+                              src={imgItem.url}
+                              alt={imgItem.alt || `Imagem ${idx + 1}`}
+                              className="w-14 h-10 rounded-lg object-cover bg-zinc-900 shrink-0 border border-white/10"
+                            />
+                            <div className="min-w-0 flex-grow">
+                              <p className="text-[11px] font-semibold text-white truncate">
+                                {imgItem.alt || `Imagem ${idx + 1}`}
+                              </p>
+                              <p className="text-[10px] text-zinc-500 truncate">{imgItem.url}</p>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                disabled={uploadingInlineImage}
+                                onClick={() => {
+                                  replacingMdTargetRef.current = imgItem;
+                                  modalMarkdownFileInputRef.current?.click();
+                                }}
+                                className="px-2 py-1 rounded-lg bg-white/5 hover:bg-[#FF650F]/20 text-[10px] font-bold text-zinc-200 hover:text-[#FF650F] border border-white/10 transition-colors"
+                                title="Substituir por nova imagem via upload"
+                              >
+                                Trocar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveMarkdownImage(imgItem)}
+                                className="p-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors"
+                                title="Remover imagem do conteúdo"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div>

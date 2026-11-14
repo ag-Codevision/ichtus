@@ -17,15 +17,45 @@ export function slugifyHeading(text: string): string {
 }
 
 /**
- * Converte formatações inline como **negrito**, *itálico* e [texto](url) em nós React
+ * Valida se a URL de imagem é segura para exibição no artigo
+ */
+function isSafeImageSrc(url: string): boolean {
+  const trimmed = url.trim();
+  return (
+    trimmed.startsWith("/") ||
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("data:image/")
+  );
+}
+
+/**
+ * Converte formatações inline como ![alt](url), **negrito**, *itálico* e [texto](url) em nós React
  */
 function parseInlineFormatting(text: string): React.ReactNode[] {
-  // Regex combinada para tokens inline: links [texto](url), **negrito**, *itálico*
-  const pattern = /(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|\*[^*]+\*)/g;
+  // Regex combinada para tokens inline: imagens ![alt](url), links [texto](url), **negrito**, *itálico*
+  const pattern = /(!\[[^\]]*\]\([^)]+\)|\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|\*[^*]+\*)/g;
   const parts = text.split(pattern);
 
   return parts.map((part, index) => {
     if (!part) return null;
+
+    // Imagem inline: ![alt](url)
+    const imgMatch = part.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (imgMatch) {
+      const imgAlt = imgMatch[1].trim();
+      const imgUrl = imgMatch[2].trim();
+      if (!isSafeImageSrc(imgUrl)) return <span key={index}>{part}</span>;
+      return (
+        <img
+          key={index}
+          src={imgUrl}
+          alt={imgAlt || "Imagem do artigo"}
+          loading="lazy"
+          className="my-4 rounded-2xl border border-glessios-border-dark max-w-full h-auto shadow-lg"
+        />
+      );
+    }
 
     // Link: [texto](url)
     const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
@@ -194,6 +224,33 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
                 </li>
               ))}
             </ol>
+          );
+        }
+
+        // Bloco de imagem Markdown isolada: ![alt](url)
+        const blockImgMatch = block.match(/^!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)$/);
+        if (blockImgMatch && isSafeImageSrc(blockImgMatch[2])) {
+          const altText = blockImgMatch[1].trim();
+          const imgSrc = blockImgMatch[2].trim();
+          const titleCaption = blockImgMatch[3]?.trim() || altText;
+
+          return (
+            <figure
+              key={blockIdx}
+              className="my-8 rounded-2xl overflow-hidden bg-glessios-charcoal border border-glessios-border-dark shadow-xl"
+            >
+              <img
+                src={imgSrc}
+                alt={altText || "Imagem ilustrativa do artigo"}
+                loading="lazy"
+                className="w-full h-auto max-h-[560px] object-cover"
+              />
+              {titleCaption && (
+                <figcaption className="px-4 py-2.5 text-xs text-glessios-text-body/80 border-t border-glessios-border-dark bg-black/30">
+                  {titleCaption}
+                </figcaption>
+              )}
+            </figure>
           );
         }
 

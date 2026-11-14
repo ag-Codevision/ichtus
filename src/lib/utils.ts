@@ -65,3 +65,31 @@ export function formatDateTime(date: Date | string | null | undefined): string {
     return "-";
   }
 }
+
+/**
+ * Indica se o <Image> do Next.js deve ignorar a otimização automática (ex: uploads locais dinâmicos ou URLs externas fora de Pexels/Unsplash).
+ */
+export function shouldBypassImageOptimization(src?: string | null): boolean {
+  if (!src) return true;
+  const trimmed = src.trim();
+  if (trimmed.startsWith("/uploads/") || trimmed.startsWith("/api/") || trimmed.startsWith("data:")) {
+    return true;
+  }
+  try {
+    const url = new URL(trimmed);
+    return !["images.pexels.com", "images.unsplash.com"].includes(url.hostname);
+  } catch {
+    return trimmed.startsWith("/");
+  }
+}
+
+/**
+ * Garante URL absoluta para metadados SEO (OpenGraph / JSON-LD) quando a imagem for um upload local.
+ */
+export function resolvePublicBlogImageUrl(src?: string | null): string {
+  const baseUrl = "https://icthusbrasil.com";
+  if (!src || !src.trim()) return `${baseUrl}/logo.jpg`;
+  const trimmed = src.trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+  return `${baseUrl}${trimmed.startsWith("/") ? "" : "/"}${trimmed}`;
+}

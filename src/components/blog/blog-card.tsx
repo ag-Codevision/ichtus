@@ -4,7 +4,7 @@ import Link from "next/link";
 import { BlogPost } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, shouldBypassImageOptimization } from "@/lib/utils";
 import { Clock, ArrowRight, Calendar, UserCheck } from "lucide-react";
 
 interface BlogCardProps {
@@ -27,9 +27,10 @@ export function BlogCard({ post, isFeatured = false }: BlogCardProps) {
           {/* Capa do Artigo com Proporção 16:9 Compacta */}
           <div className="relative aspect-[16/9] w-full overflow-hidden bg-black/80">
             <Image
-              src={post.coverImageUrl}
+              src={post.coverImageUrl || "/logo.jpg"}
               alt={post.imageAlt || post.title}
               fill
+              unoptimized={shouldBypassImageOptimization(post.coverImageUrl)}
               className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             />
