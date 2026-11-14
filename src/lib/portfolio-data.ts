@@ -651,83 +651,108 @@ export const PORTFOLIO_PROJECTS: ProjectDetailItem[] = [
  * e fallback automático para a base detalhada local.
  */
 
-function mapDbProjectToDetailItem(dbp: any, fallbackLocal?: ProjectDetailItem): ProjectDetailItem {
-  const coverImage = dbp.coverImage || dbp.featuredImage || fallbackLocal?.coverImage || fallbackLocal?.featuredImage || '/images/hero-fallback.webp';
-  const featuredImage = dbp.featuredImage || fallbackLocal?.featuredImage || coverImage;
-  
-  let galleryImages = fallbackLocal?.galleryImages || [];
-  if (Array.isArray(dbp.galleryImages) && dbp.galleryImages.length > 0) {
-    galleryImages = dbp.galleryImages.map((img: any, i: number) => {
-      if (typeof img === 'string') {
-        return {
-          url: img,
-          caption: `Registro ${i + 1} da execução do projeto ${dbp.title}`,
-          category: 'Finalizado' as const,
-        };
-      }
-      return img;
-    });
+export function mapDbProjectToDetailItem(dbp: any, fallbackLocal?: ProjectDetailItem): ProjectDetailItem {
+  const coverImage =
+    dbp.coverImage?.trim() ||
+    dbp.featuredImage?.trim() ||
+    fallbackLocal?.coverImage ||
+    fallbackLocal?.featuredImage ||
+    "/images/hero-fallback.webp";
+  const featuredImage =
+    dbp.featuredImage?.trim() ||
+    dbp.coverImage?.trim() ||
+    fallbackLocal?.featuredImage ||
+    coverImage;
+
+  let galleryImages: ProjectDetailItem["galleryImages"] = fallbackLocal?.galleryImages || [];
+  if (Array.isArray(dbp.galleryImages)) {
+    galleryImages = (dbp.galleryImages as any[])
+      .map((img: any): ProjectDetailItem["galleryImages"][number] | null => {
+        if (typeof img === "string") {
+          const url = img.trim();
+          if (!url) return null;
+          const localMatch = fallbackLocal?.galleryImages?.find((lg) => lg.url === url);
+          return {
+            url,
+            caption: localMatch?.caption || "",
+            category: localMatch?.category,
+          };
+        }
+        if (img && typeof img.url === "string" && img.url.trim()) {
+          return {
+            url: img.url.trim(),
+            caption: img.caption || "",
+            category: img.category,
+          };
+        }
+        return null;
+      })
+      .filter((item): item is ProjectDetailItem["galleryImages"][number] => item !== null);
   }
 
-  let videos = fallbackLocal?.videos || [];
-  if (Array.isArray(dbp.videos) && dbp.videos.length > 0) {
-    videos = dbp.videos;
-  } else if (!fallbackLocal && coverImage) {
-    videos = [
-      {
-        id: `vid-db-${dbp.id}`,
-        title: `Showcase — ${dbp.title}`,
-        description: 'Showcase dos detalhes de acabamento e iluminação realizados pela equipe ICTHUS.',
-        videoUrl: '/videos/hero-background.mp4',
-        thumbnailUrl: featuredImage,
-        duration: '0:30',
-        tag: 'Apresentação da Obra',
-      },
-    ];
+  let videos: ProjectVideo[] = fallbackLocal?.videos || [];
+  if (Array.isArray(dbp.videos)) {
+    videos = dbp.videos
+      .filter((v: any) => v && typeof v.videoUrl === "string" && v.videoUrl.trim())
+      .map((v: any, idx: number) => ({
+        id: v.id || `vid-${dbp.id || "item"}-${idx + 1}`,
+        title: v.title || "",
+        description: v.description || "",
+        videoUrl: v.videoUrl.trim(),
+        thumbnailUrl: v.thumbnailUrl?.trim() || "",
+        duration: v.duration || "",
+        tag: v.tag || "",
+      }));
   }
 
-  let technicalSpecs = fallbackLocal?.technicalSpecs || [];
-  if (Array.isArray(dbp.technicalSpecs) && dbp.technicalSpecs.length > 0) {
-    technicalSpecs = dbp.technicalSpecs;
-  } else if (!fallbackLocal) {
-    technicalSpecs = [
-      { label: 'Categoria', value: dbp.category || 'Comunicação Visual' },
-      { label: 'Cliente', value: dbp.clientName || 'Cliente ICTHUS' },
-      { label: 'Localização', value: dbp.location || 'Porto Alegre, RS' },
-    ];
-  }
+  const technicalSpecs = Array.isArray(dbp.technicalSpecs)
+    ? dbp.technicalSpecs
+    : fallbackLocal?.technicalSpecs || [];
 
   const testimonial = dbp.testimonial || fallbackLocal?.testimonial;
+
+  const pickOptionalText = (dbVal: any, localVal?: string) => {
+    if (dbVal !== null && dbVal !== undefined) return String(dbVal);
+    return localVal || "";
+  };
 
   return {
     id: dbp.id,
     slug: dbp.slug,
     title: dbp.title,
-    subtitle: dbp.subtitle || fallbackLocal?.subtitle || `${dbp.category} executada com excelência para ${dbp.clientName || 'Cliente Especial'}.`,
+    subtitle: pickOptionalText(dbp.subtitle, fallbackLocal?.subtitle),
     category: dbp.category,
-    clientName: dbp.clientName || fallbackLocal?.clientName || 'Cliente ICTHUS',
-    clientSegment: dbp.clientSegment || fallbackLocal?.clientSegment || 'Comunicação Visual Corporativa',
-    location: dbp.location || fallbackLocal?.location || 'Porto Alegre, RS',
-    year: dbp.year || (dbp.completedAt ? dbp.completedAt.getFullYear().toString() : fallbackLocal?.year || '2026'),
-    executionTime: dbp.executionTime || fallbackLocal?.executionTime || 'Sob Medida',
-    dimensions: dbp.dimensions || fallbackLocal?.dimensions || 'Conforme Projeto Aprovado',
-    warranty: dbp.warranty || fallbackLocal?.warranty || 'Garantia Integral ICTHUS',
+    clientName: pickOptionalText(dbp.clientName, fallbackLocal?.clientName),
+    clientSegment: pickOptionalText(dbp.clientSegment, fallbackLocal?.clientSegment),
+    location: pickOptionalText(dbp.location, fallbackLocal?.location),
+    year:
+      dbp.year !== null && dbp.year !== undefined
+        ? String(dbp.year)
+        : dbp.completedAt
+          ? new Date(dbp.completedAt).getFullYear().toString()
+          : fallbackLocal?.year || "",
+    executionTime: pickOptionalText(dbp.executionTime, fallbackLocal?.executionTime),
+    dimensions: pickOptionalText(dbp.dimensions, fallbackLocal?.dimensions),
+    warranty: pickOptionalText(dbp.warranty, fallbackLocal?.warranty),
     coverImage,
     featuredImage,
     galleryImages,
     videos,
-    description: dbp.description || fallbackLocal?.description || '',
-    challenge: dbp.challenge || fallbackLocal?.challenge || 'Desenvolver uma solução sob medida com acabamento impecável e alta durabilidade.',
-    solution: dbp.solution || fallbackLocal?.solution || 'Aplicação dos mais nobres materiais do setor com projeto de engenharia e montagem técnica.',
-    results: (Array.isArray(dbp.results) && dbp.results.length > 0) ? dbp.results : (fallbackLocal?.results || [
-      'Destaque e valorização da marca do cliente perante seu público.',
-      'Entrega pontual com controle rígido de qualidade em fábrica.',
-      'Durabilidade e resistência garantidas.',
-    ]),
-    materials: (Array.isArray(dbp.materials) && dbp.materials.length > 0) ? dbp.materials : (fallbackLocal?.materials || (dbp.tags?.length ? dbp.tags : ['ACM', 'LED', 'Acrílico'])),
+    description: pickOptionalText(dbp.description, fallbackLocal?.description),
+    challenge: pickOptionalText(dbp.challenge, fallbackLocal?.challenge),
+    solution: pickOptionalText(dbp.solution, fallbackLocal?.solution),
+    results: Array.isArray(dbp.results)
+      ? dbp.results.filter((r: string) => Boolean(r && r.trim()))
+      : fallbackLocal?.results || [],
+    materials: Array.isArray(dbp.materials)
+      ? dbp.materials.filter((m: string) => Boolean(m && m.trim()))
+      : fallbackLocal?.materials || [],
     technicalSpecs,
     testimonial,
-    tags: (Array.isArray(dbp.tags) && dbp.tags.length > 0) ? dbp.tags : (fallbackLocal?.tags || [dbp.category]),
+    tags:
+      Array.isArray(dbp.tags) && dbp.tags.length > 0
+        ? dbp.tags
+        : fallbackLocal?.tags || [dbp.category],
   };
 }
 

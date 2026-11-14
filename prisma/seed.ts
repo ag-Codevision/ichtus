@@ -397,6 +397,24 @@ A iluminação por trás das letras-caixa (efeito *halo* ou contraluz) cria prof
   });
   console.log("✍️ Post inicial do blog cadastrado.");
 
+  // 6. Categorias Padrão do Mini-Cérebro do Blog
+  const blogCategories = [
+    { name: "Fachadas Comerciais", color: "#FF650F", order: 0 },
+    { name: "Letreiros & Iluminação", color: "#F59E0B", order: 1 },
+    { name: "Engenharia de Materiais", color: "#3B82F6", order: 2 },
+    { name: "Usinagem CNC & Corte", color: "#8B5CF6", order: 3 },
+    { name: "Normas Técnicas & ROI", color: "#10B981", order: 4 },
+  ];
+
+  for (const cat of blogCategories) {
+    await prisma.blogCategory.upsert({
+      where: { name: cat.name },
+      update: {},
+      create: cat,
+    });
+  }
+  console.log("🏷️ Categorias padrão do blog configuradas.");
+
   console.log("✅ Seed finalizado com sucesso!");
 }
 

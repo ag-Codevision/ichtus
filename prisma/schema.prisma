@@ -693,6 +693,17 @@ model BlogPost {
 // BLOG AUTOMATIZADO COM IA & MINI-CÉREBRO
 // ====================================================
 
+model BlogCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String?  @default("#FF650F")
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("blog_categories")
+}
+
 model BlogTopic {
   id                  String        @id @default(cuid())
   title               String
@@ -717,7 +728,8 @@ model BlogAgentConfig {
   preferredHours String[]  @default(["09:00", "15:00"])
   autoPublish    Boolean   @default(true)
   imageProvider  String    @default("PEXELS")
-  defaultAuthor  String    @default("Engenharia ICTHUS")
+  defaultAuthor         String    @default("Engenharia ICTHUS")
+  categoriesInitialized Boolean   @default(false)
   lastRunAt      DateTime?
   lastPostTitle  String?
   lastStatus     String?   @default("IDLE")

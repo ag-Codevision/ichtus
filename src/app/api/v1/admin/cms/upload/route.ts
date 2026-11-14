@@ -43,24 +43,23 @@ export async function POST(request: NextRequest) {
     // Validação de extensão permitida
     const originalName = file.name || "media";
     const ext = path.extname(originalName).toLowerCase();
+    const videoExtensions = [".mp4", ".webm", ".mov", ".avi", ".m4v"];
     const allowedExtensions = [
       ".png",
       ".jpg",
       ".jpeg",
       ".webp",
+      ".avif",
       ".svg",
       ".gif",
-      ".mp4",
-      ".webm",
-      ".mov",
-      ".avi",
+      ...videoExtensions,
     ];
 
     if (!allowedExtensions.includes(ext)) {
       return NextResponse.json(
         {
           success: false,
-          error: `Extensão de arquivo '${ext}' não permitida. Use imagens (.png, .jpg, .webp, .svg) ou vídeos (.mp4, .webm).`,
+          error: `Extensão de arquivo '${ext}' não permitida. Use imagens (.png, .jpg, .webp, .avif, .svg) ou vídeos (.mp4, .webm, .mov, .m4v).`,
         },
         { status: 400 }
       );
@@ -92,6 +91,7 @@ export async function POST(request: NextRequest) {
       fileName,
       size: buffer.length,
       mimeType: file.type,
+      mediaType: videoExtensions.includes(ext) ? "video" : "image",
     });
   } catch (error) {
     console.error("[API CMS Upload] Erro ao processar upload:", error);

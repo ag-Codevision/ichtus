@@ -230,7 +230,23 @@ ESTRUTURA DO JSON DE RESPOSTA:
 /**
  * Sugere pautas estratégicas utilizando a IA
  */
-export async function suggestTopicsWithAI(count = 10): Promise<TopicSuggestion[]> {
+export async function suggestTopicsWithAI(
+  count = 10,
+  categories?: string[]
+): Promise<TopicSuggestion[]> {
+  const availableCategories =
+    categories && categories.length > 0
+      ? categories
+      : [
+          "Fachadas Comerciais",
+          "Letreiros & Iluminação",
+          "Engenharia de Materiais",
+          "Usinagem CNC & Corte",
+          "Normas Técnicas & ROI",
+        ];
+
+  const categoriesPattern = availableCategories.join(" | ");
+
   const systemPrompt = `Você é o estrategista chefe de SEO e Inbound Marketing da ICTHUS (fábrica de fachadas em ACM, letreiros LED e comunicação visual).
 Sua missão é sugerir exatamente ${count} temas/pautas inéditas de alta demanda e pesquisa no Google para comerciantes, arquitetos e redes corporativas.
 
@@ -239,7 +255,7 @@ Responda EXCLUSIVAMENTE em formato JSON VÁLIDO no seguinte formato:
   "topics": [
     {
       "title": "Título sugerido da pauta",
-      "category": "Fachadas Comerciais | Letreiros & Iluminação | Engenharia de Materiais | Normas Técnicas",
+      "category": "${categoriesPattern}",
       "keywords": ["palavra1", "palavra2", "palavra3"],
       "targetAudience": "Empresários, Lojistas e Arquitetos",
       "tone": "Técnico Especialista & Conversão"
@@ -247,7 +263,7 @@ Responda EXCLUSIVAMENTE em formato JSON VÁLIDO no seguinte formato:
   ]
 }`;
 
-  const userPrompt = `Gere ${count} pautas estratégicas focadas em atrair orçamentos para a ICTHUS.`;
+  const userPrompt = `Gere ${count} pautas estratégicas focadas em atrair orçamentos para a ICTHUS. Escolha obrigatoriamente o campo "category" de cada pauta entre: ${categoriesPattern}.`;
 
   try {
     const rawContent = await callLLM({
@@ -268,7 +284,7 @@ Responda EXCLUSIVAMENTE em formato JSON VÁLIDO no seguinte formato:
   // Fallback estratégico de alta conversão
   return DEFAULT_TOPIC_IDEAS.slice(0, count).map((ideaTitle, idx) => ({
     title: ideaTitle,
-    category: idx % 2 === 0 ? "Fachadas Comerciais" : "Letreiros & Iluminação",
+    category: availableCategories[idx % availableCategories.length],
     keywords: ["fachadas em acm", "letreiro luminoso", "comunicação visual", "curitiba"],
     targetAudience: "Empresários, Lojistas e Arquitetos",
     tone: "Técnico Especialista & Conversão",

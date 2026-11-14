@@ -30,7 +30,13 @@ import {
   Minus,
   Pencil,
   FileText,
+  Tag,
 } from "lucide-react";
+import {
+  BlogCategoriesModal,
+  type BlogCategoryItem,
+  type BlogCategoryChangeEvent,
+} from "@/components/admin/blog/BlogCategoriesModal";
 
 const WEEK_DAYS = [
   { key: "MON", label: "Seg", full: "Segunda" },
@@ -45,7 +51,7 @@ const WEEK_DAYS = [
 interface BlogTopic {
   id: string;
   title: string;
-  category: string;
+  category: string | null;
   keywords: string[];
   targetAudience: string;
   tone: string;
@@ -94,6 +100,7 @@ export default function AdminBlogPage() {
 
   // Estados dos Dados
   const [topics, setTopics] = useState<BlogTopic[]>([]);
+  const [categories, setCategories] = useState<BlogCategoryItem[]>([]);
   const [config, setConfig] = useState<BlogAgentConfig | null>(null);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [topicStats, setTopicStats] = useState({ total: 0, pending: 0, inProgress: 0, completed: 0 });
@@ -105,24 +112,26 @@ export default function AdminBlogPage() {
   const [suggestingTopics, setSuggestingTopics] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
 
-  // Modais de Criação e Edição de Pautas
+  // Modais de Criação e Edição de Pautas / Categorias
+  const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
   const [isNewTopicModalOpen, setIsNewTopicModalOpen] = useState(false);
   const [newTopicMode, setNewTopicMode] = useState<"single" | "bulk">("single");
   const [singleTitle, setSingleTitle] = useState("");
-  const [singleCategory, setSingleCategory] = useState("Fachadas Comerciais");
+  const [singleCategory, setSingleCategory] = useState("");
   const [singlePriority, setSinglePriority] = useState<"LOW" | "MEDIUM" | "HIGH" | "URGENT">("MEDIUM");
   const [bulkTitles, setBulkTitles] = useState("");
 
   // Modal de Edição (CRUD)
   const [editingTopic, setEditingTopic] = useState<BlogTopic | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [editCategory, setEditCategory] = useState("Fachadas Comerciais");
+  const [editCategory, setEditCategory] = useState("");
   const [editPriority, setEditPriority] = useState<"LOW" | "MEDIUM" | "HIGH" | "URGENT">("MEDIUM");
   const [editKeywords, setEditKeywords] = useState("");
   const [savingEditTopic, setSavingEditTopic] = useState(false);
 
   // Filtros de Pautas
   const [topicFilter, setTopicFilter] = useState<string>("ALL");
+  const [topicCategoryFilter, setTopicCategoryFilter] = useState<string>("ALL");
   const [topicSearch, setTopicSearch] = useState("");
 
   // Filtros e Modal de Edição de Artigos Gerados (CRUD)
@@ -213,11 +222,14 @@ export default function AdminBlogPage() {
   };
 
   // Carrega Dados Iniciais
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchData = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
     try {
-      const [topicsRes, configRes, postsRes] = await Promise.all([
+      const [topicsRes, categoriesRes, configRes, postsRes] = await Promise.all([
         fetch("/api/v1/blog/topics"),
+        fetch("/api/v1/blog/categories"),
         fetch("/api/v1/blog/agent/config"),
         fetch("/api/v1/blog/posts"),
       ]);
@@ -226,6 +238,19 @@ export default function AdminBlogPage() {
         const tJson = await topicsRes.json();
         setTopics(tJson.data || []);
         if (tJson.stats) setTopicStats(tJson.stats);
+      }
+
+      if (categoriesRes.ok) {
+        const catJson = await categoriesRes.json();
+        const catList: BlogCategoryItem[] = catJson.data || [];
+        setCategories(catList);
+        if (catList.length > 0) {
+          setSingleCategory((prev) =>
+            prev && catList.some((c) => c.name === prev) ? prev : catList[0].name
+          );
+        } else {
+          setSingleCategory("");
+        }
       }
 
       if (configRes.ok) {
@@ -242,9 +267,45 @@ export default function AdminBlogPage() {
       console.error("Erro ao carregar dados do blog:", err);
       showFeedback("error", "Erro ao sincronizar informações.");
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, []);
+
+  // Sincroniza categorias e seleções nos modais após operações CRUD
+  const handleCategoriesChanged = async (event?: BlogCategoryChangeEvent) => {
+    if (event?.action === "create" && event.category) {
+      if (isNewTopicModalOpen) {
+        setSingleCategory(event.category.name);
+      }
+      if (editingTopic) {
+        setEditCategory(event.category.name);
+      }
+      showFeedback("success", `Categoria "${event.category.name}" criada!`);
+    } else if (event?.action === "update" && event.category && event.previousName) {
+      if (singleCategory === event.previousName) {
+        setSingleCategory(event.category.name);
+      }
+      if (editCategory === event.previousName) {
+        setEditCategory(event.category.name);
+      }
+      if (topicCategoryFilter === event.previousName) {
+        setTopicCategoryFilter(event.category.name);
+      }
+      showFeedback("success", `Categoria "${event.category.name}" atualizada!`);
+    } else if (event?.action === "delete" && event.deletedName) {
+      if (editCategory === event.deletedName) {
+        setEditCategory("");
+      }
+      if (topicCategoryFilter === event.deletedName) {
+        setTopicCategoryFilter("ALL");
+      }
+      showFeedback("success", `Categoria "${event.deletedName}" removida.`);
+    }
+
+    await fetchData(true);
+  };
 
   useEffect(() => {
     fetchData();
@@ -341,7 +402,7 @@ export default function AdminBlogPage() {
       setIsNewTopicModalOpen(false);
       setSingleTitle("");
       setBulkTitles("");
-      await fetchData();
+      await fetchData(true);
     } catch (err: any) {
       showFeedback("error", err.message || "Erro ao salvar pauta.");
     }
@@ -351,9 +412,51 @@ export default function AdminBlogPage() {
   const handleOpenEditTopic = (topic: BlogTopic) => {
     setEditingTopic(topic);
     setEditTitle(topic.title);
-    setEditCategory(topic.category || "Fachadas Comerciais");
+    setEditCategory(topic.category || "");
     setEditPriority(topic.priority || "MEDIUM");
     setEditKeywords(Array.isArray(topic.keywords) ? topic.keywords.join(", ") : "");
+  };
+
+  // Helper reutilizável para renderizar o seletor dinâmico de Categoria + atalho CRUD
+  const renderCategoryField = (
+    value: string,
+    onChange: (nextValue: string) => void
+  ) => {
+    const hasLegacyOption =
+      Boolean(value) &&
+      !categories.some((c) => c.name.toLowerCase() === value.toLowerCase());
+
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <label className="text-xs font-bold text-zinc-300">Categoria</label>
+          <button
+            type="button"
+            onClick={() => setIsCategoriesModalOpen(true)}
+            className="text-[11px] font-bold text-[#FF650F] hover:text-orange-400 hover:underline inline-flex items-center gap-1 transition-colors"
+            title="Criar, editar ou excluir categorias"
+          >
+            <Sliders className="w-3 h-3" />
+            <span>Gerenciar</span>
+          </button>
+        </div>
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full px-2.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+        >
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.name}>
+              {cat.name}
+            </option>
+          ))}
+          <option value="">Geral (Sem categoria)</option>
+          {hasLegacyOption && (
+            <option value={value}>{value} (Personalizada)</option>
+          )}
+        </select>
+      </div>
+    );
   };
 
   // Ação: Salvar Edição da Pauta (CRUD - Update)
@@ -377,7 +480,7 @@ export default function AdminBlogPage() {
 
       showFeedback("success", "Pauta atualizada com sucesso!");
       setEditingTopic(null);
-      await fetchData();
+      await fetchData(true);
     } catch (err: any) {
       showFeedback("error", err.message || "Erro ao salvar alterações.");
     } finally {
@@ -409,7 +512,7 @@ export default function AdminBlogPage() {
       const res = await fetch(`/api/v1/blog/topics/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Falha ao excluir.");
       showFeedback("success", "Pauta removida.");
-      await fetchData();
+      await fetchData(true);
     } catch (err: any) {
       showFeedback("error", err.message);
     }
@@ -519,6 +622,14 @@ export default function AdminBlogPage() {
   const filteredTopics = topics.filter((t) => {
     if (topicFilter === "ACTIVE" && t.status === "PAUSED") return false;
     if (topicFilter === "PAUSED" && t.status !== "PAUSED") return false;
+    if (topicCategoryFilter === "__NONE__" && t.category) return false;
+    if (
+      topicCategoryFilter !== "ALL" &&
+      topicCategoryFilter !== "__NONE__" &&
+      (t.category || "").toLowerCase() !== topicCategoryFilter.toLowerCase()
+    ) {
+      return false;
+    }
     if (topicSearch.trim()) {
       const search = topicSearch.toLowerCase();
       return (
@@ -745,10 +856,35 @@ export default function AdminBlogPage() {
                   </button>
                 ))}
               </div>
+
+              <select
+                value={topicCategoryFilter}
+                onChange={(e) => setTopicCategoryFilter(e.target.value)}
+                className="px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-zinc-300 text-xs font-semibold focus:border-[#FF650F] focus:outline-none"
+                title="Filtrar pautas por categoria"
+              >
+                <option value="ALL">Todas as Categorias</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.name}>
+                    {cat.name} ({cat.topicsCount})
+                  </option>
+                ))}
+                <option value="__NONE__">Geral (Sem categoria)</option>
+              </select>
             </div>
 
-            {/* Botões: Sugerir IA & Nova Pauta */}
-            <div className="flex items-center gap-2 shrink-0">
+            {/* Botões: Categorias, Sugerir IA & Nova Pauta */}
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsCategoriesModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-200 border border-white/10 text-xs font-bold transition-all"
+                title="Criar, editar ou excluir categorias do Mini-Cérebro"
+              >
+                <Tag className="w-3.5 h-3.5 text-[#FF650F]" />
+                <span>Categorias ({categories.length})</span>
+              </button>
+
               <button
                 onClick={handleSuggestTopics}
                 disabled={suggestingTopics}
@@ -764,7 +900,12 @@ export default function AdminBlogPage() {
               </button>
 
               <button
-                onClick={() => setIsNewTopicModalOpen(true)}
+                onClick={() => {
+                  if (!singleCategory && categories.length > 0) {
+                    setSingleCategory(categories[0].name);
+                  }
+                  setIsNewTopicModalOpen(true);
+                }}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FF650F] hover:bg-orange-600 text-white text-xs font-bold transition-all shadow-md shadow-orange-500/20"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -789,7 +930,11 @@ export default function AdminBlogPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredTopics.map((topic) => (
+              {filteredTopics.map((topic) => {
+                const matchedCat = categories.find(
+                  (c) => c.name.toLowerCase() === (topic.category || "").toLowerCase()
+                );
+                return (
                 <div
                   key={topic.id}
                   className={`p-3.5 rounded-xl bg-[#141518] border transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 ${
@@ -801,8 +946,14 @@ export default function AdminBlogPage() {
                   {/* Informações da Pauta */}
                   <div className="space-y-1 flex-grow">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/5 text-zinc-400 border border-white/5">
-                        {topic.category || "Geral"}
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/5 text-zinc-300 border border-white/10">
+                        {matchedCat && (
+                          <span
+                            className="w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ backgroundColor: matchedCat.color || "#FF650F" }}
+                          />
+                        )}
+                        <span>{topic.category || "Geral"}</span>
                       </span>
 
                       {topic.priority === "URGENT" && (
@@ -890,7 +1041,8 @@ export default function AdminBlogPage() {
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -1508,20 +1660,7 @@ export default function AdminBlogPage() {
               )}
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-300">Categoria</label>
-                  <select
-                    value={singleCategory}
-                    onChange={(e) => setSingleCategory(e.target.value)}
-                    className="w-full px-2.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
-                  >
-                    <option value="Fachadas Comerciais">Fachadas Comerciais</option>
-                    <option value="Letreiros & Iluminação">Letreiros &amp; Iluminação</option>
-                    <option value="Engenharia de Materiais">Engenharia de Materiais</option>
-                    <option value="Usinagem CNC & Corte">Usinagem CNC &amp; Corte</option>
-                    <option value="Normas Técnicas & ROI">Normas Técnicas &amp; ROI</option>
-                  </select>
-                </div>
+                {renderCategoryField(singleCategory, setSingleCategory)}
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-300">Prioridade</label>
@@ -1590,20 +1729,7 @@ export default function AdminBlogPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-300">Categoria</label>
-                  <select
-                    value={editCategory}
-                    onChange={(e) => setEditCategory(e.target.value)}
-                    className="w-full px-2.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
-                  >
-                    <option value="Fachadas Comerciais">Fachadas Comerciais</option>
-                    <option value="Letreiros & Iluminação">Letreiros &amp; Iluminação</option>
-                    <option value="Engenharia de Materiais">Engenharia de Materiais</option>
-                    <option value="Usinagem CNC & Corte">Usinagem CNC &amp; Corte</option>
-                    <option value="Normas Técnicas & ROI">Normas Técnicas &amp; ROI</option>
-                  </select>
-                </div>
+                {renderCategoryField(editCategory, setEditCategory)}
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-300">Prioridade</label>
@@ -1823,6 +1949,14 @@ export default function AdminBlogPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL 4: GERENCIAR CATEGORIAS DO MINI-CÉREBRO (CRUD COMPLETO) */}
+      <BlogCategoriesModal
+        isOpen={isCategoriesModalOpen}
+        onClose={() => setIsCategoriesModalOpen(false)}
+        categories={categories}
+        onCategoriesChanged={handleCategoriesChanged}
+      />
     </div>
   );
 }

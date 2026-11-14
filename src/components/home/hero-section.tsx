@@ -8,7 +8,6 @@ import { Sparkles, ArrowRight, Video, Edit2 } from "lucide-react";
 import { HeroSculpture } from "@/components/home/hero-sculpture";
 import { HeroRotatingWord } from "@/components/home/hero-rotating-word";
 import { HeroParallaxContainer } from "@/components/home/hero-parallax-container";
-import { MagneticButton } from "@/components/ui/magnetic-button";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { useCMS } from "@/components/cms/cms-provider";
 import { CMSEditableText } from "@/components/cms/cms-editable-text";
@@ -133,48 +132,44 @@ export function HeroSection() {
 
             {/* CTAs de Conversão com Botões Editáveis */}
             <div className="flex flex-col sm:flex-row items-center gap-3.5 pt-2 w-full sm:w-auto animate-hero-cta">
-              <MagneticButton strength={0.2} className="w-full sm:w-auto">
-                <CMSEditableButton
-                  label={hero.primaryButton?.label || "Solicitar Orçamento Exclusivo"}
-                  url={hero.primaryButton?.url || "/#contato"}
-                  onSave={(newLabel, newUrl) =>
-                    updateSection("hero", {
-                      primaryButton: { label: newLabel, url: newUrl },
-                    })
-                  }
-                  className="w-full sm:w-auto block"
+              <CMSEditableButton
+                label={hero.primaryButton?.label || "Solicitar Orçamento Exclusivo"}
+                url={hero.primaryButton?.url || "/#contato"}
+                onSave={(newLabel, newUrl) =>
+                  updateSection("hero", {
+                    primaryButton: { label: newLabel, url: newUrl },
+                  })
+                }
+                className="w-full sm:w-auto block"
+              >
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full sm:w-auto gap-3 font-bold text-base shadow-lg hover:scale-105 transition-all duration-300"
                 >
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    className="w-full sm:w-auto gap-3 font-bold text-base shadow-lg"
-                  >
-                    {hero.primaryButton?.label || "Solicitar Orçamento Exclusivo"}
-                    <ArrowRight className="w-5 h-5" />
-                  </Button>
-                </CMSEditableButton>
-              </MagneticButton>
+                  {hero.primaryButton?.label || "Solicitar Orçamento Exclusivo"}
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
+              </CMSEditableButton>
 
-              <MagneticButton strength={0.12} className="w-full sm:w-auto">
-                <CMSEditableButton
-                  label={hero.secondaryButton?.label || "Explorar Portfólio"}
-                  url={hero.secondaryButton?.url || "/#portfolio"}
-                  onSave={(newLabel, newUrl) =>
-                    updateSection("hero", {
-                      secondaryButton: { label: newLabel, url: newUrl },
-                    })
-                  }
-                  className="w-full sm:w-auto block"
+              <CMSEditableButton
+                label={hero.secondaryButton?.label || "Explorar Portfólio"}
+                url={hero.secondaryButton?.url || "/#portfolio"}
+                onSave={(newLabel, newUrl) =>
+                  updateSection("hero", {
+                    secondaryButton: { label: newLabel, url: newUrl },
+                  })
+                }
+                className="w-full sm:w-auto block"
+              >
+                <Button
+                  variant="dark-secondary"
+                  size="lg"
+                  className="w-full sm:w-auto text-base hover:scale-105 transition-all duration-300"
                 >
-                  <Button
-                    variant="dark-secondary"
-                    size="lg"
-                    className="w-full sm:w-auto text-base"
-                  >
-                    {hero.secondaryButton?.label || "Explorar Portfólio"}
-                  </Button>
-                </CMSEditableButton>
-              </MagneticButton>
+                  {hero.secondaryButton?.label || "Explorar Portfólio"}
+                </Button>
+              </CMSEditableButton>
             </div>
 
             {/* Métricas Editáveis */}

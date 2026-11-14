@@ -258,6 +258,7 @@ export function PortfolioGallery() {
                         alt={project.title}
                         fill
                         unoptimized
+                        referrerPolicy="no-referrer"
                         decoding="async"
                         className="object-cover transition-transform duration-700 group-hover:scale-105"
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -268,28 +269,36 @@ export function PortfolioGallery() {
                         <Badge variant="graphite" className="bg-[#121316]/85 backdrop-blur-md text-white text-[10px]">
                           {project.category}
                         </Badge>
-                        <Badge variant="orange" className="bg-[#FF650F] text-white text-[10px] border-none font-bold">
-                          {project.year || "2026"}
-                        </Badge>
+                        {project.year?.trim() && (
+                          <Badge variant="orange" className="bg-[#FF650F] text-white text-[10px] border-none font-bold">
+                            {project.year}
+                          </Badge>
+                        )}
                       </div>
 
-                      <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-white text-xs z-10">
-                        <span className="font-mono text-zinc-200 truncate">{project.location || "Porto Alegre, RS"}</span>
-                      </div>
+                      {project.location?.trim() && (
+                        <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-white text-xs z-10">
+                          <span className="font-mono text-zinc-200 truncate">{project.location}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Conteúdo do Card */}
                     <div className="p-6 flex flex-col justify-between flex-grow space-y-4">
                       <div>
-                        <span className="text-[11px] font-bold tracking-wider text-[#FF650F] uppercase font-mono block mb-1">
-                          {project.clientName || "Cliente Especial"}
-                        </span>
+                        {project.clientName?.trim() && (
+                          <span className="text-[11px] font-bold tracking-wider text-[#FF650F] uppercase font-mono block mb-1">
+                            {project.clientName}
+                          </span>
+                        )}
                         <h3 className="text-lg font-bold text-zinc-900 group-hover:text-[#FF650F] transition-colors leading-snug">
                           {project.title}
                         </h3>
-                        <p className="text-xs text-zinc-500 line-clamp-2 mt-2 leading-relaxed">
-                          {project.subtitle || project.description}
-                        </p>
+                        {(project.subtitle?.trim() || project.description?.trim()) && (
+                          <p className="text-xs text-zinc-500 line-clamp-2 mt-2 leading-relaxed">
+                            {project.subtitle || project.description}
+                          </p>
+                        )}
                       </div>
 
                       <div className="pt-4 border-t border-zinc-100 flex items-center justify-between text-xs font-bold text-zinc-900 group-hover:text-[#FF650F] transition-colors">

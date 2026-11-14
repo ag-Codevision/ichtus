@@ -21,7 +21,11 @@ import {
   type CMSGlobalContactContent,
   type CMSPortfolioSectionContent,
 } from "./cms-defaults";
-import { PORTFOLIO_PROJECTS, type ProjectDetailItem } from "./portfolio-data";
+import {
+  PORTFOLIO_PROJECTS,
+  mapDbProjectToDetailItem,
+  type ProjectDetailItem,
+} from "./portfolio-data";
 
 /**
  * Recupera o conteúdo de uma seção com fallback transparente para o padrão.
@@ -180,46 +184,11 @@ export async function getAllCMSProjects(): Promise<ProjectDetailItem[]> {
       orderBy: { createdAt: "desc" },
     });
 
-    const localSlugs = new Set(PORTFOLIO_PROJECTS.map((p) => p.slug));
-
-    // Projetos do banco convertidos para o formato ProjectDetailItem
-    const formattedDbProjects: ProjectDetailItem[] = dbProjects.map((p) => ({
-      id: p.id,
-      slug: p.slug,
-      title: p.title,
-      subtitle: p.subtitle || `${p.category} executada com excelência para ${p.clientName || "Cliente Especial"}.`,
-      category: p.category,
-      clientName: p.clientName || "Cliente Glessios",
-      clientSegment: p.clientSegment || "Comunicação Visual Corporativa",
-      location: p.location || "Porto Alegre, RS",
-      year: p.year || (p.completedAt ? p.completedAt.getFullYear().toString() : "2026"),
-      executionTime: p.executionTime || "Sob Medida",
-      dimensions: p.dimensions || "Conforme Projeto Aprovado",
-      warranty: p.warranty || "Garantia Integral Glessios",
-      coverImage: p.coverImage || p.featuredImage,
-      featuredImage: p.featuredImage,
-      galleryImages: (p.galleryImages && p.galleryImages.length > 0
-        ? p.galleryImages
-        : [p.featuredImage]
-      ).map((url, i) => ({
-        url,
-        caption: `Foto ${i + 1} da execução do projeto ${p.title}`,
-        category: "Finalizado",
-      })),
-      videos: Array.isArray(p.videos) ? (p.videos as any) : [],
-      description: p.description,
-      challenge: p.challenge || "Desenvolver uma solução sob medida com acabamento impecável e alta durabilidade.",
-      solution: p.solution || "Aplicação dos mais nobres materiais do setor com projeto de engenharia e montagem técnica.",
-      results: p.results && p.results.length > 0 ? p.results : ["Destaque visual de excelência"],
-      materials: p.materials && p.materials.length > 0 ? p.materials : ["ACM", "LED", "Acrílico"],
-      technicalSpecs: Array.isArray(p.technicalSpecs) ? (p.technicalSpecs as any) : [
-        { label: "Categoria", value: p.category },
-        { label: "Cliente", value: p.clientName || "Cliente Glessios" },
-        { label: "Garantia", value: p.warranty || "5 anos de garantia" },
-      ],
-      testimonial: p.testimonial ? (p.testimonial as any) : undefined,
-      tags: p.tags && p.tags.length > 0 ? p.tags : [p.category],
-    }));
+    // Projetos do banco convertidos para o formato ProjectDetailItem (reutilizando o mapper oficial)
+    const formattedDbProjects: ProjectDetailItem[] = dbProjects.map((p) => {
+      const fallback = PORTFOLIO_PROJECTS.find((local) => local.slug === p.slug || local.id === p.id);
+      return mapDbProjectToDetailItem(p, fallback);
+    });
 
     // Mantém os projetos do banco primeiro, depois os locais que não foram sobrescritos
     const dbSlugs = new Set(dbProjects.map((p) => p.slug));
@@ -232,59 +201,78 @@ export async function getAllCMSProjects(): Promise<ProjectDetailItem[]> {
   }
 }
 
+function normalizeGalleryUrls(galleryImages: unknown): string[] {
+  if (!Array.isArray(galleryImages)) return [];
+  return galleryImages
+    .map((g: any) => (typeof g === "string" ? g.trim() : typeof g?.url === "string" ? g.url.trim() : ""))
+    .filter(Boolean);
+}
+
+function normalizeVideosList(videos: unknown) {
+  if (!Array.isArray(videos)) return [];
+  return videos
+    .filter((v: any) => v && typeof v.videoUrl === "string" && v.videoUrl.trim())
+    .map((v: any, idx: number) => ({
+      id: v.id || `vid-${Date.now()}-${idx + 1}`,
+      title: typeof v.title === "string" ? v.title.trim() : "",
+      description: typeof v.description === "string" ? v.description.trim() : "",
+      videoUrl: v.videoUrl.trim(),
+      thumbnailUrl: typeof v.thumbnailUrl === "string" ? v.thumbnailUrl.trim() : "",
+      duration: typeof v.duration === "string" ? v.duration.trim() : "",
+      tag: typeof v.tag === "string" ? v.tag.trim() : "",
+    }));
+}
+
 export async function createCMSProject(data: Partial<ProjectDetailItem>): Promise<ProjectDetailItem> {
-  if (!data.title || !data.category) {
-    throw new Error("Título e categoria são obrigatórios para o projeto.");
+  const title = data.title?.trim() || "";
+  const category = data.category?.trim() || "";
+  const cover = data.featuredImage?.trim() || data.coverImage?.trim() || "";
+
+  if (!title || !category || !cover) {
+    throw new Error("Título, categoria e imagem de capa são obrigatórios para o projeto.");
   }
 
   // Gera slug amigável caso não fornecido
-  const slug = (
-    data.slug ||
-    data.title
+  const baseSlug =
+    data.slug?.trim() ||
+    title
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-  ) + `-${Date.now().toString().slice(-4)}`;
+      .replace(/^-+|-+$/g, "") ||
+    "projeto";
+  const slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
 
   const created = await prisma.portfolioProject.create({
     data: {
-      title: data.title,
+      title,
       slug,
-      subtitle: data.subtitle || "",
-      category: data.category,
-      clientName: data.clientName || "",
-      clientSegment: data.clientSegment || "",
-      location: data.location || "Porto Alegre, RS",
-      year: data.year || "2026",
-      executionTime: data.executionTime || "15 dias úteis",
-      dimensions: data.dimensions || "Sob medida",
-      warranty: data.warranty || "5 anos de garantia estrutural",
-      description: data.description || "Projeto corporativo desenvolvido sob medida.",
-      challenge: data.challenge || "",
-      solution: data.solution || "",
-      results: data.results || [],
-      materials: data.materials || [],
-      technicalSpecs: (data.technicalSpecs as any) || [],
-      testimonial: (data.testimonial as any) || null,
-      featuredImage: data.featuredImage || data.coverImage || "/images/portfolio/fachada-acm-tech-tower-thumb.webp",
-      coverImage: data.coverImage || data.featuredImage || "/images/portfolio/fachada-acm-tech-tower-cover.webp",
-      galleryImages: data.galleryImages ? data.galleryImages.map((g) => g.url) : [],
-      videos: (data.videos as any) || [],
-      tags: data.tags || [data.category],
+      subtitle: data.subtitle?.trim() || "",
+      category,
+      clientName: data.clientName?.trim() || "",
+      clientSegment: data.clientSegment?.trim() || "",
+      location: data.location?.trim() || "",
+      year: data.year?.trim() || "",
+      executionTime: data.executionTime?.trim() || "",
+      dimensions: data.dimensions?.trim() || "",
+      warranty: data.warranty?.trim() || "",
+      description: data.description?.trim() || "",
+      challenge: data.challenge?.trim() || "",
+      solution: data.solution?.trim() || "",
+      results: Array.isArray(data.results) ? data.results.map((r) => r.trim()).filter(Boolean) : [],
+      materials: Array.isArray(data.materials) ? data.materials.map((m) => m.trim()).filter(Boolean) : [],
+      technicalSpecs: Array.isArray(data.technicalSpecs) ? (data.technicalSpecs as any) : [],
+      testimonial: data.testimonial ? (data.testimonial as any) : null,
+      featuredImage: data.featuredImage?.trim() || cover,
+      coverImage: data.coverImage?.trim() || cover,
+      galleryImages: normalizeGalleryUrls(data.galleryImages),
+      videos: normalizeVideosList(data.videos) as any,
+      tags: Array.isArray(data.tags) && data.tags.length > 0 ? data.tags : [category],
     },
   });
 
-  return {
-    ...data,
-    id: created.id,
-    slug: created.slug,
-    title: created.title,
-    category: created.category,
-    featuredImage: created.featuredImage,
-    coverImage: created.coverImage || created.featuredImage,
-  } as ProjectDetailItem;
+  return mapDbProjectToDetailItem(created);
 }
 
 export async function deleteCMSProject(idOrSlug: string) {

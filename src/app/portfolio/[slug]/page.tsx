@@ -27,7 +27,6 @@ import {
 import {
   getProjectBySlugOrId,
   getAllProjects,
-  type ProjectDetailItem,
 } from "@/lib/portfolio-data";
 import { ProjectMediaShowcase } from "@/components/portfolio/project-gallery-view";
 import { PortfolioHeroBackground } from "@/components/portfolio/portfolio-hero-background";
@@ -53,10 +52,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `${project.title} | Portfólio Glessios`,
-    description: project.subtitle || project.description.slice(0, 160),
+    description:
+      project.subtitle ||
+      project.description?.slice(0, 160) ||
+      `${project.title} — ${project.category}`,
     openGraph: {
       title: `${project.title} — Glessios Portfólio`,
-      description: project.subtitle || project.description.slice(0, 160),
+      description:
+        project.subtitle ||
+        project.description?.slice(0, 160) ||
+        `${project.title} — ${project.category}`,
       url: `https://glessios.com.br/portfolio/${project.slug}`,
       siteName: "Glessios Comunicação Visual",
       images: [
@@ -90,6 +95,67 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
   );
   const whatsappUrl = `https://wa.me/5551981192976?text=${whatsappMessage}`;
 
+  const filledMetrics = [
+    (project.clientName?.trim() || project.clientSegment?.trim()) && {
+      key: "client",
+      icon: <Building className="w-5 h-5" />,
+      label: "Cliente & Segmento",
+      value: project.clientName?.trim() || project.clientSegment,
+      sub: project.clientName?.trim() ? project.clientSegment : "",
+    },
+    project.executionTime?.trim() && {
+      key: "time",
+      icon: <Clock className="w-5 h-5" />,
+      label: "Prazo de Execução",
+      value: project.executionTime,
+      sub: "Fábrica & Montagem",
+    },
+    project.dimensions?.trim() && {
+      key: "dimensions",
+      icon: <Ruler className="w-5 h-5" />,
+      label: "Área & Proporções",
+      value: project.dimensions,
+      sub: "Precisão Milimétrica",
+    },
+    project.warranty?.trim() && {
+      key: "warranty",
+      icon: <ShieldCheck className="w-5 h-5" />,
+      label: "Garantia e Laudo",
+      value: project.warranty,
+      sub: "Qualidade Certificada",
+    },
+  ].filter(Boolean) as {
+    key: string;
+    icon: React.ReactNode;
+    label: string;
+    value: string;
+    sub: string;
+  }[];
+
+  const metricsGridClass =
+    filledMetrics.length === 1
+      ? "grid-cols-1 max-w-md"
+      : filledMetrics.length === 2
+        ? "grid-cols-1 sm:grid-cols-2"
+        : filledMetrics.length === 3
+          ? "grid-cols-1 sm:grid-cols-3"
+          : "grid-cols-2 md:grid-cols-4";
+
+  const hasOverview = Boolean(project.description?.trim());
+  const hasChallenge = Boolean(project.challenge?.trim());
+  const hasSolution = Boolean(project.solution?.trim());
+  const hasResults = Boolean(project.results && project.results.length > 0);
+  const hasLeftColumn = hasOverview || hasChallenge || hasSolution || hasResults;
+
+  const hasMaterials = Boolean(project.materials && project.materials.length > 0);
+  const hasSpecs = Boolean(project.technicalSpecs && project.technicalSpecs.length > 0);
+  const hasTestimonial = Boolean(project.testimonial?.quote?.trim());
+  const hasRightColumn = hasMaterials || hasSpecs || hasTestimonial;
+
+  const hasMediaGallery =
+    (project.galleryImages && project.galleryImages.length > 0) ||
+    (project.videos && project.videos.length > 0);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F9FA] text-zinc-900 selection:bg-[#FF650F] selection:text-white">
       <Navbar />
@@ -99,14 +165,13 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
             1. HERO DE CAPA CINEMATOGRÁFICO COM COREOGRAFIA DE ENTRADA
             ==================================================== */}
         <section className="relative w-full min-h-[500px] sm:min-h-[560px] lg:min-h-[620px] flex items-end justify-center overflow-hidden bg-[#0A0B0D] text-white pb-16 sm:pb-20">
-          {/* Imagem de Capa Otimizada com Carregamento Rápido e Placeholder Imediato */}
           <PortfolioHeroBackground
             src={project.coverImage || project.featuredImage}
             alt={project.title}
           />
 
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-            {/* Navegação Breadcrumb Superior com animação de entrada */}
+            {/* Navegação Breadcrumb Superior */}
             <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-300 mb-6 animate-hero-badge">
               <Link
                 href="/"
@@ -133,14 +198,18 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
                 <Sparkles className="w-3.5 h-3.5" />
                 {project.category}
               </Badge>
-              <Badge variant="graphite" className="bg-white/10 backdrop-blur-md text-white text-xs border border-white/20">
-                <Calendar className="w-3.5 h-3.5 text-orange-400" />
-                Ano {project.year}
-              </Badge>
-              <Badge variant="graphite" className="bg-white/10 backdrop-blur-md text-white text-xs border border-white/20">
-                <MapPin className="w-3.5 h-3.5 text-orange-400" />
-                {project.location}
-              </Badge>
+              {project.year?.trim() && (
+                <Badge variant="graphite" className="bg-white/10 backdrop-blur-md text-white text-xs border border-white/20">
+                  <Calendar className="w-3.5 h-3.5 text-orange-400" />
+                  Ano {project.year}
+                </Badge>
+              )}
+              {project.location?.trim() && (
+                <Badge variant="graphite" className="bg-white/10 backdrop-blur-md text-white text-xs border border-white/20">
+                  <MapPin className="w-3.5 h-3.5 text-orange-400" />
+                  {project.location}
+                </Badge>
+              )}
             </div>
 
             {/* Título Imponente com Efeito Reveal Mask */}
@@ -151,11 +220,13 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
             </div>
 
             {/* Subtítulo com Elevação Suave */}
-            <p className="text-base sm:text-xl text-zinc-300 font-normal max-w-3xl mt-4 leading-relaxed animate-hero-supporting">
-              {project.subtitle}
-            </p>
+            {project.subtitle?.trim() && (
+              <p className="text-base sm:text-xl text-zinc-300 font-normal max-w-3xl mt-4 leading-relaxed animate-hero-supporting">
+                {project.subtitle}
+              </p>
+            )}
 
-            {/* Barra de Ações Rápidas no Hero com Animação */}
+            {/* Barra de Ações Rápidas no Hero */}
             <div className="pt-8 flex flex-wrap items-center gap-4 animate-hero-cta">
               <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
                 <Button variant="primary" size="lg" className="gap-2.5 font-bold shadow-xl">
@@ -176,215 +247,194 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
         </section>
 
         {/* ====================================================
-            2. GRID DE MÉTRICAS & INDICADORES COM M3 SCROLL STAGGER
+            2. GRID DE MÉTRICAS & INDICADORES (SOMENTE SE PREENCHIDO)
             ==================================================== */}
-        <section className="relative -mt-10 z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <M3ScrollStagger className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 sm:p-6 bg-white rounded-3xl border border-zinc-200/90 shadow-xl">
-            <M3ScrollItem>
-              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-start gap-3.5 h-full">
-                <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#FF650F] flex items-center justify-center shrink-0">
-                  <Building className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold block">
-                    Cliente & Segmento
-                  </span>
-                  <p className="text-sm font-bold text-zinc-900 mt-0.5 leading-snug">{project.clientName}</p>
-                  <span className="text-xs text-zinc-500 block truncate">{project.clientSegment}</span>
-                </div>
-              </div>
-            </M3ScrollItem>
-
-            <M3ScrollItem>
-              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-start gap-3.5 h-full">
-                <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#FF650F] flex items-center justify-center shrink-0">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold block">
-                    Prazo de Execução
-                  </span>
-                  <p className="text-sm font-bold text-zinc-900 mt-0.5">{project.executionTime}</p>
-                  <span className="text-xs text-zinc-500 block">Fábrica & Montagem</span>
-                </div>
-              </div>
-            </M3ScrollItem>
-
-            <M3ScrollItem>
-              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-start gap-3.5 h-full">
-                <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#FF650F] flex items-center justify-center shrink-0">
-                  <Ruler className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold block">
-                    Área & Proporções
-                  </span>
-                  <p className="text-sm font-bold text-zinc-900 mt-0.5 leading-snug">{project.dimensions}</p>
-                  <span className="text-xs text-zinc-500 block">Precisão Milimétrica</span>
-                </div>
-              </div>
-            </M3ScrollItem>
-
-            <M3ScrollItem>
-              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-start gap-3.5 h-full">
-                <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#FF650F] flex items-center justify-center shrink-0">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold block">
-                    Garantia e Laudo
-                  </span>
-                  <p className="text-sm font-bold text-zinc-900 mt-0.5 leading-snug">{project.warranty}</p>
-                  <span className="text-xs text-zinc-500 block">Com ART e NR-35</span>
-                </div>
-              </div>
-            </M3ScrollItem>
-          </M3ScrollStagger>
-        </section>
+        {filledMetrics.length > 0 && (
+          <section className="relative -mt-10 z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <M3ScrollStagger className={`grid ${metricsGridClass} gap-4 p-4 sm:p-6 bg-white rounded-3xl border border-zinc-200/90 shadow-xl`}>
+              {filledMetrics.map((metric) => (
+                <M3ScrollItem key={metric.key}>
+                  <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-start gap-3.5 h-full">
+                    <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#FF650F] flex items-center justify-center shrink-0">
+                      {metric.icon}
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-semibold block">
+                        {metric.label}
+                      </span>
+                      <p className="text-sm font-bold text-zinc-900 mt-0.5 leading-snug">{metric.value}</p>
+                      {metric.sub && (
+                        <span className="text-xs text-zinc-500 block truncate">{metric.sub}</span>
+                      )}
+                    </div>
+                  </div>
+                </M3ScrollItem>
+              ))}
+            </M3ScrollStagger>
+          </section>
+        )}
 
         {/* ====================================================
             3. HISTÓRIA DA OBRA: O DESAFIO, A SOLUÇÃO E O IMPACTO
             ==================================================== */}
-        <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-            {/* Coluna Esquerda: Descrição & Desafio/Solução com M3ScrollReveal */}
-            <div className="lg:col-span-7 space-y-10">
-              <M3ScrollReveal variant="fadeUp" className="space-y-3">
-                <Badge variant="orange-light" className="mb-2">
-                  <Layers className="w-3.5 h-3.5 text-[#FF650F]" />
-                  Visão Geral do Projeto
-                </Badge>
-                <h2 className="text-3xl font-extrabold text-zinc-900 tracking-tight">
-                  Engenharia e Design a Serviço da Marca
-                </h2>
-                <div className="mt-4 space-y-4 text-base text-zinc-700 leading-relaxed">
-                  <p>{project.description}</p>
-                </div>
-              </M3ScrollReveal>
-
-              {/* Box O Desafio vs A Solução com M3ScrollStagger */}
-              <M3ScrollStagger className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <M3ScrollItem>
-                  <div className="p-6 rounded-3xl bg-white border border-zinc-200/90 shadow-sm space-y-3 h-full">
-                    <span className="text-xs font-mono uppercase tracking-wider text-red-600 font-bold block">
-                      01. O Desafio do Cliente
-                    </span>
-                    <h3 className="text-lg font-bold text-zinc-900">Necessidade Inicial</h3>
-                    <p className="text-sm text-zinc-600 leading-relaxed">{project.challenge}</p>
-                  </div>
-                </M3ScrollItem>
-
-                <M3ScrollItem>
-                  <div className="p-6 rounded-3xl bg-white border border-orange-200/90 shadow-sm space-y-3 relative overflow-hidden h-full">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
-                    <span className="text-xs font-mono uppercase tracking-wider text-[#FF650F] font-bold block">
-                      02. A Solução Glessios
-                    </span>
-                    <h3 className="text-lg font-bold text-zinc-900">Engenharia Visual</h3>
-                    <p className="text-sm text-zinc-600 leading-relaxed">{project.solution}</p>
-                  </div>
-                </M3ScrollItem>
-              </M3ScrollStagger>
-
-              {/* Resultados e Benefícios Atingidos */}
-              <M3ScrollReveal variant="scaleUp" className="p-8 rounded-3xl bg-zinc-900 text-white shadow-xl space-y-4">
-                <span className="text-xs font-mono uppercase tracking-wider text-[#FF650F] font-bold block">
-                  03. Resultados Aferidos
-                </span>
-                <h3 className="text-2xl font-extrabold text-white">Impacto Comercial e Arquitetônico</h3>
-                <div className="space-y-3 pt-2">
-                  {project.results.map((res, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
-                      <p className="text-sm sm:text-base text-zinc-300 leading-relaxed">{res}</p>
-                    </div>
-                  ))}
-                </div>
-              </M3ScrollReveal>
-            </div>
-
-            {/* Coluna Direita: Materiais & Ficha Técnica */}
-            <div className="lg:col-span-5 space-y-8 lg:sticky lg:top-28">
-              {/* Card de Materiais Nobres Utilizados com M3ScrollReveal */}
-              <M3ScrollReveal variant="fadeIn" delay={0.1} className="p-8 rounded-3xl bg-white border border-zinc-200/90 shadow-md space-y-6">
-                <div>
-                  <h3 className="text-xl font-extrabold text-zinc-900">
-                    Materiais & Matérias-Primas Nobres
-                  </h3>
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Selecionados rigorosamente para garantir máxima durabilidade.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {project.materials.map((mat, i) => (
-                    <span
-                      key={i}
-                      className="text-xs bg-zinc-50 border border-zinc-200/80 px-3.5 py-2 rounded-xl text-zinc-800 font-semibold flex items-center gap-2 hover:border-[#FF650F]/50 transition-colors"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-[#FF650F]" />
-                      {mat}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Tabela de Especificações */}
-                <div className="border-t border-zinc-100 pt-6 space-y-3">
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-zinc-500 font-bold">
-                    Ficha Técnica de Engenharia
-                  </h4>
-                  <div className="divide-y divide-zinc-100 text-xs sm:text-sm">
-                    {project.technicalSpecs.map((spec, i) => (
-                      <div key={i} className="py-2.5 flex items-center justify-between gap-4">
-                        <span className="text-zinc-500 font-medium">{spec.label}</span>
-                        <span className="text-zinc-900 font-bold text-right">{spec.value}</span>
+        {(hasLeftColumn || hasRightColumn) && (
+          <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+              {hasLeftColumn && (
+                <div className={`${hasRightColumn ? "lg:col-span-7" : "lg:col-span-12"} space-y-10`}>
+                  {hasOverview && (
+                    <M3ScrollReveal variant="fadeUp" className="space-y-3">
+                      <Badge variant="orange-light" className="mb-2">
+                        <Layers className="w-3.5 h-3.5 text-[#FF650F]" />
+                        Visão Geral do Projeto
+                      </Badge>
+                      <h2 className="text-3xl font-extrabold text-zinc-900 tracking-tight">
+                        Engenharia e Design a Serviço da Marca
+                      </h2>
+                      <div className="mt-4 space-y-4 text-base text-zinc-700 leading-relaxed">
+                        <p>{project.description}</p>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </M3ScrollReveal>
+                  )}
 
-                {/* Botão de Contato Rápido para Este Projeto */}
-                <div className="pt-2">
-                  <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block w-full">
-                    <Button variant="primary" size="lg" className="w-full gap-2 font-bold shadow-lg">
-                      <MessageCircle className="w-4 h-4" />
-                      Falar Sobre Este Projeto
-                    </Button>
-                  </a>
-                </div>
-              </M3ScrollReveal>
+                  {(hasChallenge || hasSolution) && (
+                    <M3ScrollStagger className={`grid grid-cols-1 ${hasChallenge && hasSolution ? "sm:grid-cols-2" : ""} gap-6`}>
+                      {hasChallenge && (
+                        <M3ScrollItem>
+                          <div className="p-6 rounded-3xl bg-white border border-zinc-200/90 shadow-sm space-y-3 h-full">
+                            <span className="text-xs font-mono uppercase tracking-wider text-red-600 font-bold block">
+                              01. O Desafio do Cliente
+                            </span>
+                            <h3 className="text-lg font-bold text-zinc-900">Necessidade Inicial</h3>
+                            <p className="text-sm text-zinc-600 leading-relaxed">{project.challenge}</p>
+                          </div>
+                        </M3ScrollItem>
+                      )}
 
-              {/* Depoimento do Cliente se houver */}
-              {project.testimonial && (
-                <M3ScrollReveal variant="scaleUp" delay={0.2} className="p-8 rounded-3xl bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-200/80 shadow-sm space-y-4">
-                  <div className="flex items-center gap-1 text-amber-500">
-                    {[...Array(project.testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  <blockquote className="text-sm sm:text-base italic text-zinc-800 font-serif leading-relaxed">
-                    “{project.testimonial.quote}”
-                  </blockquote>
-                  <div className="pt-2 border-t border-orange-200/60">
-                    <p className="text-sm font-bold text-zinc-900">{project.testimonial.author}</p>
-                    <p className="text-xs text-zinc-600">
-                      {project.testimonial.role} • {project.testimonial.company}
-                    </p>
-                  </div>
-                </M3ScrollReveal>
+                      {hasSolution && (
+                        <M3ScrollItem>
+                          <div className="p-6 rounded-3xl bg-white border border-orange-200/90 shadow-sm space-y-3 relative overflow-hidden h-full">
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
+                            <span className="text-xs font-mono uppercase tracking-wider text-[#FF650F] font-bold block">
+                              02. A Solução Glessios
+                            </span>
+                            <h3 className="text-lg font-bold text-zinc-900">Engenharia Visual</h3>
+                            <p className="text-sm text-zinc-600 leading-relaxed">{project.solution}</p>
+                          </div>
+                        </M3ScrollItem>
+                      )}
+                    </M3ScrollStagger>
+                  )}
+
+                  {hasResults && (
+                    <M3ScrollReveal variant="scaleUp" className="p-8 rounded-3xl bg-zinc-900 text-white shadow-xl space-y-4">
+                      <span className="text-xs font-mono uppercase tracking-wider text-[#FF650F] font-bold block">
+                        03. Resultados Aferidos
+                      </span>
+                      <h3 className="text-2xl font-extrabold text-white">Impacto Comercial e Arquitetônico</h3>
+                      <div className="space-y-3 pt-2">
+                        {project.results.map((res, i) => (
+                          <div key={i} className="flex items-start gap-3">
+                            <CheckCircle2 className="w-5 h-5 text-[#FF650F] shrink-0 mt-0.5" />
+                            <p className="text-sm sm:text-base text-zinc-300 leading-relaxed">{res}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </M3ScrollReveal>
+                  )}
+                </div>
+              )}
+
+              {hasRightColumn && (
+                <div className={`${hasLeftColumn ? "lg:col-span-5 lg:sticky lg:top-28" : "lg:col-span-12"} space-y-8`}>
+                  {(hasMaterials || hasSpecs) && (
+                    <M3ScrollReveal variant="fadeIn" delay={0.1} className="p-8 rounded-3xl bg-white border border-zinc-200/90 shadow-md space-y-6">
+                      {hasMaterials && (
+                        <>
+                          <div>
+                            <h3 className="text-xl font-extrabold text-zinc-900">
+                              Materiais & Matérias-Primas Nobres
+                            </h3>
+                            <p className="text-xs text-zinc-500 mt-1">
+                              Selecionados rigorosamente para garantir máxima durabilidade.
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            {project.materials.map((mat, i) => (
+                              <span
+                                key={i}
+                                className="text-xs bg-zinc-50 border border-zinc-200/80 px-3.5 py-2 rounded-xl text-zinc-800 font-semibold flex items-center gap-2 hover:border-[#FF650F]/50 transition-colors"
+                              >
+                                <span className="w-2 h-2 rounded-full bg-[#FF650F]" />
+                                {mat}
+                              </span>
+                            ))}
+                          </div>
+                        </>
+                      )}
+
+                      {hasSpecs && (
+                        <div className={`${hasMaterials ? "border-t border-zinc-100 pt-6" : ""} space-y-3`}>
+                          <h4 className="text-xs font-mono uppercase tracking-wider text-zinc-500 font-bold">
+                            Ficha Técnica de Engenharia
+                          </h4>
+                          <div className="divide-y divide-zinc-100 text-xs sm:text-sm">
+                            {project.technicalSpecs.map((spec, i) => (
+                              <div key={i} className="py-2.5 flex items-center justify-between gap-4">
+                                <span className="text-zinc-500 font-medium">{spec.label}</span>
+                                <span className="text-zinc-900 font-bold text-right">{spec.value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="pt-2">
+                        <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block w-full">
+                          <Button variant="primary" size="lg" className="w-full gap-2 font-bold shadow-lg">
+                            <MessageCircle className="w-4 h-4" />
+                            Falar Sobre Este Projeto
+                          </Button>
+                        </a>
+                      </div>
+                    </M3ScrollReveal>
+                  )}
+
+                  {hasTestimonial && project.testimonial && (
+                    <M3ScrollReveal variant="scaleUp" delay={0.2} className="p-8 rounded-3xl bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-200/80 shadow-sm space-y-4">
+                      <div className="flex items-center gap-1 text-amber-500">
+                        {[...Array(project.testimonial.rating || 5)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                        ))}
+                      </div>
+                      <blockquote className="text-sm sm:text-base italic text-zinc-800 font-serif leading-relaxed">
+                        “{project.testimonial.quote}”
+                      </blockquote>
+                      <div className="pt-2 border-t border-orange-200/60">
+                        <p className="text-sm font-bold text-zinc-900">{project.testimonial.author}</p>
+                        <p className="text-xs text-zinc-600">
+                          {project.testimonial.role} • {project.testimonial.company}
+                        </p>
+                      </div>
+                    </M3ScrollReveal>
+                  )}
+                </div>
               )}
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* ====================================================
             4. GALERIA COMPLETA DE FOTOS & SHOWCASE DE VÍDEOS
             ==================================================== */}
-        <section className="py-20 bg-white border-y border-zinc-200/90">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <ProjectMediaShowcase project={project} />
-          </div>
-        </section>
+        {hasMediaGallery && (
+          <section className="py-20 bg-white border-y border-zinc-200/90">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <ProjectMediaShowcase project={project} />
+            </div>
+          </section>
+        )}
 
         {/* ====================================================
             5. OUTROS PROJETOS REALIZADOS COM M3 SCROLL STAGGER
@@ -421,6 +471,7 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
                           alt={rel.title}
                           fill
                           unoptimized
+                          referrerPolicy="no-referrer"
                           loading="lazy"
                           decoding="async"
                           className="object-cover transition-transform duration-700 group-hover:scale-105"
@@ -434,9 +485,11 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
                       </div>
                       <div className="p-6 flex flex-col flex-grow justify-between space-y-3">
                         <div>
-                          <span className="text-[11px] font-mono text-[#FF650F] uppercase font-semibold">
-                            {rel.clientName}
-                          </span>
+                          {rel.clientName?.trim() && (
+                            <span className="text-[11px] font-mono text-[#FF650F] uppercase font-semibold">
+                              {rel.clientName}
+                            </span>
+                          )}
                           <h3 className="text-base font-bold text-zinc-900 group-hover:text-[#FF650F] transition-colors mt-1 line-clamp-2">
                             {rel.title}
                           </h3>

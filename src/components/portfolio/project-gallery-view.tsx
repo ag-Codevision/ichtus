@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Play,
   X,
@@ -16,6 +15,7 @@ import {
 } from "lucide-react";
 import type { ProjectDetailItem, ProjectVideo } from "@/lib/portfolio-data";
 import { M3ScrollReveal, M3ScrollStagger, M3ScrollItem } from "@/components/ui/scroll-reveal";
+import { getExternalVideoEmbedUrl, getYouTubeThumbnailUrl } from "@/lib/media-utils";
 
 interface ProjectMediaShowcaseProps {
   project: ProjectDetailItem;
@@ -42,7 +42,6 @@ function OptimizedPhotoCard({
       onClick={onClick}
       className="group relative h-64 sm:h-72 lg:h-80 rounded-2xl overflow-hidden bg-zinc-100 border border-zinc-200/90 cursor-pointer shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300"
     >
-      {/* Skeleton de Carregamento Instantâneo */}
       {!isLoaded && (
         <div className="absolute inset-0 bg-gradient-to-r from-zinc-200 via-zinc-100 to-zinc-200 animate-pulse" />
       )}
@@ -52,9 +51,11 @@ function OptimizedPhotoCard({
         alt={img.caption || projectTitle}
         fill
         unoptimized
+        referrerPolicy="no-referrer"
         loading={index < 3 ? "eager" : "lazy"}
         decoding="async"
         onLoad={() => setIsLoaded(true)}
+        onError={() => setIsLoaded(true)}
         className={`object-cover transition-all duration-500 group-hover:scale-105 ${
           isLoaded ? "opacity-100" : "opacity-0"
         }`}
@@ -74,9 +75,11 @@ function OptimizedPhotoCard({
               {img.category}
             </span>
           )}
-          <p className="text-white text-xs sm:text-sm font-medium line-clamp-2 leading-snug">
-            {img.caption}
-          </p>
+          {img.caption?.trim() && (
+            <p className="text-white text-xs sm:text-sm font-medium line-clamp-2 leading-snug">
+              {img.caption}
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -84,19 +87,28 @@ function OptimizedPhotoCard({
 }
 
 export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
-  const [activeTab, setActiveTab] = useState<"photos" | "videos">("photos");
+  const photos = project.galleryImages || [];
+  const videos = project.videos || [];
+  const hasPhotos = photos.length > 0;
+  const hasVideos = videos.length > 0;
+
+  const [activeTab, setActiveTab] = useState<"photos" | "videos">(hasPhotos ? "photos" : "videos");
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>("Todas");
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<ProjectVideo | null>(
-    project.videos && project.videos.length > 0 ? project.videos[0] : null
+    hasVideos ? videos[0] : null
   );
+
+  if (!hasPhotos && !hasVideos) {
+    return null;
+  }
 
   const photoCategories: string[] = [
     "Todas",
     ...Array.from(
       new Set(
-        project.galleryImages
+        photos
           .map((img) => img.category)
           .filter((cat): cat is NonNullable<typeof cat> => Boolean(cat))
       )
@@ -105,20 +117,29 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
 
   const filteredPhotos =
     filterCategory === "Todas"
-      ? project.galleryImages
-      : project.galleryImages.filter((img) => img.category === filterCategory);
+      ? photos
+      : photos.filter((img) => img.category === filterCategory);
 
   const handleNextPhoto = () => {
-    if (selectedPhotoIdx === null) return;
-    setSelectedPhotoIdx((selectedPhotoIdx + 1) % project.galleryImages.length);
+    if (selectedPhotoIdx === null || photos.length === 0) return;
+    setSelectedPhotoIdx((selectedPhotoIdx + 1) % photos.length);
   };
 
   const handlePrevPhoto = () => {
-    if (selectedPhotoIdx === null) return;
-    setSelectedPhotoIdx(
-      (selectedPhotoIdx - 1 + project.galleryImages.length) % project.galleryImages.length
-    );
+    if (selectedPhotoIdx === null || photos.length === 0) return;
+    setSelectedPhotoIdx((selectedPhotoIdx - 1 + photos.length) % photos.length);
   };
+
+  const resolveVideoThumb = (vid: ProjectVideo) =>
+    vid.thumbnailUrl?.trim() ||
+    getYouTubeThumbnailUrl(vid.videoUrl) ||
+    project.featuredImage ||
+    project.coverImage ||
+    "";
+
+  const activeEmbedUrl = selectedVideo
+    ? getExternalVideoEmbedUrl(selectedVideo.videoUrl, true)
+    : null;
 
   return (
     <section className="space-y-12">
@@ -133,51 +154,56 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
             Acervo Visual da Obra
           </Badge>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">
-            Galeria de Fotos & Vídeos
+            {hasPhotos && hasVideos
+              ? "Galeria de Fotos & Vídeos"
+              : hasPhotos
+                ? "Galeria de Fotos"
+                : "Galeria de Vídeos"}
           </h2>
           <p className="text-sm text-zinc-600 mt-1">
-            Veja em alta definição cada detalhe da execução, iluminação e acabamentos.
+            Veja em alta definição os registros e detalhes deste trabalho.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 p-1.5 bg-zinc-100 rounded-2xl border border-zinc-200 w-fit">
-          <button
-            onClick={() => setActiveTab("photos")}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-              activeTab === "photos"
-                ? "bg-[#FF650F] text-white shadow-sm"
-                : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60"
-            }`}
-          >
-            <Camera className="w-4 h-4" />
-            Fotos da Obra ({project.galleryImages.length})
-          </button>
+        {(hasPhotos || hasVideos) && (
+          <div className="flex items-center gap-2 p-1.5 bg-zinc-100 rounded-2xl border border-zinc-200 w-fit">
+            {hasPhotos && (
+              <button
+                onClick={() => setActiveTab("photos")}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  activeTab === "photos"
+                    ? "bg-[#FF650F] text-white shadow-sm"
+                    : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60"
+                }`}
+              >
+                <Camera className="w-4 h-4" />
+                Fotos da Obra ({photos.length})
+              </button>
+            )}
 
-          {project.videos && project.videos.length > 0 && (
-            <button
-              onClick={() => {
-                setActiveTab("videos");
-                setIsVideoPlaying(false);
-              }}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                activeTab === "videos"
-                  ? "bg-[#FF650F] text-white shadow-sm"
-                  : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60"
-              }`}
-            >
-              <Film className="w-4 h-4" />
-              Vídeos do Projeto ({project.videos.length})
-            </button>
-          )}
-        </div>
+            {hasVideos && (
+              <button
+                onClick={() => {
+                  setActiveTab("videos");
+                  setIsVideoPlaying(false);
+                }}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  activeTab === "videos"
+                    ? "bg-[#FF650F] text-white shadow-sm"
+                    : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60"
+                }`}
+              >
+                <Film className="w-4 h-4" />
+                Vídeos do Projeto ({videos.length})
+              </button>
+            )}
+          </div>
+        )}
       </M3ScrollReveal>
 
-      {/* ========================================================
-          ABA 1: GALERIA DE FOTOS COM STAGGER MOTION
-          ======================================================== */}
-      {activeTab === "photos" && (
+      {/* ABA 1: GALERIA DE FOTOS */}
+      {activeTab === "photos" && hasPhotos && (
         <div className="space-y-8 animate-in fade-in duration-300">
-          {/* Subfiltros de Categoria de Foto */}
           {photoCategories.length > 2 && (
             <div className="flex flex-wrap items-center gap-2">
               {photoCategories.map((cat) => (
@@ -196,12 +222,11 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
             </div>
           )}
 
-          {/* Grid de Fotos com M3ScrollStagger e M3ScrollItem */}
           <M3ScrollStagger className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPhotos.map((img, idx) => {
-              const originalIndex = project.galleryImages.findIndex((g) => g.url === img.url);
+              const originalIndex = photos.findIndex((g) => g.url === img.url);
               return (
-                <M3ScrollItem key={idx}>
+                <M3ScrollItem key={`${img.url}-${idx}`}>
                   <OptimizedPhotoCard
                     img={img}
                     index={idx}
@@ -215,23 +240,29 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
         </div>
       )}
 
-      {/* ========================================================
-          ABA 2: GALERIA E SHOWCASE DE VÍDEOS OTIMIZADO
-          ======================================================== */}
-      {activeTab === "videos" && project.videos && project.videos.length > 0 && (
+      {/* ABA 2: GALERIA E SHOWCASE DE VÍDEOS */}
+      {activeTab === "videos" && hasVideos && (
         <div className="space-y-8 animate-in fade-in duration-300">
           {selectedVideo && (
             <div className="relative rounded-3xl overflow-hidden bg-black border border-zinc-800 shadow-2xl">
               <div className="aspect-video w-full bg-black relative flex items-center justify-center">
                 {!isVideoPlaying ? (
-                  <div className="relative w-full h-full cursor-pointer group" onClick={() => setIsVideoPlaying(true)}>
-                    <Image
-                      src={selectedVideo.thumbnailUrl}
-                      alt={selectedVideo.title}
-                      fill
-                      unoptimized
-                      className="object-cover opacity-80 group-hover:opacity-95 transition-opacity"
-                    />
+                  <div
+                    className="relative w-full h-full cursor-pointer group"
+                    onClick={() => setIsVideoPlaying(true)}
+                  >
+                    {resolveVideoThumb(selectedVideo) ? (
+                      <Image
+                        src={resolveVideoThumb(selectedVideo)}
+                        alt={selectedVideo.title || project.title}
+                        fill
+                        unoptimized
+                        referrerPolicy="no-referrer"
+                        className="object-cover opacity-80 group-hover:opacity-95 transition-opacity"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black" />
+                    )}
                     <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-4">
                       <div className="w-20 h-20 rounded-full bg-[#FF650F] text-white flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
                         <Play className="w-8 h-8 fill-white translate-x-0.5" />
@@ -241,74 +272,115 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
                       </span>
                     </div>
                   </div>
+                ) : activeEmbedUrl ? (
+                  <iframe
+                    key={activeEmbedUrl}
+                    src={activeEmbedUrl}
+                    title={selectedVideo.title || project.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="w-full h-full border-0"
+                  />
                 ) : (
                   <video
                     key={selectedVideo.videoUrl}
+                    src={selectedVideo.videoUrl}
                     controls
                     autoPlay
                     playsInline
-                    preload="auto"
-                    className="w-full h-full object-cover"
+                    preload="metadata"
+                    className="w-full h-full object-contain bg-black"
                   >
-                    <source src={selectedVideo.videoUrl} type="video/mp4" />
-                    Seu navegador não suporta a tag de vídeo HTML5.
+                    Seu navegador não suporta a reprodução deste vídeo.
                   </video>
                 )}
               </div>
 
-              {/* Informações do Vídeo Atual */}
-              <div className="p-6 bg-zinc-950 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-zinc-800">
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <Badge variant="orange">{selectedVideo.tag}</Badge>
-                    <span className="text-xs text-zinc-400 font-mono">Duração: {selectedVideo.duration}</span>
+              {(selectedVideo.title?.trim() ||
+                selectedVideo.description?.trim() ||
+                selectedVideo.tag?.trim() ||
+                selectedVideo.duration?.trim()) && (
+                <div className="p-6 bg-zinc-950 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-zinc-800">
+                  <div>
+                    {(selectedVideo.tag?.trim() || selectedVideo.duration?.trim()) && (
+                      <div className="flex items-center gap-2 mb-1.5">
+                        {selectedVideo.tag?.trim() && (
+                          <Badge variant="orange">{selectedVideo.tag}</Badge>
+                        )}
+                        {selectedVideo.duration?.trim() && (
+                          <span className="text-xs text-zinc-400 font-mono">
+                            Duração: {selectedVideo.duration}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {selectedVideo.title?.trim() && (
+                      <h3 className="text-lg sm:text-xl font-bold">{selectedVideo.title}</h3>
+                    )}
+                    {selectedVideo.description?.trim() && (
+                      <p className="text-xs sm:text-sm text-zinc-400 mt-1 max-w-2xl">
+                        {selectedVideo.description}
+                      </p>
+                    )}
                   </div>
-                  <h3 className="text-lg sm:text-xl font-bold">{selectedVideo.title}</h3>
-                  <p className="text-xs sm:text-sm text-zinc-400 mt-1 max-w-2xl">{selectedVideo.description}</p>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
-          {/* Lista de Outros Vídeos se houver mais de um */}
-          {project.videos.length > 1 && (
+          {videos.length > 1 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
-              {project.videos.map((vid) => (
-                <div
-                  key={vid.id}
-                  onClick={() => {
-                    setSelectedVideo(vid);
-                    setIsVideoPlaying(false);
-                  }}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer flex gap-4 items-center ${
-                    selectedVideo?.id === vid.id
-                      ? "bg-orange-50 border-[#FF650F] text-zinc-900"
-                      : "bg-white border-zinc-200 hover:border-zinc-300 text-zinc-700"
-                  }`}
-                >
-                  <div className="relative w-20 h-14 rounded-lg overflow-hidden bg-black shrink-0">
-                    <Image src={vid.thumbnailUrl} alt={vid.title} fill quality={60} className="object-cover" />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white">
-                      <Play className="w-4 h-4 fill-white" />
+              {videos.map((vid, idx) => {
+                const thumb = resolveVideoThumb(vid);
+                return (
+                  <div
+                    key={vid.id || idx}
+                    onClick={() => {
+                      setSelectedVideo(vid);
+                      setIsVideoPlaying(false);
+                    }}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex gap-4 items-center ${
+                      selectedVideo?.id === vid.id
+                        ? "bg-orange-50 border-[#FF650F] text-zinc-900"
+                        : "bg-white border-zinc-200 hover:border-zinc-300 text-zinc-700"
+                    }`}
+                  >
+                    <div className="relative w-20 h-14 rounded-lg overflow-hidden bg-black shrink-0">
+                      {thumb ? (
+                        <Image
+                          src={thumb}
+                          alt={vid.title || `Vídeo ${idx + 1}`}
+                          fill
+                          unoptimized
+                          referrerPolicy="no-referrer"
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-zinc-900" />
+                      )}
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white">
+                        <Play className="w-4 h-4 fill-white" />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold line-clamp-1">
+                        {vid.title?.trim() || `Vídeo ${idx + 1}`}
+                      </h4>
+                      {vid.duration?.trim() && (
+                        <span className="text-[10px] text-zinc-500 font-mono">{vid.duration}</span>
+                      )}
                     </div>
                   </div>
-                  <div>
-                    <h4 className="text-xs font-bold line-clamp-1">{vid.title}</h4>
-                    <span className="text-[10px] text-zinc-500 font-mono">{vid.duration}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       )}
 
-      {/* ========================================================
-          MODAL LIGHTBOX EM TELA CHEIA (FULLSCREEN ZOOM)
-          ======================================================== */}
-      {selectedPhotoIdx !== null && (
+      {/* MODAL LIGHTBOX EM TELA CHEIA */}
+      {selectedPhotoIdx !== null && photos[selectedPhotoIdx] && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-200">
-          {/* Botão Fechar */}
           <button
             onClick={() => setSelectedPhotoIdx(null)}
             className="absolute top-5 right-5 z-20 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
@@ -317,48 +389,51 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
             <X className="w-6 h-6" />
           </button>
 
-          {/* Botão Anterior */}
-          <button
-            onClick={handlePrevPhoto}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/10 hover:bg-[#FF650F] text-white flex items-center justify-center transition-all cursor-pointer"
-            aria-label="Foto anterior"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
+          {photos.length > 1 && (
+            <>
+              <button
+                onClick={handlePrevPhoto}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/10 hover:bg-[#FF650F] text-white flex items-center justify-center transition-all cursor-pointer"
+                aria-label="Foto anterior"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
 
-          {/* Botão Próximo */}
-          <button
-            onClick={handleNextPhoto}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/10 hover:bg-[#FF650F] text-white flex items-center justify-center transition-all cursor-pointer"
-            aria-label="Próxima foto"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
+              <button
+                onClick={handleNextPhoto}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/10 hover:bg-[#FF650F] text-white flex items-center justify-center transition-all cursor-pointer"
+                aria-label="Próxima foto"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </>
+          )}
 
-          {/* Imagem Central */}
           <div className="relative max-w-6xl max-h-[85vh] w-full h-[80vh] px-4 flex flex-col items-center justify-center">
             <div className="relative w-full h-full">
               <Image
-                src={project.galleryImages[selectedPhotoIdx].url}
-                alt={project.galleryImages[selectedPhotoIdx].caption || project.title}
+                src={photos[selectedPhotoIdx].url}
+                alt={photos[selectedPhotoIdx].caption || project.title}
                 fill
                 unoptimized
+                referrerPolicy="no-referrer"
                 className="object-contain"
                 sizes="100vw"
                 priority
               />
             </div>
 
-            {/* Legenda e Contador */}
             <div className="mt-4 text-center max-w-2xl px-4">
               <span className="text-xs font-mono text-[#FF650F] block mb-1">
-                Foto {selectedPhotoIdx + 1} de {project.galleryImages.length}
-                {project.galleryImages[selectedPhotoIdx].category &&
-                  ` • ${project.galleryImages[selectedPhotoIdx].category}`}
+                Foto {selectedPhotoIdx + 1} de {photos.length}
+                {photos[selectedPhotoIdx].category &&
+                  ` • ${photos[selectedPhotoIdx].category}`}
               </span>
-              <p className="text-white text-sm font-medium">
-                {project.galleryImages[selectedPhotoIdx].caption}
-              </p>
+              {photos[selectedPhotoIdx].caption?.trim() && (
+                <p className="text-white text-sm font-medium">
+                  {photos[selectedPhotoIdx].caption}
+                </p>
+              )}
             </div>
           </div>
         </div>

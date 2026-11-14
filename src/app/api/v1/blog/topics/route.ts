@@ -49,6 +49,26 @@ export async function GET(request: NextRequest) {
   }
 }
 
+function buildTopicCreateData(item: any) {
+  const cleanCategory =
+    typeof item.category === "string" && item.category.trim() ? item.category.trim() : null;
+  const keywords = Array.isArray(item.keywords)
+    ? item.keywords
+    : typeof item.keywords === "string"
+    ? item.keywords.split(",").map((s: string) => s.trim()).filter(Boolean)
+    : [];
+
+  return {
+    title: item.title.trim(),
+    category: cleanCategory,
+    keywords,
+    targetAudience: item.targetAudience || "Empresários, Lojistas e Arquitetos",
+    tone: item.tone || "Técnico Especialista e Conversão",
+    priority: (item.priority as PriorityLevel) || PriorityLevel.MEDIUM,
+    status: TopicStatus.PENDING,
+  };
+}
+
 /**
  * POST /api/v1/blog/topics
  * Cria uma nova pauta ou lote de pautas
@@ -63,15 +83,7 @@ export async function POST(request: NextRequest) {
       for (const item of body.topics) {
         if (!item.title || typeof item.title !== "string" || !item.title.trim()) continue;
         const topic = await prisma.blogTopic.create({
-          data: {
-            title: item.title.trim(),
-            category: item.category || "Fachadas e Comunicação Visual",
-            keywords: Array.isArray(item.keywords) ? item.keywords : [],
-            targetAudience: item.targetAudience || "Empresários, Lojistas e Arquitetos",
-            tone: item.tone || "Técnico Especialista e Conversão",
-            priority: (item.priority as PriorityLevel) || PriorityLevel.MEDIUM,
-            status: TopicStatus.PENDING,
-          },
+          data: buildTopicCreateData(item),
         });
         createdList.push(topic);
       }
@@ -92,19 +104,7 @@ export async function POST(request: NextRequest) {
     }
 
     const topic = await prisma.blogTopic.create({
-      data: {
-        title: body.title.trim(),
-        category: body.category || "Fachadas e Comunicação Visual",
-        keywords: Array.isArray(body.keywords)
-          ? body.keywords
-          : typeof body.keywords === "string"
-          ? body.keywords.split(",").map((s: string) => s.trim()).filter(Boolean)
-          : [],
-        targetAudience: body.targetAudience || "Empresários, Lojistas e Arquitetos",
-        tone: body.tone || "Técnico Especialista e Conversão",
-        priority: (body.priority as PriorityLevel) || PriorityLevel.MEDIUM,
-        status: TopicStatus.PENDING,
-      },
+      data: buildTopicCreateData(body),
     });
 
     return NextResponse.json({

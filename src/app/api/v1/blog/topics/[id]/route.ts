@@ -26,8 +26,8 @@ export async function PATCH(
     if (body.title && typeof body.title === "string") {
       data.title = body.title.trim();
     }
-    if (body.category !== undefined && typeof body.category === "string") {
-      data.category = body.category.trim();
+    if (body.category !== undefined) {
+      data.category = typeof body.category === "string" ? body.category.trim() || null : null;
     }
     if (body.targetAudience !== undefined && typeof body.targetAudience === "string") {
       data.targetAudience = body.targetAudience.trim();

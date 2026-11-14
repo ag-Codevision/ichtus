@@ -31,6 +31,7 @@ export function PortfolioHeroBackground({ src, alt }: PortfolioHeroBackgroundPro
         fill
         priority
         unoptimized
+        referrerPolicy="no-referrer"
         decoding="async"
         placeholder="blur"
         blurDataURL={ARCHITECTURAL_BLUR_PLACEHOLDER}
