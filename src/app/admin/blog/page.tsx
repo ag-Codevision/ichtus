@@ -482,16 +482,16 @@ export default function AdminBlogPage() {
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full px-2.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+          className="w-full px-2.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none [color-scheme:dark]"
         >
           {categories.map((cat) => (
-            <option key={cat.id} value={cat.name}>
+            <option key={cat.id} value={cat.name} className="bg-zinc-900 text-white">
               {cat.name}
             </option>
           ))}
-          <option value="">Geral (Sem categoria)</option>
+          <option value="" className="bg-zinc-900 text-white">Geral (Sem categoria)</option>
           {hasLegacyOption && (
-            <option value={value}>{value} (Personalizada)</option>
+            <option value={value} className="bg-zinc-900 text-white">{value} (Personalizada)</option>
           )}
         </select>
       </div>
@@ -1025,16 +1025,16 @@ export default function AdminBlogPage() {
               <select
                 value={topicCategoryFilter}
                 onChange={(e) => setTopicCategoryFilter(e.target.value)}
-                className="px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-zinc-300 text-xs font-semibold focus:border-[#FF650F] focus:outline-none"
+                className="px-2.5 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs font-semibold focus:border-[#FF650F] focus:outline-none [color-scheme:dark]"
                 title="Filtrar pautas por categoria"
               >
-                <option value="ALL">Todas as Categorias</option>
+                <option value="ALL" className="bg-zinc-900 text-white">Todas as Categorias</option>
                 {categories.map((cat) => (
-                  <option key={cat.id} value={cat.name}>
+                  <option key={cat.id} value={cat.name} className="bg-zinc-900 text-white">
                     {cat.name} ({cat.topicsCount})
                   </option>
                 ))}
-                <option value="__NONE__">Geral (Sem categoria)</option>
+                <option value="__NONE__" className="bg-zinc-900 text-white">Geral (Sem categoria)</option>
               </select>
             </div>
 
@@ -1878,12 +1878,12 @@ export default function AdminBlogPage() {
                   <select
                     value={singlePriority}
                     onChange={(e) => setSinglePriority(e.target.value as any)}
-                    className="w-full px-2.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+                    className="w-full px-2.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none [color-scheme:dark]"
                   >
-                    <option value="URGENT">Urgente</option>
-                    <option value="HIGH">Alta</option>
-                    <option value="MEDIUM">Média</option>
-                    <option value="LOW">Baixa</option>
+                    <option value="URGENT" className="bg-zinc-900 text-white">Urgente</option>
+                    <option value="HIGH" className="bg-zinc-900 text-white">Alta</option>
+                    <option value="MEDIUM" className="bg-zinc-900 text-white">Média</option>
+                    <option value="LOW" className="bg-zinc-900 text-white">Baixa</option>
                   </select>
                 </div>
               </div>
@@ -1947,12 +1947,12 @@ export default function AdminBlogPage() {
                   <select
                     value={editPriority}
                     onChange={(e) => setEditPriority(e.target.value as any)}
-                    className="w-full px-2.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+                    className="w-full px-2.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:border-[#FF650F] focus:outline-none [color-scheme:dark]"
                   >
-                    <option value="URGENT">Urgente</option>
-                    <option value="HIGH">Alta</option>
-                    <option value="MEDIUM">Média</option>
-                    <option value="LOW">Baixa</option>
+                    <option value="URGENT" className="bg-zinc-900 text-white">Urgente</option>
+                    <option value="HIGH" className="bg-zinc-900 text-white">Alta</option>
+                    <option value="MEDIUM" className="bg-zinc-900 text-white">Média</option>
+                    <option value="LOW" className="bg-zinc-900 text-white">Baixa</option>
                   </select>
                 </div>
               </div>
@@ -2039,10 +2039,10 @@ export default function AdminBlogPage() {
                   <select
                     value={editPostStatus}
                     onChange={(e) => setEditPostStatus(e.target.value as "PUBLISHED" | "DRAFT")}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 text-sm text-white focus:outline-none focus:border-[#FF650F]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-sm text-white focus:outline-none focus:border-[#FF650F] [color-scheme:dark]"
                   >
-                    <option value="PUBLISHED">Publicado no Ar</option>
-                    <option value="DRAFT">Aguardando Avaliação</option>
+                    <option value="PUBLISHED" className="bg-zinc-900 text-white">Publicado no Ar</option>
+                    <option value="DRAFT" className="bg-zinc-900 text-white">Aguardando Avaliação</option>
                   </select>
                 </div>
               </div>
