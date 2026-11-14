@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,15 +14,26 @@ import {
   ZoomIn,
 } from "lucide-react";
 import type { ProjectDetailItem, ProjectVideo } from "@/lib/portfolio-data";
-import { M3ScrollReveal, M3ScrollStagger, M3ScrollItem } from "@/components/ui/scroll-reveal";
+import { M3ScrollReveal } from "@/components/ui/scroll-reveal";
 import { getExternalVideoEmbedUrl, getYouTubeThumbnailUrl } from "@/lib/media-utils";
 
 interface ProjectMediaShowcaseProps {
   project: ProjectDetailItem;
 }
 
+/** Posiciona o primeiro frame útil de vídeos MP4/WebM para renderizar miniatura real. */
+function seekVideoPreviewFrame(videoEl: HTMLVideoElement) {
+  try {
+    if (Number.isFinite(videoEl.duration) && videoEl.duration > 0 && videoEl.currentTime < 0.1) {
+      videoEl.currentTime = Math.min(0.5, videoEl.duration * 0.1);
+    }
+  } catch {
+    // Ignora caso o stream não permita seek inicial
+  }
+}
+
 /**
- * Componente de Imagem Otimizada com Skeleton Shimmer e Transição de Opacidade
+ * Card de Foto da Galeria da Página Interna (sempre visível após carregamento imediato)
  */
 function OptimizedPhotoCard({
   img,
@@ -35,31 +46,19 @@ function OptimizedPhotoCard({
   projectTitle: string;
   onClick: () => void;
 }) {
-  const [isLoaded, setIsLoaded] = useState(false);
-
   return (
     <div
       onClick={onClick}
       className="group relative h-64 sm:h-72 lg:h-80 rounded-2xl overflow-hidden bg-zinc-100 border border-zinc-200/90 cursor-pointer shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300"
     >
-      {!isLoaded && (
-        <div className="absolute inset-0 bg-gradient-to-r from-zinc-200 via-zinc-100 to-zinc-200 animate-pulse" />
-      )}
-
-      <Image
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
         src={img.url}
-        alt={img.caption || projectTitle}
-        fill
-        unoptimized
+        alt={img.caption || `${projectTitle} - Foto ${index + 1}`}
         referrerPolicy="no-referrer"
-        loading={index < 3 ? "eager" : "lazy"}
+        loading={index < 6 ? "eager" : "lazy"}
         decoding="async"
-        onLoad={() => setIsLoaded(true)}
-        onError={() => setIsLoaded(true)}
-        className={`object-cover transition-all duration-500 group-hover:scale-105 ${
-          isLoaded ? "opacity-100" : "opacity-0"
-        }`}
-        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
       />
 
       {/* Overlay Escuro e Detalhes ao passar o mouse */}
@@ -92,13 +91,26 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
   const hasPhotos = photos.length > 0;
   const hasVideos = videos.length > 0;
 
-  const [activeTab, setActiveTab] = useState<"photos" | "videos">(hasPhotos ? "photos" : "videos");
+  const [activeTab, setActiveTab] = useState<"all" | "photos" | "videos">("all");
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>("Todas");
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<ProjectVideo | null>(
     hasVideos ? videos[0] : null
   );
+
+  useEffect(() => {
+    if (videos.length === 0) {
+      setSelectedVideo(null);
+      return;
+    }
+    setSelectedVideo((prev) => {
+      if (prev && videos.some((v) => v.id === prev.id || v.videoUrl === prev.videoUrl)) {
+        return prev;
+      }
+      return videos[0];
+    });
+  }, [videos]);
 
   if (!hasPhotos && !hasVideos) {
     return null;
@@ -131,19 +143,23 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
   };
 
   const resolveVideoThumb = (vid: ProjectVideo) =>
-    vid.thumbnailUrl?.trim() ||
-    getYouTubeThumbnailUrl(vid.videoUrl) ||
-    project.featuredImage ||
-    project.coverImage ||
-    "";
+    vid.thumbnailUrl?.trim() || getYouTubeThumbnailUrl(vid.videoUrl) || "";
 
   const activeEmbedUrl = selectedVideo
     ? getExternalVideoEmbedUrl(selectedVideo.videoUrl, true)
     : null;
 
+  const activeVideoThumb = selectedVideo ? resolveVideoThumb(selectedVideo) : "";
+  const activeVideoIsExternalEmbed = selectedVideo
+    ? Boolean(getExternalVideoEmbedUrl(selectedVideo.videoUrl))
+    : false;
+
+  const showPhotosSection = hasPhotos && (activeTab === "all" || activeTab === "photos");
+  const showVideosSection = hasVideos && (activeTab === "all" || activeTab === "videos");
+
   return (
     <section className="space-y-12">
-      {/* Seletor de Abas de Mídia: Fotos & Vídeos com M3ScrollReveal */}
+      {/* Cabeçalho e Filtro de Mídia: Tudo / Fotos / Vídeos */}
       <M3ScrollReveal
         variant="fadeUp"
         className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 pb-6"
@@ -165,50 +181,70 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
           </p>
         </div>
 
-        {(hasPhotos || hasVideos) && (
-          <div className="flex items-center gap-2 p-1.5 bg-zinc-100 rounded-2xl border border-zinc-200 w-fit">
-            {hasPhotos && (
-              <button
-                onClick={() => setActiveTab("photos")}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                  activeTab === "photos"
-                    ? "bg-[#FF650F] text-white shadow-sm"
-                    : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60"
-                }`}
-              >
-                <Camera className="w-4 h-4" />
-                Fotos da Obra ({photos.length})
-              </button>
-            )}
+        {hasPhotos && hasVideos && (
+          <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-zinc-100 rounded-2xl border border-zinc-200 w-fit">
+            <button
+              type="button"
+              onClick={() => setActiveTab("all")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                activeTab === "all"
+                  ? "bg-[#FF650F] text-white shadow-sm"
+                  : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60"
+              }`}
+            >
+              Tudo ({photos.length + videos.length})
+            </button>
 
-            {hasVideos && (
-              <button
-                onClick={() => {
-                  setActiveTab("videos");
-                  setIsVideoPlaying(false);
-                }}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                  activeTab === "videos"
-                    ? "bg-[#FF650F] text-white shadow-sm"
-                    : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60"
-                }`}
-              >
-                <Film className="w-4 h-4" />
-                Vídeos do Projeto ({videos.length})
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setActiveTab("photos")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                activeTab === "photos"
+                  ? "bg-[#FF650F] text-white shadow-sm"
+                  : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60"
+              }`}
+            >
+              <Camera className="w-4 h-4" />
+              Fotos ({photos.length})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("videos");
+                setIsVideoPlaying(false);
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                activeTab === "videos"
+                  ? "bg-[#FF650F] text-white shadow-sm"
+                  : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60"
+              }`}
+            >
+              <Film className="w-4 h-4" />
+              Vídeos ({videos.length})
+            </button>
           </div>
         )}
       </M3ScrollReveal>
 
-      {/* ABA 1: GALERIA DE FOTOS */}
-      {activeTab === "photos" && hasPhotos && (
-        <div className="space-y-8 animate-in fade-in duration-300">
+      {/* SEÇÃO 1: GALERIA DE FOTOS */}
+      {showPhotosSection && (
+        <div className="space-y-6">
+          {showVideosSection && (
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg sm:text-xl font-extrabold text-zinc-900 flex items-center gap-2">
+                <Camera className="w-5 h-5 text-[#FF650F]" />
+                Galeria de Fotos ({photos.length})
+              </h3>
+            </div>
+          )}
+
           {photoCategories.length > 2 && (
             <div className="flex flex-wrap items-center gap-2">
               {photoCategories.map((cat) => (
                 <button
                   key={cat}
+                  type="button"
                   onClick={() => setFilterCategory(cat)}
                   className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     filterCategory === cat
@@ -222,27 +258,35 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
             </div>
           )}
 
-          <M3ScrollStagger className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPhotos.map((img, idx) => {
               const originalIndex = photos.findIndex((g) => g.url === img.url);
               return (
-                <M3ScrollItem key={`${img.url}-${idx}`}>
-                  <OptimizedPhotoCard
-                    img={img}
-                    index={idx}
-                    projectTitle={project.title}
-                    onClick={() => setSelectedPhotoIdx(originalIndex !== -1 ? originalIndex : idx)}
-                  />
-                </M3ScrollItem>
+                <OptimizedPhotoCard
+                  key={`${img.url}-${idx}`}
+                  img={img}
+                  index={idx}
+                  projectTitle={project.title}
+                  onClick={() => setSelectedPhotoIdx(originalIndex !== -1 ? originalIndex : idx)}
+                />
               );
             })}
-          </M3ScrollStagger>
+          </div>
         </div>
       )}
 
-      {/* ABA 2: GALERIA E SHOWCASE DE VÍDEOS */}
-      {activeTab === "videos" && hasVideos && (
-        <div className="space-y-8 animate-in fade-in duration-300">
+      {/* SEÇÃO 2: GALERIA E SHOWCASE DE VÍDEOS */}
+      {showVideosSection && (
+        <div className="space-y-6">
+          {showPhotosSection && (
+            <div className="pt-4 border-t border-zinc-200 flex items-center justify-between">
+              <h3 className="text-lg sm:text-xl font-extrabold text-zinc-900 flex items-center gap-2">
+                <Film className="w-5 h-5 text-[#FF650F]" />
+                Galeria de Vídeos ({videos.length})
+              </h3>
+            </div>
+          )}
+
           {selectedVideo && (
             <div className="relative rounded-3xl overflow-hidden bg-black border border-zinc-800 shadow-2xl">
               <div className="aspect-video w-full bg-black relative flex items-center justify-center">
@@ -251,19 +295,30 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
                     className="relative w-full h-full cursor-pointer group"
                     onClick={() => setIsVideoPlaying(true)}
                   >
-                    {resolveVideoThumb(selectedVideo) ? (
+                    {activeVideoThumb ? (
                       <Image
-                        src={resolveVideoThumb(selectedVideo)}
+                        src={activeVideoThumb}
                         alt={selectedVideo.title || project.title}
                         fill
                         unoptimized
                         referrerPolicy="no-referrer"
-                        className="object-cover opacity-80 group-hover:opacity-95 transition-opacity"
+                        className="object-cover opacity-85 group-hover:opacity-100 transition-opacity"
+                      />
+                    ) : !activeVideoIsExternalEmbed ? (
+                      <video
+                        key={`poster-${selectedVideo.videoUrl}`}
+                        src={selectedVideo.videoUrl}
+                        preload="metadata"
+                        muted
+                        playsInline
+                        onLoadedMetadata={(e) => seekVideoPreviewFrame(e.currentTarget)}
+                        onLoadedData={(e) => seekVideoPreviewFrame(e.currentTarget)}
+                        className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity"
                       />
                     ) : (
                       <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black" />
                     )}
-                    <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-4">
+                    <div className="absolute inset-0 bg-black/35 flex flex-col items-center justify-center gap-4">
                       <div className="w-20 h-20 rounded-full bg-[#FF650F] text-white flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
                         <Play className="w-8 h-8 fill-white translate-x-0.5" />
                       </div>
@@ -329,23 +384,26 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
           )}
 
           {videos.length > 1 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
               {videos.map((vid, idx) => {
                 const thumb = resolveVideoThumb(vid);
+                const isExternalEmbed = Boolean(getExternalVideoEmbedUrl(vid.videoUrl));
+                const isSelected = selectedVideo?.id === vid.id || selectedVideo?.videoUrl === vid.videoUrl;
+
                 return (
                   <div
                     key={vid.id || idx}
                     onClick={() => {
                       setSelectedVideo(vid);
-                      setIsVideoPlaying(false);
+                      setIsVideoPlaying(true);
                     }}
                     className={`p-4 rounded-2xl border transition-all cursor-pointer flex gap-4 items-center ${
-                      selectedVideo?.id === vid.id
-                        ? "bg-orange-50 border-[#FF650F] text-zinc-900"
+                      isSelected
+                        ? "bg-orange-50 border-[#FF650F] text-zinc-900 shadow-sm"
                         : "bg-white border-zinc-200 hover:border-zinc-300 text-zinc-700"
                     }`}
                   >
-                    <div className="relative w-20 h-14 rounded-lg overflow-hidden bg-black shrink-0">
+                    <div className="relative w-24 h-16 rounded-lg overflow-hidden bg-black shrink-0">
                       {thumb ? (
                         <Image
                           src={thumb}
@@ -355,14 +413,24 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
                           referrerPolicy="no-referrer"
                           className="object-cover"
                         />
+                      ) : !isExternalEmbed ? (
+                        <video
+                          src={vid.videoUrl}
+                          preload="metadata"
+                          muted
+                          playsInline
+                          onLoadedMetadata={(e) => seekVideoPreviewFrame(e.currentTarget)}
+                          onLoadedData={(e) => seekVideoPreviewFrame(e.currentTarget)}
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         <div className="w-full h-full bg-zinc-900" />
                       )}
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white">
+                      <div className="absolute inset-0 bg-black/35 flex items-center justify-center text-white">
                         <Play className="w-4 h-4 fill-white" />
                       </div>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <h4 className="text-xs font-bold line-clamp-1">
                         {vid.title?.trim() || `Vídeo ${idx + 1}`}
                       </h4>
@@ -382,6 +450,7 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
       {selectedPhotoIdx !== null && photos[selectedPhotoIdx] && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-200">
           <button
+            type="button"
             onClick={() => setSelectedPhotoIdx(null)}
             className="absolute top-5 right-5 z-20 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
             aria-label="Fechar visualizador"
@@ -392,6 +461,7 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
           {photos.length > 1 && (
             <>
               <button
+                type="button"
                 onClick={handlePrevPhoto}
                 className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/10 hover:bg-[#FF650F] text-white flex items-center justify-center transition-all cursor-pointer"
                 aria-label="Foto anterior"
@@ -400,6 +470,7 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
               </button>
 
               <button
+                type="button"
                 onClick={handleNextPhoto}
                 className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/10 hover:bg-[#FF650F] text-white flex items-center justify-center transition-all cursor-pointer"
                 aria-label="Próxima foto"
@@ -410,16 +481,13 @@ export function ProjectMediaShowcase({ project }: ProjectMediaShowcaseProps) {
           )}
 
           <div className="relative max-w-6xl max-h-[85vh] w-full h-[80vh] px-4 flex flex-col items-center justify-center">
-            <div className="relative w-full h-full">
-              <Image
+            <div className="relative w-full h-full flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={photos[selectedPhotoIdx].url}
                 alt={photos[selectedPhotoIdx].caption || project.title}
-                fill
-                unoptimized
                 referrerPolicy="no-referrer"
-                className="object-contain"
-                sizes="100vw"
-                priority
+                className="max-w-full max-h-full object-contain"
               />
             </div>
 

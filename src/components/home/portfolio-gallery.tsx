@@ -32,7 +32,7 @@ export function PortfolioGallery() {
   const [newCatName, setNewCatName] = useState("");
 
   // 1. Carrega projetos atualizados do servidor/banco de dados
-  const fetchProjects = async () => {
+  const fetchProjects = async (): Promise<ProjectDetailItem[] | null> => {
     setLoadingProjects(true);
     try {
       const res = await fetch("/api/v1/admin/cms/portfolio", { cache: "no-store" });
@@ -40,6 +40,7 @@ export function PortfolioGallery() {
         const json = await res.json();
         if (json.success && Array.isArray(json.projects)) {
           setProjects(json.projects);
+          return json.projects;
         }
       }
     } catch (err) {
@@ -47,11 +48,22 @@ export function PortfolioGallery() {
     } finally {
       setLoadingProjects(false);
     }
+    return null;
   };
 
   useEffect(() => {
     fetchProjects();
   }, [portfolioRefreshCounter]);
+
+  // Busca a versão mais recente do projeto antes de abrir o modal de edição
+  const handleEditProject = async (project: ProjectDetailItem) => {
+    const latestProjects = await fetchProjects();
+    const freshProject =
+      latestProjects?.find(
+        (item) => (project.id && item.id === project.id) || item.slug === project.slug
+      ) || project;
+    openPortfolioModal(freshProject);
+  };
 
   // Exclusão de Projeto de Portfólio (limpa do banco de dados)
   const handleDeleteProject = async (project: ProjectDetailItem) => {
@@ -242,11 +254,11 @@ export function PortfolioGallery() {
                 {/* Ações flutuantes do Card de Portfólio no Modo de Edição */}
                 <CMSCardActionBar
                   label="Projeto"
-                  onEdit={() => openPortfolioModal(project)}
+                  onEdit={() => handleEditProject(project)}
                   onDelete={() => handleDeleteProject(project)}
                 />
 
-                <Link href={`/portfolio/${project.slug}`} className="block h-full group">
+                <Link href={`/portfolio/${project.slug}`} prefetch={false} className="block h-full group">
                   <SpotlightCard
                     isDark={false}
                     className="rounded-2xl bg-white border border-zinc-200/90 overflow-hidden transition-all duration-300 group-hover:border-[#FF650F]/50 group-hover:shadow-xl group-hover:-translate-y-1.5 flex flex-col h-full"

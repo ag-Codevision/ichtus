@@ -463,7 +463,7 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
             <M3ScrollStagger className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {relatedProjects.map((rel) => (
                 <M3ScrollItem key={rel.id} className="h-full">
-                  <Link href={`/portfolio/${rel.slug}`} className="block group h-full">
+                  <Link href={`/portfolio/${rel.slug}`} prefetch={false} className="block group h-full">
                     <div className="rounded-2xl overflow-hidden bg-white border border-zinc-200/90 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col h-full">
                       <div className="relative h-56 w-full bg-zinc-100 overflow-hidden">
                         <Image

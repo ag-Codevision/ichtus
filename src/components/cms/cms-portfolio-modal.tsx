@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useOptionalCMS } from "./cms-provider";
 import {
   X,
@@ -23,6 +24,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Video,
+  Play,
 } from "lucide-react";
 import type { ProjectDetailItem, ProjectVideo } from "@/lib/portfolio-data";
 import {
@@ -30,6 +32,7 @@ import {
   isInstagramAnyUrl,
   isValidMediaUrlInput,
   getYouTubeThumbnailUrl,
+  getExternalVideoEmbedUrl,
 } from "@/lib/media-utils";
 
 export interface CMSPortfolioModalProps {
@@ -37,6 +40,14 @@ export interface CMSPortfolioModalProps {
   onClose?: () => void;
   initialProject?: Partial<ProjectDetailItem> | null;
   onSaved?: () => void;
+}
+
+interface PendingUploadPreview {
+  tempId: string;
+  previewUrl: string;
+  name: string;
+  status: "uploading" | "error";
+  errorMessage?: string;
 }
 
 const DEFAULT_CATEGORIES = [
@@ -49,6 +60,37 @@ const DEFAULT_CATEGORIES = [
   "Fachadas",
   "Outros",
 ];
+
+/** Posiciona o frame inicial de um <video> em ~0.5s para renderizar uma miniatura real. */
+function seekVideoPreviewFrame(videoEl: HTMLVideoElement) {
+  try {
+    if (Number.isFinite(videoEl.duration) && videoEl.duration > 0 && videoEl.currentTime < 0.1) {
+      videoEl.currentTime = Math.min(0.5, videoEl.duration * 0.1);
+    }
+  } catch {
+    // Ignora falhas de seek em streams bloqueados por CORS
+  }
+}
+
+/** Faz parse seguro de respostas da API evitando erro de sintaxe quando o proxy retorna HTML. */
+async function parseApiJsonSafe(res: Response, fallbackMessage: string): Promise<any> {
+  const rawText = await res.text();
+  if (!rawText) {
+    return { success: res.ok, error: res.ok ? undefined : fallbackMessage };
+  }
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    const cleanText = rawText.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const hint =
+      res.status === 413
+        ? "O arquivo ultrapassou o limite máximo permitido pelo servidor."
+        : res.status >= 500
+          ? `Erro interno no servidor (HTTP ${res.status}) ao processar a mídia.`
+          : cleanText.slice(0, 140) || fallbackMessage;
+    return { success: false, error: hint };
+  }
+}
 
 function createEmptyProjectForm(defaultCategory: string): Partial<ProjectDetailItem> {
   return {
@@ -83,6 +125,7 @@ export function CMSPortfolioModal({
   initialProject: propInitialProject,
   onSaved: propOnSaved,
 }: CMSPortfolioModalProps = {}) {
+  const router = useRouter();
   const cms = useOptionalCMS();
 
   const isOpen = propIsOpen !== undefined ? propIsOpen : (cms?.portfolioModalOpen ?? false);
@@ -118,6 +161,10 @@ export function CMSPortfolioModal({
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [isImportingVideoLink, setIsImportingVideoLink] = useState(false);
   const [uploadingVideoThumbId, setUploadingVideoThumbId] = useState<string | null>(null);
+  const [previewingVideoId, setPreviewingVideoId] = useState<string | null>(null);
+
+  const [pendingGalleryUploads, setPendingGalleryUploads] = useState<PendingUploadPreview[]>([]);
+  const [pendingVideoUploads, setPendingVideoUploads] = useState<PendingUploadPreview[]>([]);
 
   const [coverUrlInput, setCoverUrlInput] = useState("");
   const [galleryUrlInput, setGalleryUrlInput] = useState("");
@@ -131,6 +178,39 @@ export function CMSPortfolioModal({
   const coverFileInputRef = useRef<HTMLInputElement>(null);
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
+  const lastInitKeyRef = useRef<string | null>(null);
+  const objectUrlsRef = useRef<string[]>([]);
+
+  const trackObjectUrl = (url: string) => {
+    objectUrlsRef.current.push(url);
+    return url;
+  };
+
+  const releaseObjectUrl = (url: string) => {
+    try {
+      URL.revokeObjectURL(url);
+    } catch {
+      // Ignora erro caso a URL já tenha sido revogada
+    }
+    objectUrlsRef.current = objectUrlsRef.current.filter((u) => u !== url);
+  };
+
+  const releaseAllObjectUrls = () => {
+    objectUrlsRef.current.forEach((url) => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {
+        // Ignora
+      }
+    });
+    objectUrlsRef.current = [];
+  };
+
+  useEffect(() => {
+    return () => {
+      releaseAllObjectUrls();
+    };
+  }, []);
 
   // Sincroniza categorias caso o modal seja aberto fora do CMSProvider (ex: página interna do projeto)
   useEffect(() => {
@@ -145,14 +225,29 @@ export function CMSPortfolioModal({
       .catch(() => {});
   }, [isOpen, cms?.data?.portfolio?.categories]);
 
-  // Reseta/popula o formulário ao abrir o modal
+  // Popula o formulário apenas na abertura do modal ou na troca de projeto (sem perder mídias já subidas)
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      lastInitKeyRef.current = null;
+      releaseAllObjectUrls();
+      setPendingGalleryUploads([]);
+      setPendingVideoUploads([]);
+      setPreviewingVideoId(null);
+      return;
+    }
+
+    const initKey = selectedPortfolioProject?.id || selectedPortfolioProject?.slug || "__new__";
+    if (lastInitKeyRef.current === initKey) {
+      return;
+    }
+    lastInitKeyRef.current = initKey;
+
     setActiveTab("geral");
     setError(null);
     setMediaNotice(null);
     setGalleryUrlInput("");
     setVideoUrlInput("");
+    setPreviewingVideoId(null);
 
     if (selectedPortfolioProject) {
       setFormData({
@@ -178,8 +273,8 @@ export function CMSPortfolioModal({
       method: "POST",
       body: dataPayload,
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
+    const json = await parseApiJsonSafe(res, `Falha ao enviar ${file.name}.`);
+    if (!res.ok || !json.success || !json.url) {
       throw new Error(json.error || `Falha ao enviar ${file.name}.`);
     }
     return { url: json.url, mediaType: json.mediaType };
@@ -194,8 +289,8 @@ export function CMSPortfolioModal({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url: rawUrl.trim(), expectedType }),
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
+    const json = await parseApiJsonSafe(res, "Não foi possível importar a mídia do link.");
+    if (!res.ok || !json.success || !json.url) {
       throw new Error(json.error || "Não foi possível importar a mídia do link.");
     }
     return { url: json.url, mediaType: json.mediaType };
@@ -273,30 +368,81 @@ export function CMSPortfolioModal({
   };
 
   // ==================== GALERIA DE FOTOS ====================
+  const dismissPendingGalleryError = (tempId: string) => {
+    setPendingGalleryUploads((prev) => {
+      const target = prev.find((item) => item.tempId === tempId);
+      if (target) releaseObjectUrl(target.previewUrl);
+      return prev.filter((item) => item.tempId !== tempId);
+    });
+  };
+
   const handleGalleryFilesUpload = async (files: FileList | File[]) => {
-    const fileList = Array.from(files).filter((f) => f.type.startsWith("image/") || /\.(png|jpe?g|webp|avif|gif|svg)$/i.test(f.name));
+    const fileList = Array.from(files).filter(
+      (f) => f.type.startsWith("image/") || /\.(png|jpe?g|webp|avif|gif|svg)$/i.test(f.name)
+    );
     if (fileList.length === 0) {
       setError("Selecione arquivos de imagem válidos (.jpg, .png, .webp, .avif, .gif, .svg).");
       return;
     }
 
+    // Exibe miniaturas instantâneas assim que o usuário seleciona/arrasta as fotos
+    const batch = fileList.map((file, idx) => ({
+      file,
+      preview: {
+        tempId: `gal-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
+        previewUrl: trackObjectUrl(URL.createObjectURL(file)),
+        name: file.name,
+        status: "uploading" as const,
+      },
+    }));
+
+    setPendingGalleryUploads((prev) => [...prev, ...batch.map((b) => b.preview)]);
     setIsUploadingGallery(true);
     setError(null);
-    setMediaNotice(null);
+    setMediaNotice(`Carregando ${fileList.length} foto(s) na galeria...`);
+
+    let successCount = 0;
+    const failedMessages: string[] = [];
 
     try {
-      const uploadedItems: { url: string; caption: string }[] = [];
-      for (const file of fileList) {
-        const { url } = await uploadSingleFile(file);
-        uploadedItems.push({ url, caption: "" });
+      for (const item of batch) {
+        try {
+          const { url } = await uploadSingleFile(item.file);
+          successCount += 1;
+          setFormData((prev) => ({
+            ...prev,
+            galleryImages: [...(prev.galleryImages || []), { url, caption: "" }],
+          }));
+          setPendingGalleryUploads((prev) =>
+            prev.filter((p) => p.tempId !== item.preview.tempId)
+          );
+          releaseObjectUrl(item.preview.previewUrl);
+        } catch (err: any) {
+          const msg = err?.message || `Falha ao enviar ${item.file.name}.`;
+          failedMessages.push(`${item.file.name}: ${msg}`);
+          setPendingGalleryUploads((prev) =>
+            prev.map((p) =>
+              p.tempId === item.preview.tempId
+                ? { ...p, status: "error", errorMessage: msg }
+                : p
+            )
+          );
+        }
       }
-      setFormData((prev) => ({
-        ...prev,
-        galleryImages: [...(prev.galleryImages || []), ...uploadedItems],
-      }));
-      setMediaNotice(`${uploadedItems.length} foto(s) adicionada(s) à galeria!`);
-    } catch (err: any) {
-      setError(err.message || "Erro ao enviar foto(s) para a galeria.");
+
+      if (successCount > 0) {
+        setMediaNotice(
+          `${successCount} foto(s) carregada(s)! Clique em "${
+            selectedPortfolioProject?.id ? "Salvar Alterações" : "Salvar e Criar Página Interna"
+          }" para gravar no banco.`
+        );
+      } else {
+        setMediaNotice(null);
+      }
+
+      if (failedMessages.length > 0) {
+        setError(failedMessages[0]);
+      }
     } finally {
       setIsUploadingGallery(false);
     }
@@ -395,39 +541,91 @@ export function CMSPortfolioModal({
   };
 
   // ==================== GALERIA DE VÍDEOS ====================
+  const dismissPendingVideoError = (tempId: string) => {
+    setPendingVideoUploads((prev) => {
+      const target = prev.find((item) => item.tempId === tempId);
+      if (target) releaseObjectUrl(target.previewUrl);
+      return prev.filter((item) => item.tempId !== tempId);
+    });
+  };
+
   const handleVideoFilesUpload = async (files: FileList | File[]) => {
-    const fileList = Array.from(files).filter((f) => f.type.startsWith("video/") || /\.(mp4|webm|mov|m4v|avi)$/i.test(f.name));
+    const fileList = Array.from(files).filter(
+      (f) => f.type.startsWith("video/") || /\.(mp4|webm|mov|m4v|avi)$/i.test(f.name)
+    );
     if (fileList.length === 0) {
       setError("Selecione arquivos de vídeo válidos (.mp4, .webm, .mov, .m4v, .avi).");
       return;
     }
 
+    // Exibe miniaturas instantâneas do vídeo enquanto envia ao servidor
+    const batch = fileList.map((file, idx) => ({
+      file,
+      preview: {
+        tempId: `vid-up-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
+        previewUrl: trackObjectUrl(URL.createObjectURL(file)),
+        name: file.name,
+        status: "uploading" as const,
+      },
+    }));
+
+    setPendingVideoUploads((prev) => [...prev, ...batch.map((b) => b.preview)]);
     setIsUploadingVideo(true);
     setError(null);
-    setMediaNotice(null);
+    setMediaNotice(`Enviando ${fileList.length} vídeo(s) para a galeria...`);
+
+    let successCount = 0;
+    const failedMessages: string[] = [];
 
     try {
-      const newVideos: ProjectVideo[] = [];
-      for (const file of fileList) {
-        const { url } = await uploadSingleFile(file);
-        const cleanTitle = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ");
-        newVideos.push({
-          id: `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          title: cleanTitle,
-          description: "",
-          videoUrl: url,
-          thumbnailUrl: "",
-          duration: "",
-          tag: "",
-        });
+      for (const item of batch) {
+        try {
+          const { url } = await uploadSingleFile(item.file);
+          const cleanTitle = item.file.name.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ");
+          const newVideo: ProjectVideo = {
+            id: `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            title: cleanTitle,
+            description: "",
+            videoUrl: url,
+            thumbnailUrl: "",
+            duration: "",
+            tag: "",
+          };
+          successCount += 1;
+          setFormData((prev) => ({
+            ...prev,
+            videos: [...(prev.videos || []), newVideo],
+          }));
+          setPendingVideoUploads((prev) =>
+            prev.filter((p) => p.tempId !== item.preview.tempId)
+          );
+          releaseObjectUrl(item.preview.previewUrl);
+        } catch (err: any) {
+          const msg = err?.message || `Falha ao enviar ${item.file.name}.`;
+          failedMessages.push(`${item.file.name}: ${msg}`);
+          setPendingVideoUploads((prev) =>
+            prev.map((p) =>
+              p.tempId === item.preview.tempId
+                ? { ...p, status: "error", errorMessage: msg }
+                : p
+            )
+          );
+        }
       }
-      setFormData((prev) => ({
-        ...prev,
-        videos: [...(prev.videos || []), ...newVideos],
-      }));
-      setMediaNotice(`${newVideos.length} vídeo(s) enviado(s) para a galeria!`);
-    } catch (err: any) {
-      setError(err.message || "Erro ao enviar vídeo(s).");
+
+      if (successCount > 0) {
+        setMediaNotice(
+          `${successCount} vídeo(s) carregado(s)! Clique em "${
+            selectedPortfolioProject?.id ? "Salvar Alterações" : "Salvar e Criar Página Interna"
+          }" para gravar no banco.`
+        );
+      } else {
+        setMediaNotice(null);
+      }
+
+      if (failedMessages.length > 0) {
+        setError(failedMessages[0]);
+      }
     } finally {
       setIsUploadingVideo(false);
     }
@@ -524,6 +722,7 @@ export function CMSPortfolioModal({
     try {
       const { url } = await uploadSingleFile(file);
       handleVideoFieldChange(videoId, "thumbnailUrl", url);
+      setMediaNotice("Capa personalizada do vídeo carregada!");
     } catch (err: any) {
       setError(err.message || "Erro ao enviar miniatura do vídeo.");
     } finally {
@@ -532,6 +731,7 @@ export function CMSPortfolioModal({
   };
 
   const removeVideoItem = (videoId: string) => {
+    setPreviewingVideoId((prev) => (prev === videoId ? null : prev));
     setFormData((prev) => ({
       ...prev,
       videos: (prev.videos || []).filter((v) => v.id !== videoId),
@@ -541,6 +741,11 @@ export function CMSPortfolioModal({
   // ==================== SALVAMENTO ====================
   const handleSave = async () => {
     setError(null);
+
+    if (isUploadingCover || isUploadingGallery || isUploadingVideo) {
+      setError("Aguarde o término do envio dos arquivos antes de salvar as alterações.");
+      return;
+    }
 
     if (!formData.title?.trim()) {
       setActiveTab("geral");
@@ -646,10 +851,13 @@ export function CMSPortfolioModal({
         body: JSON.stringify(payload),
       });
 
-      const json = await res.json();
+      const json = await parseApiJsonSafe(res, "Erro ao salvar projeto no banco de dados.");
       if (!res.ok || !json.success) {
         throw new Error(json.error || "Erro ao salvar projeto no banco de dados.");
       }
+
+      lastInitKeyRef.current = null;
+      router.refresh();
 
       if (propOnSaved) {
         propOnSaved();
@@ -1198,88 +1406,155 @@ export function CMSPortfolioModal({
                 </button>
               </div>
 
-              {/* Grid de fotos da galeria */}
-              {photosCount > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-2">
-                  {(formData.galleryImages || []).map((img, idx) => (
-                    <div
-                      key={`${img.url}-${idx}`}
-                      className="group relative rounded-xl overflow-hidden border border-white/15 bg-black flex flex-col"
-                    >
-                      <div className="relative h-28 w-full bg-zinc-950">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={img.url}
-                          alt={`Foto ${idx + 1}`}
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover"
-                        />
-                        <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/75 text-[10px] font-mono text-white">
-                          #{idx + 1}
-                        </span>
-                      </div>
+              {/* Grid de miniaturas da galeria (com preview imediato durante e após o upload) */}
+              {(photosCount > 0 || pendingGalleryUploads.length > 0) && (
+                <div className="space-y-2 pt-2">
+                  <div className="flex items-center justify-between text-[11px] text-emerald-300 font-semibold">
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      {photosCount} foto(s) carregada(s) e pronta(s) para salvar
+                    </span>
+                    {pendingGalleryUploads.some((p) => p.status === "uploading") && (
+                      <span className="text-amber-300 flex items-center gap-1">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Enviando {pendingGalleryUploads.filter((p) => p.status === "uploading").length} arquivo(s)...
+                      </span>
+                    )}
+                  </div>
 
-                      <div className="p-1.5 bg-zinc-950 flex items-center justify-between gap-1 border-t border-white/10">
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            disabled={idx === 0}
-                            onClick={() => moveGalleryItem(idx, -1)}
-                            className="p-1 rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-300"
-                            title="Mover para esquerda"
-                          >
-                            <ArrowLeft className="w-3 h-3" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={idx === photosCount - 1}
-                            onClick={() => moveGalleryItem(idx, 1)}
-                            className="p-1 rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-300"
-                            title="Mover para direita"
-                          >
-                            <ArrowRight className="w-3 h-3" />
-                          </button>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {(formData.galleryImages || []).map((img, idx) => (
+                      <div
+                        key={`${img.url}-${idx}`}
+                        className="group relative rounded-xl overflow-hidden border border-emerald-500/30 bg-black flex flex-col shadow-sm"
+                      >
+                        <div className="relative h-28 w-full bg-zinc-950">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={img.url}
+                            alt={`Foto ${idx + 1}`}
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover"
+                          />
+                          <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/80 text-[10px] font-mono text-white">
+                            #{idx + 1}
+                          </span>
+                          <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-emerald-600/90 text-[9px] font-bold text-white flex items-center gap-1 shadow">
+                            <CheckCircle2 className="w-2.5 h-2.5" />
+                            Carregada
+                          </span>
                         </div>
 
-                        <div className="flex items-center gap-1">
-                          {img.url.startsWith("http") && (
+                        <div className="p-1.5 bg-zinc-950 flex items-center justify-between gap-1 border-t border-white/10">
+                          <div className="flex items-center gap-1">
                             <button
                               type="button"
-                              onClick={() => handleImportExistingGalleryItem(idx)}
-                              className="p-1 rounded bg-zinc-800 hover:bg-emerald-600 text-zinc-300 hover:text-white"
-                              title="Baixar cópia para o servidor"
+                              disabled={idx === 0}
+                              onClick={() => moveGalleryItem(idx, -1)}
+                              className="p-1 rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-300"
+                              title="Mover para esquerda"
                             >
-                              <Download className="w-3 h-3" />
+                              <ArrowLeft className="w-3 h-3" />
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFormData((prev) => ({
-                                ...prev,
-                                featuredImage: img.url,
-                                coverImage: img.url,
-                              }));
-                              setCoverUrlInput(img.url);
-                              setMediaNotice("Foto definida como imagem de capa!");
-                            }}
-                            className="p-1 rounded bg-zinc-800 hover:bg-[#FF650F] text-zinc-300 hover:text-white"
-                            title="Usar esta foto como capa"
-                          >
-                            <Star className="w-3 h-3" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeGalleryItem(idx)}
-                            className="p-1 rounded bg-zinc-800 hover:bg-rose-600 text-zinc-300 hover:text-white"
-                            title="Remover foto"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
+                            <button
+                              type="button"
+                              disabled={idx === photosCount - 1}
+                              onClick={() => moveGalleryItem(idx, 1)}
+                              className="p-1 rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-300"
+                              title="Mover para direita"
+                            >
+                              <ArrowRight className="w-3 h-3" />
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            {img.url.startsWith("http") && (
+                              <button
+                                type="button"
+                                onClick={() => handleImportExistingGalleryItem(idx)}
+                                className="p-1 rounded bg-zinc-800 hover:bg-emerald-600 text-zinc-300 hover:text-white"
+                                title="Baixar cópia para o servidor"
+                              >
+                                <Download className="w-3 h-3" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  featuredImage: img.url,
+                                  coverImage: img.url,
+                                }));
+                                setCoverUrlInput(img.url);
+                                setMediaNotice("Foto definida como imagem de capa!");
+                              }}
+                              className="p-1 rounded bg-zinc-800 hover:bg-[#FF650F] text-zinc-300 hover:text-white"
+                              title="Usar esta foto como capa"
+                            >
+                              <Star className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeGalleryItem(idx)}
+                              className="p-1 rounded bg-zinc-800 hover:bg-rose-600 text-zinc-300 hover:text-white"
+                              title="Remover foto"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+
+                    {pendingGalleryUploads.map((pending) => (
+                      <div
+                        key={pending.tempId}
+                        className={`relative rounded-xl overflow-hidden border flex flex-col bg-black ${
+                          pending.status === "error"
+                            ? "border-rose-500/70"
+                            : "border-[#FF650F]/60 animate-pulse"
+                        }`}
+                      >
+                        <div className="relative h-28 w-full bg-zinc-950">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={pending.previewUrl}
+                            alt={pending.name}
+                            className="w-full h-full object-cover opacity-55"
+                          />
+                          <div className="absolute inset-0 bg-black/55 flex flex-col items-center justify-center p-2 text-center">
+                            {pending.status === "uploading" ? (
+                              <>
+                                <Loader2 className="w-5 h-5 text-[#FF650F] animate-spin mb-1" />
+                                <span className="text-[10px] font-bold text-white">Enviando...</span>
+                              </>
+                            ) : (
+                              <>
+                                <AlertCircle className="w-5 h-5 text-rose-400 mb-1" />
+                                <span className="text-[10px] font-semibold text-rose-200 line-clamp-2">
+                                  {pending.errorMessage || "Erro ao enviar"}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="p-1.5 bg-zinc-950 flex items-center justify-between gap-1 border-t border-white/10">
+                          <span className="text-[10px] text-zinc-400 truncate px-1">{pending.name}</span>
+                          {pending.status === "error" && (
+                            <button
+                              type="button"
+                              onClick={() => dismissPendingGalleryError(pending.tempId)}
+                              className="p-1 rounded bg-rose-600/80 hover:bg-rose-600 text-white"
+                              title="Remover aviso"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1377,94 +1652,226 @@ export function CMSPortfolioModal({
                 </button>
               </div>
 
-              {/* Lista de vídeos adicionados */}
-              {videosCount > 0 && (
+              {/* Miniaturas e lista de vídeos adicionados / em envio */}
+              {(videosCount > 0 || pendingVideoUploads.length > 0) && (
                 <div className="space-y-3 pt-2">
-                  {(formData.videos || []).map((vid, idx) => (
-                    <div
-                      key={vid.id || idx}
-                      className="p-3.5 rounded-2xl bg-zinc-950 border border-white/10 space-y-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-16 h-12 rounded-lg bg-zinc-900 border border-white/10 overflow-hidden shrink-0 flex items-center justify-center">
-                            {vid.thumbnailUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={vid.thumbnailUrl}
-                                alt={vid.title || `Vídeo ${idx + 1}`}
-                                referrerPolicy="no-referrer"
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <Film className="w-5 h-5 text-[#FF650F]" />
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#FF650F]">
-                              Vídeo #{idx + 1}
-                            </span>
-                            <p className="text-xs font-mono text-zinc-300 truncate">{vid.videoUrl}</p>
-                          </div>
-                        </div>
+                  <div className="flex items-center justify-between text-[11px] text-emerald-300 font-semibold">
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      {videosCount} vídeo(s) carregado(s) e pronto(s) para salvar
+                    </span>
+                    {pendingVideoUploads.some((v) => v.status === "uploading") && (
+                      <span className="text-amber-300 flex items-center gap-1">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Enviando vídeo(s)...
+                      </span>
+                    )}
+                  </div>
 
+                  {pendingVideoUploads.map((pending) => (
+                    <div
+                      key={pending.tempId}
+                      className={`p-3 rounded-2xl border flex items-center gap-3 bg-zinc-950 ${
+                        pending.status === "error"
+                          ? "border-rose-500/70"
+                          : "border-[#FF650F]/60 animate-pulse"
+                      }`}
+                    >
+                      <div className="relative w-32 sm:w-40 aspect-video rounded-xl overflow-hidden bg-black border border-white/10 shrink-0">
+                        <video
+                          src={pending.previewUrl}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          onLoadedMetadata={(e) => seekVideoPreviewFrame(e.currentTarget)}
+                          className="w-full h-full object-cover opacity-60"
+                        />
+                        <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center">
+                          {pending.status === "uploading" ? (
+                            <>
+                              <Loader2 className="w-5 h-5 text-[#FF650F] animate-spin mb-1" />
+                              <span className="text-[10px] font-bold text-white">Enviando vídeo...</span>
+                            </>
+                          ) : (
+                            <AlertCircle className="w-5 h-5 text-rose-400" />
+                          )}
+                        </div>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-white truncate">{pending.name}</p>
+                        <p className="text-[11px] text-zinc-400">
+                          {pending.status === "error"
+                            ? pending.errorMessage || "Erro ao enviar vídeo"
+                            : "Carregando arquivo no servidor..."}
+                        </p>
+                      </div>
+                      {pending.status === "error" && (
                         <button
                           type="button"
-                          onClick={() => removeVideoItem(vid.id)}
-                          className="p-1.5 rounded-lg bg-zinc-800 hover:bg-rose-600 text-zinc-300 hover:text-white transition-colors shrink-0"
-                          title="Remover vídeo"
+                          onClick={() => dismissPendingVideoError(pending.tempId)}
+                          className="p-1.5 rounded-lg bg-rose-600 text-white"
+                          title="Dispensar"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <X className="w-3.5 h-3.5" />
                         </button>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <input
-                          type="text"
-                          value={vid.title || ""}
-                          onChange={(e) => handleVideoFieldChange(vid.id, "title", e.target.value)}
-                          placeholder="Título do vídeo (opcional)"
-                          className="sm:col-span-2 p-2 rounded-lg bg-zinc-900 border border-white/15 text-white text-xs focus:border-[#FF650F] focus:outline-none"
-                        />
-                        <input
-                          type="text"
-                          value={vid.duration || ""}
-                          onChange={(e) => handleVideoFieldChange(vid.id, "duration", e.target.value)}
-                          placeholder="Duração ex: 0:45 (opcional)"
-                          className="p-2 rounded-lg bg-zinc-900 border border-white/15 text-white text-xs font-mono focus:border-[#FF650F] focus:outline-none"
-                        />
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-2 items-center">
-                        <input
-                          type="text"
-                          value={vid.thumbnailUrl || ""}
-                          onChange={(e) => handleVideoFieldChange(vid.id, "thumbnailUrl", e.target.value)}
-                          placeholder="Link da capa/miniatura do vídeo (opcional — se vazio usa a capa do projeto)"
-                          className="flex-1 w-full p-2 rounded-lg bg-zinc-900 border border-white/15 text-white text-xs font-mono focus:border-[#FF650F] focus:outline-none"
-                        />
-                        <label className="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 cursor-pointer flex items-center gap-1.5 shrink-0">
-                          {uploadingVideoThumbId === vid.id ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <UploadCloud className="w-3.5 h-3.5" />
-                          )}
-                          <span>Capa do Vídeo</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              if (e.target.files?.[0]) {
-                                handleVideoThumbUpload(vid.id, e.target.files[0]);
-                                e.target.value = "";
-                              }
-                            }}
-                          />
-                        </label>
-                      </div>
+                      )}
                     </div>
                   ))}
+
+                  {(formData.videos || []).map((vid, idx) => {
+                    const resolvedThumb =
+                      vid.thumbnailUrl?.trim() || getYouTubeThumbnailUrl(vid.videoUrl) || "";
+                    const embedUrl = getExternalVideoEmbedUrl(vid.videoUrl, true);
+                    const isPreviewOpen = previewingVideoId === vid.id;
+
+                    return (
+                      <div
+                        key={vid.id || idx}
+                        className="p-3.5 rounded-2xl bg-zinc-950 border border-emerald-500/25 space-y-3"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                          <div className="flex flex-col sm:flex-row items-start gap-3 min-w-0 flex-1">
+                            {/* Miniatura visual real do vídeo (ou player interativo ao clicar) */}
+                            <div
+                              className="relative w-full sm:w-44 aspect-video rounded-xl bg-black border border-white/15 overflow-hidden shrink-0 group cursor-pointer"
+                              onClick={() => {
+                                if (!isPreviewOpen) setPreviewingVideoId(vid.id);
+                              }}
+                              title={isPreviewOpen ? undefined : "Clique para visualizar o vídeo"}
+                            >
+                              {isPreviewOpen ? (
+                                embedUrl ? (
+                                  <iframe
+                                    src={embedUrl}
+                                    title={vid.title || `Vídeo ${idx + 1}`}
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                    className="w-full h-full border-0"
+                                  />
+                                ) : (
+                                  <video
+                                    src={vid.videoUrl}
+                                    controls
+                                    autoPlay
+                                    playsInline
+                                    preload="metadata"
+                                    className="w-full h-full object-contain bg-black"
+                                  />
+                                )
+                              ) : (
+                                <>
+                                  {resolvedThumb ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={resolvedThumb}
+                                      alt={vid.title || `Vídeo ${idx + 1}`}
+                                      referrerPolicy="no-referrer"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <video
+                                      src={vid.videoUrl}
+                                      preload="metadata"
+                                      muted
+                                      playsInline
+                                      onLoadedMetadata={(e) => seekVideoPreviewFrame(e.currentTarget)}
+                                      onLoadedData={(e) => seekVideoPreviewFrame(e.currentTarget)}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  )}
+                                  <div className="absolute inset-0 bg-black/30 group-hover:bg-black/45 transition-colors flex items-center justify-center">
+                                    <span className="w-9 h-9 rounded-full bg-[#FF650F] text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                      <Play className="w-4 h-4 fill-white translate-x-0.5" />
+                                    </span>
+                                  </div>
+                                  <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-emerald-600/90 text-[9px] font-bold text-white flex items-center gap-1 shadow">
+                                    <CheckCircle2 className="w-2.5 h-2.5" />
+                                    Carregado
+                                  </span>
+                                </>
+                              )}
+                            </div>
+
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#FF650F]">
+                                  Vídeo #{idx + 1}
+                                </span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-semibold border border-emerald-500/30">
+                                  Pronto para salvar
+                                </span>
+                              </div>
+                              <p className="text-xs font-mono text-zinc-300 truncate">{vid.videoUrl}</p>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setPreviewingVideoId(isPreviewOpen ? null : vid.id)
+                                }
+                                className="text-[11px] font-semibold text-zinc-300 hover:text-[#FF650F] underline underline-offset-2"
+                              >
+                                {isPreviewOpen ? "Fechar prévia do player" : "Testar reprodução aqui"}
+                              </button>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => removeVideoItem(vid.id)}
+                            className="p-1.5 rounded-lg bg-zinc-800 hover:bg-rose-600 text-zinc-300 hover:text-white transition-colors shrink-0 self-end sm:self-start"
+                            title="Remover vídeo"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <input
+                            type="text"
+                            value={vid.title || ""}
+                            onChange={(e) => handleVideoFieldChange(vid.id, "title", e.target.value)}
+                            placeholder="Título do vídeo (opcional)"
+                            className="sm:col-span-2 p-2 rounded-lg bg-zinc-900 border border-white/15 text-white text-xs focus:border-[#FF650F] focus:outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={vid.duration || ""}
+                            onChange={(e) => handleVideoFieldChange(vid.id, "duration", e.target.value)}
+                            placeholder="Duração ex: 0:45 (opcional)"
+                            className="p-2 rounded-lg bg-zinc-900 border border-white/15 text-white text-xs font-mono focus:border-[#FF650F] focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-2 items-center">
+                          <input
+                            type="text"
+                            value={vid.thumbnailUrl || ""}
+                            onChange={(e) => handleVideoFieldChange(vid.id, "thumbnailUrl", e.target.value)}
+                            placeholder="Link da capa/miniatura personalizada (opcional — se vazio mostra o vídeo)"
+                            className="flex-1 w-full p-2 rounded-lg bg-zinc-900 border border-white/15 text-white text-xs font-mono focus:border-[#FF650F] focus:outline-none"
+                          />
+                          <label className="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 cursor-pointer flex items-center gap-1.5 shrink-0">
+                            {uploadingVideoThumbId === vid.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <UploadCloud className="w-3.5 h-3.5" />
+                            )}
+                            <span>Capa do Vídeo</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) {
+                                  handleVideoThumbUpload(vid.id, e.target.files[0]);
+                                  e.target.value = "";
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1569,6 +1976,21 @@ export function CMSPortfolioModal({
                 placeholder="Ex: Clínicas & Saúde, Redes de Franquias"
               />
             </div>
+          </div>
+        )}
+
+        {/* Feedback próximo ao rodapé para evitar rolagem excessiva durante uploads na aba de mídias */}
+        {error && (
+          <div className="p-3 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-200 text-xs font-semibold flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {mediaNotice && !error && (
+          <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{mediaNotice}</span>
           </div>
         )}
 
